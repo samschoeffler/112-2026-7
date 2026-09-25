@@ -16,9 +16,11 @@ Controls:
     GP 1:
     Joysticks to move/turn
     D-pad to turn/pitch turret
+    a --> toggle gate (up/down)
+    b --> intake (hold, 0.4 power)
 
     GP 2:
-    x --> intake
+    x --> intake (hold, full power)
     y --> charge launch
     D-pad to turn/pitch turret
     Right trigger --> launch
@@ -33,11 +35,19 @@ public class TeleOpBCFC extends OpMode {
     //servos:)
     private CRServo turretPitch, launch;
     private Servo rgb;
+    private Servo gate;
 
     //turret variables
     double turretPos = 0;
     boolean turretOn = false;
     boolean turretAuto = false;
+
+    //gate variables:)
+    // kept as fields so the toggle state survives between loop() calls
+    boolean gateDown = true;
+    boolean lastA = false;
+    final double GATE_UP_POSITION = 0.0;
+    final double GATE_DOWN_POSITION = 1.0;
 
 
     @Override
@@ -49,11 +59,13 @@ public class TeleOpBCFC extends OpMode {
         launch0 = hardwareMap.get(DcMotor.class, "launch0");
         launch1 = hardwareMap.get(DcMotor.class, "launch1");
         intake = hardwareMap.get(DcMotor.class, "intake");
+        //intake.setDirection(DcMotor.Direction.REVERSE);
         turretRot = hardwareMap.get(DcMotor.class,"turret");
 
         //init servo:)
         turretPitch = hardwareMap.get(CRServo.class,"turretPitch");
         launch = hardwareMap.get(CRServo.class,"launch");
+        gate = hardwareMap.get(Servo.class, "gate");
 
         //init rgb:)
         rgb = hardwareMap.get(Servo.class, "rgb_indicator");
@@ -78,13 +90,30 @@ public class TeleOpBCFC extends OpMode {
                 gamepad1.right_stick_x,
                 follower.pose().heading()
         );
+        follower.manual(powers);
 
 
         //intake:)
+        // GP2 x = full power, GP1 b = 0.4 power (GP2 x wins if both held)
         if(gamepad2.x){
             intake.setPower(1.0);
+        } else if(gamepad1.b){
+            intake.setPower(0.4);
         } else{
             intake.setPower(0);
+        }
+
+        //gate [A Gamepad 1] (servo toggle):)
+        // only flips once per press, not every loop while A is held
+        if(gamepad1.a && !lastA){
+            gateDown = !gateDown;
+        }
+        lastA = gamepad1.a;
+
+        if(gateDown){
+            gate.setPosition(GATE_DOWN_POSITION);
+        } else{
+            gate.setPosition(GATE_UP_POSITION);
         }
 
         //launcher:)
@@ -144,9 +173,9 @@ public class TeleOpBCFC extends OpMode {
         //telemetry updates
         telemetry.addData("Launch power", (launch0.getPower()+launch1.getPower())/2);
         telemetry.addData("Turret Position (rotation)", turretPos);
+        telemetry.addData("Gate", gateDown ? "DOWN" : "UP");
 
         //final updates:)
         follower.update();
     }
 }
-//:)
