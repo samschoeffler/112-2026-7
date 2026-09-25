@@ -5,11 +5,13 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.ManualDrive;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
-@TeleOp(name = "TeleOP")
-public class TeleOp extends OpMode {
+@TeleOp(name = "Drive")
+public class Drive extends OpMode {
     //drive:)
     private Follower follower;
   
