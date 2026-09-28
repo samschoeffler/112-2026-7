@@ -53,9 +53,6 @@ public class Drive extends OpMode {
         follower.manual(powers);
         follower.update();
 
-
-
-
       //Gate [A Gamepad 1] (Servo Rotation)
       
       boolean gateToggle = true;
