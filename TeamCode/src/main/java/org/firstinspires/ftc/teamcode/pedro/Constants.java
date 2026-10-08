@@ -10,16 +10,19 @@ import com.pedropathing.revhub.drivetrains.Mecanum;
 import com.pedropathing.revhub.drivetrains.MecanumConfig;
 import com.pedropathing.revhub.localizers.CustomIMU;
 import com.pedropathing.revhub.localizers.Encoder;
+import com.pedropathing.revhub.localizers.PinpointConfig;
 import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.pedropathing.revhub.localizers.RevHubIMU;
 import com.pedropathing.revhub.localizers.ThreeWheelIMUConfig;
 import com.pedropathing.revhub.localizers.ThreeWheelIMULocalizer;
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Constants {
 
@@ -34,55 +37,48 @@ public class Constants {
         c.backRightDirection.set(DcMotorSimple.Direction.FORWARD);
     });
 
-    public static ThreeWheelIMUConfig localizerConfig = new ThreeWheelIMUConfig(c -> {
-        c.leftEncoderName.set("lf");
-        c.rightEncoderName.set("rr");
-        c.strafeEncoderName.set("lr");
-        c.imuName.set("imu");
-        c.imu.set(new RevHubIMU(new RevHubOrientationOnRobot(
-                RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD
-        )));
-        c.leftPodY.set(-0.0);
-        c.rightPodY.set(270.36483770541906);
-        c.strafePodX.set(-4.686415744065391);
-        c.forwardTicksToInches.set(0.1005893164287472);
-        c.strafeTicksToInches.set(0.02050022397629756);
-        c.turnTicksToRadians.set(0.08660476043072554);
-        c.leftEncoderDirection.set(Encoder.FORWARD);
-        c.rightEncoderDirection.set(Encoder.REVERSE);
-        c.strafeEncoderDirection.set(Encoder.FORWARD);
+    public static PinpointConfig localizerConfig = new PinpointConfig(c -> {
+        c.name.set("pinpoint");
+        c.podType.set(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        c.xPodOffset.set(6.383766114242434);
+        c.yPodOffset.set(1.6953493854192299);
+        c.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        c.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+        c.globalDistanceUnit.set(DistanceUnit.INCH);
+        c.offsetUnits.set(DistanceUnit.INCH);
+
+        c.resetMode.set(PinpointLocalizer.ResetMode.RESET_AND_RECALIBRATE_IMU);
     });
 
     public static ForesightConfig foresightConfig = new ForesightConfig(
             c -> {
-                Controller primaryTranslationalForward = Controller.proportional(0.1744996633509695);
-                Controller secondaryTranslationalForward = Controller.proportional(0.06447296289130401);
-                Controller primaryTranslationalLateral = Controller.proportional(0.17401686294007437);
-                Controller secondaryTranslationalLateral = Controller.proportional(0.06429458104014282);
+                Controller primaryTranslationalForward = Controller.proportional(0.1713317668304033);
+                Controller secondaryTranslationalForward = Controller.proportional(0.0633025097747088);
+                Controller primaryTranslationalLateral = Controller.proportional(0.2097069449695416);
+                Controller secondaryTranslationalLateral = Controller.proportional(0.0774811126934754);
 
                 c.forwardTranslational.set(Controller.piecewise(secondaryTranslationalForward).put(2.5, primaryTranslationalForward));
                 c.strafeTranslational.set(Controller.piecewise(secondaryTranslationalLateral).put(2.5, primaryTranslationalLateral));
 
-                c.coast.set(Controller.proportionalFeedforward(0.018897442690086166));
-                c.brake.set(Controller.proportionalFeedforward(0.01606282628657324));
+                c.coast.set(Controller.proportionalFeedforward(0.016655976635378465));
+                c.brake.set(Controller.proportionalFeedforward(0.014157580140071695));
 
-                c.headingFeedback.set(Controller.proportional(5.788999900687193));
-                c.headingBrakeCoefficients.set(Vector2D.cartesian(0.0664238067297162, 0.002316567359492882));
+                c.headingFeedback.set(Controller.proportional(2.777644949113141));
+                c.headingBrakeCoefficients.set(Vector2D.cartesian(0.05092893582517059, 0.0035030242909608114));
 
-                c.linearBrakeCoefficients.set(Matrix.diag(0.05736709925479266, 0.044613987226119776));
-                c.quadraticBrakeCoefficients.set(Matrix.diag(0.0011189883299769202, 0.0010299993385718183));
+                c.linearBrakeCoefficients.set(Matrix.diag(0.0548008613847533, 0.06659148902863314));
+                c.quadraticBrakeCoefficients.set(Matrix.diag(0.0013340206034016977, 0.0010773827434043595));
 
-                c.maxAchievableForwardVelocity.set(58.65009245355094);
-                c.maxAchievableStrafeVelocity.set(69.53994301288155);
-                c.naturalForwardDeceleration.set(41.79889161527495);
-                c.naturalStrafeDeceleration.set(61.30097929319159);
+                c.maxAchievableForwardVelocity.set(61.644393504664606);
+                c.maxAchievableStrafeVelocity.set(55.47349495797238);
+                c.naturalForwardDeceleration.set(37.92739561446642);
+                c.naturalStrafeDeceleration.set(74.07841950443836);
             }
     );
 
     public static Follower create(HardwareMap h) {
         return new Follower(
-                new ThreeWheelIMULocalizer(h, localizerConfig),
+                new PinpointLocalizer(h, localizerConfig),
                 new Mecanum(h, drivetrainConfig),
                 new Foresight(foresightConfig)
         );
