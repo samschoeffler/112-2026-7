@@ -1,6 +1,5 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Tests;
 
-import com.pedropathing.api.Paths;
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
@@ -18,7 +17,6 @@ import org.firstinspires.ftc.teamcode.methods.HiveRoutes;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
-import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 
 @TeleOp(name = "TeleOpTest")
 public class TeleOpTest extends OpMode {
@@ -27,7 +25,7 @@ public class TeleOpTest extends OpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     // Target you want to drive to (field coords, same system as AutoTest)
-    private Pose shootingPose = poseFactory.of(118, 24, 180);
+    private Pose shootingPose = poseFactory.of(56, 8, 90);
 
     private boolean autoPathing = false;
     private boolean lastA = false;
@@ -101,5 +99,10 @@ public class TeleOpTest extends OpMode {
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.update();
+    }
+
+    @Override
+    public void stop() {
+        OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
     }
 }

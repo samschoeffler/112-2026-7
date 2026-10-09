@@ -11,11 +11,11 @@ import java.util.List;
  * HiveRoutes turns the result into Pedro paths.
  *
  *            A0 ---------- A1 ---------- A2        (A row = higher Y)
- *            |                            |
- *            |       +------------+       |
- *            |       |    HIVE    |       |
- *            |       +------------+       |
- *            |                            |
+ *            |                                         |
+ *            |       +------------+              |
+ *            |       |    HIVE    |              |
+ *            |       +------------+              |
+ *            |                                         |
  *            B0 ---------- B1 ---------- B2        (B row = lower Y)
  *
  * How a route is chosen:

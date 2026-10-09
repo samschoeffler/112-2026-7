@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Tests;
 
 import com.pedropathing.api.Paths;
 import com.pedropathing.api.PoseFactory;
@@ -9,7 +9,6 @@ import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.pedropathing.ivy.Scheduler;
-import com.qualcomm.robotcore.hardware.DcMotor;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
@@ -128,9 +127,6 @@ public class AutoTest extends OpMode {
     // =========================
     // AUTO STATE
     // =========================
-
-    private int pathState = 0;
-
 
     @Override
     public void init() {
