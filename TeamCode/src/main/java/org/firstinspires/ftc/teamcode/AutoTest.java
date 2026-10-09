@@ -9,10 +9,13 @@ import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.pedropathing.ivy.Scheduler;
+import com.qualcomm.robotcore.hardware.DcMotor;
+
 import static com.pedropathing.ivy.Scheduler.schedule;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 
+import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -29,7 +32,7 @@ public class AutoTest extends OpMode {
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
     private final Pose startPose =
-            poseFactory.of(56, 8, 90);
+            poseFactory.of(118, 24, 180);
 
     private final Pose shootingPose =
             poseFactory.of(63.3326, 34.4146, 180);
@@ -62,7 +65,7 @@ public class AutoTest extends OpMode {
             poseFactory.of(58.1113, 137.8887, 0);
 
     private final Pose endPose =
-            poseFactory.of(56.2003, 8.1064, 57.9536);
+            poseFactory.of(118, 24, 180);
 
 
     // =========================
@@ -109,6 +112,7 @@ public class AutoTest extends OpMode {
         return Paths.line(point5, endPose)
                 .reverseTangent();
     }
+
     private Command autoRoutine() {
         return sequential(
                 follow(follower, path1()),
@@ -135,6 +139,7 @@ public class AutoTest extends OpMode {
         follower.setPose(startPose);
         follower.update();
     }
+
     @Override
     public void start() {
         schedule(autoRoutine());
@@ -151,4 +156,10 @@ public class AutoTest extends OpMode {
         telemetry.addData("Follower Mode", follower.mode());
         telemetry.update();
     }
+
+    @Override
+    public void stop() {
+        OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
+    }
+
 }
