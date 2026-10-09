@@ -5,12 +5,15 @@ import com.pedropathing.api.PoseFactory;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
+import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+
+import org.firstinspires.ftc.teamcode.methods.HiveRoutes;
 
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 
@@ -33,6 +36,7 @@ public class TeleOpTest extends OpMode {
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
+        follower.setPose(OpModeStorage.autonomousEndPose);
     }
 
     @Override
@@ -50,11 +54,11 @@ public class TeleOpTest extends OpMode {
 
         // Press A: build a path from the CURRENT pose to the target and run it
         if (a && !lastA && !autoPathing) {
-            Pose current = follower.pose();
-            schedule(follow(follower,
-                    Paths.line(current, shootingPose)
-                            .linear(current, shootingPose)));
-            autoPathing = true;
+            Command move = HiveRoutes.goTo(follower, follower.pose(), shootingPose);
+            if (move != null) {          // null = already at the target
+                schedule(move);
+                autoPathing = true;
+            }
         }
         lastA = a;
 
@@ -83,8 +87,9 @@ public class TeleOpTest extends OpMode {
                     follower.pose().heading()
             );
 
-            if(gamepad1.y) {
-                shootingPose = follower.pose();
+            if (gamepad1.y) {
+                Pose p = follower.pose();
+                shootingPose = poseFactory.of(p.x(), p.y(), Math.toDegrees(p.heading()));
             }
 
             follower.manual(powers);
