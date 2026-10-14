@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Autos;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
+import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
@@ -22,8 +23,11 @@ public class Blue2Tip extends OpMode {
     private Command autoRoutine() {
         return sequential(
                 follow(follower, AutoPaths.Blue2Tip.path1()),
+                Commands.waitMs(2000),
                 follow(follower, AutoPaths.Blue2Tip.path2()),
+                Commands.waitMs(2000),
                 follow(follower, AutoPaths.Blue2Tip.path3()),
+                Commands.waitMs(2000),
                 follow(follower, AutoPaths.Blue2Tip.path4())
         );
     }
