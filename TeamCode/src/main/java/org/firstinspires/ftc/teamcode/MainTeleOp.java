@@ -96,20 +96,18 @@ public class MainTeleOp extends OpMode {
 
         //Launcher logic:
        //toggling launcher
-        boolean y2 = gamepad2.y;
-        if (y2 && !lastY2) {
+        if (gamepad2.y && !lastY2) {
             launcher.toggleOn();
         }
-        lastY2 = y2;
+        lastY2 = gamepad2.y;
 
         // Right trigger: shoot. Launcher ignores this while a pulse is already
         // running, so holding it fires once every 500 ms.
         if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
             launcher.fire();
-        }
-
-        launcher.update();
-/*
+        } else if(gamepad2.right_trigger < TRIGGER_THRESHOLD)
+            launcher.stopFire();
+        /*
         //intake
         if (gamepad2.x) {
             intake.intake();
@@ -127,11 +125,10 @@ public class MainTeleOp extends OpMode {
         lastLeftTrigger2 = leftTrigger2;
 */
         //turret auto
-        boolean bothBumpers2 = gamepad2.left_bumper && gamepad2.right_bumper;
-        if (bothBumpers2 && !lastBothBumpers2) {
+        if (gamepad2.left_bumper && gamepad2.right_bumper && !lastBothBumpers2) {
             turret.toggleTurretAuto();
         }
-        lastBothBumpers2 = bothBumpers2;
+        lastBothBumpers2 = gamepad2.left_bumper && gamepad2.right_bumper;
 
         if (turret.isTurretAuto()) {
             turret.autoAim();      // placeholder until TurretAuto code is written
@@ -154,6 +151,7 @@ public class MainTeleOp extends OpMode {
         //telemetry.addData("Gate Open", intake.isGateOpen());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("TurretPower", launcher.firePower());
+        telemetry.addData("trigger", gamepad2.right_trigger);
         telemetry.update();
     }
 

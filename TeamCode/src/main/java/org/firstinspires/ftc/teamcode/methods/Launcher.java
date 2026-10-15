@@ -26,13 +26,13 @@ public class Launcher {
 
     // ---------- TUNING ----------
     public static double LAUNCH_POWER = 2000.00;   // flywheel power
-    public static double MECH_POWER   = 0.2;   // launch mechanism power
-    public static double MECH_TIME_MS = 500;   // how long one launch pulse lasts
+    public static double MECH_POWER   = 1000.0;   // launch mechanism power
+    public static double MECH_TIME_MS = 1000;   // how long one launch pulse lasts
 
     // ---------- HARDWARE ----------
     private final DcMotorEx launch0;
     private final DcMotorEx launch1;
-    private final DcMotor launchMech;
+    private final DcMotorEx launchMech;
 
     // ---------- STATE ----------
     private boolean flywheelsOn = false;          // are the flywheels spinning?
@@ -43,7 +43,7 @@ public class Launcher {
     public Launcher(HardwareMap hardwareMap) {
         launch0    = hardwareMap.get(DcMotorEx.class, "Launch0");
         launch1    = hardwareMap.get(DcMotorEx.class, "Launch1");
-        launchMech = hardwareMap.get(DcMotor.class, "LaunchMech");
+        launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
 
         // Directions are a guess; flip these during testing if a motor spins the wrong way.
         launch0.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -67,19 +67,14 @@ public class Launcher {
      * Fires whether or not the flywheels are on.
      */
     public void fire() {
-        if (firing) return;
         firing = true;
-        fireTimer.reset();
-        launchMech.setPower(MECH_POWER);
-        firePower = (launch0.getVelocity() + launch1.getVelocity()) / 2;
+        launchMech.setVelocity(MECH_POWER);
     }
 
     /** Call every loop: stops the launch mechanism once the pulse time is up. */
-    public void update() {
-        if (firing && fireTimer.milliseconds() >= MECH_TIME_MS) {
-            launchMech.setPower(0);
-            firing = false;
-        }
+    public void stopFire() {
+        launchMech.setVelocity(0.0);
+        firing = false;
     }
 
     /** Stop everything (used on init and when the OpMode ends). */
@@ -88,7 +83,7 @@ public class Launcher {
         firing = false;
         launch0.setVelocity(0);
         launch1.setVelocity(0);
-        launchMech.setPower(0);
+        launchMech.setVelocity(0);
     }
 
     public boolean isFlywheelsOn() { return flywheelsOn; }
