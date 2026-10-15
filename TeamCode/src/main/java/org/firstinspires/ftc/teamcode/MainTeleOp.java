@@ -103,14 +103,14 @@ public class MainTeleOp extends OpMode {
         // Right trigger: shoot
         if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
             launcher.fire();
-        } else if(gamepad2.right_trigger < TRIGGER_THRESHOLD)
+        } else if(gamepad2.right_trigger <= TRIGGER_THRESHOLD)
             launcher.stopFire();
 
         //update gate position
         launcher.gateUpdate();
 
         //intake
-        if (gamepad2.x) {
+        if (gamepad2.x || launcher.isFiring()) {
             intake.intake();
         } else if (gamepad2.b) {
             intake.outtake();
