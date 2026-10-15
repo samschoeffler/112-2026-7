@@ -95,9 +95,8 @@ public class Turret {
      * PITCH_MAX_DEG. Find these by moving the servo and measuring the angle.
      * If the servo goes the wrong way, just swap the two values.
      */
-    public static double PITCH_POS_AT_MIN = 0.0;
-    public static double PITCH_POS_AT_MAX = 0.5;
-
+    public static double PITCH_POS_AT_MIN = 0.5;
+    public static double PITCH_POS_AT_MAX = 0.0;
     /** Where pitch starts when the OpMode inits (degrees). */
     public static double PITCH_START_DEG = 20;
 

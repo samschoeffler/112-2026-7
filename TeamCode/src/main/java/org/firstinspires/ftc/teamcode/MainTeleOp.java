@@ -6,9 +6,8 @@ import com.pedropathing.follower.ManualDrive;
 import com.pedropathing.ivy.Scheduler;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 
-//import org.firstinspires.ftc.teamcode.methods.Intake;
+import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.TelePathing;
@@ -45,7 +44,7 @@ public class MainTeleOp extends OpMode {
     private Follower follower;
     private TelePathing telePathing;
     private Launcher launcher;
-    //private Intake intake;
+    private Intake intake;
     private Turret turret;
 
     //uses Booleans to keep last for toggling
@@ -62,7 +61,7 @@ public class MainTeleOp extends OpMode {
         //hardware mapping for methods
         telePathing = new TelePathing(follower);
         launcher    = new Launcher(hardwareMap);
-        //intake      = new Intake(hardwareMap);
+        intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
     }
 
@@ -101,13 +100,15 @@ public class MainTeleOp extends OpMode {
         }
         lastY2 = gamepad2.y;
 
-        // Right trigger: shoot. Launcher ignores this while a pulse is already
-        // running, so holding it fires once every 500 ms.
+        // Right trigger: shoot
         if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
             launcher.fire();
         } else if(gamepad2.right_trigger < TRIGGER_THRESHOLD)
             launcher.stopFire();
-        /*
+
+        //update gate position
+        launcher.gateUpdate();
+
         //intake
         if (gamepad2.x) {
             intake.intake();
@@ -117,13 +118,13 @@ public class MainTeleOp extends OpMode {
             intake.stop();
         }
 
-        //gate
+        //ramp
         boolean leftTrigger2 = gamepad2.left_trigger > TRIGGER_THRESHOLD;
         if (leftTrigger2 && !lastLeftTrigger2) {
-            intake.toggleGate();
+            intake.toggleRamp();
         }
         lastLeftTrigger2 = leftTrigger2;
-*/
+
         //turret auto
         if (gamepad2.left_bumper && gamepad2.right_bumper && !lastBothBumpers2) {
             turret.toggleTurretAuto();
@@ -148,10 +149,9 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Launcher On", launcher.isFlywheelsOn());
         telemetry.addData("Firing", launcher.isFiring());
-        //telemetry.addData("Gate Open", intake.isGateOpen());
+        telemetry.addData("Gate Open", launcher.isGateOpen());
+        telemetry.addData("Ramp Down", !intake.isRampUp());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
-        telemetry.addData("TurretPower", launcher.firePower());
-        telemetry.addData("trigger", gamepad2.right_trigger);
         telemetry.update();
     }
 

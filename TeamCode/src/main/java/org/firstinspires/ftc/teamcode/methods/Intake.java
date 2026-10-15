@@ -1,4 +1,4 @@
-/*package org.firstinspires.ftc.teamcode.methods;
+package org.firstinspires.ftc.teamcode.methods;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -11,26 +11,26 @@ public class Intake {
     public static double INTAKE_POWER = 0.5;
 
     // Placeholder servo positions (0.0 to 1.0); tune these on the robot.
-    public static double GATE_CLOSED = 0.0;
-    public static double GATE_OPEN   = 0.5;
+    public static double rAMPdOWN = 0.0;
+    public static double rAMPuP   = 0.5;
 
     // ---------- HARDWARE ----------
     private final DcMotor intake;
-    private final Servo gate;
+    private final Servo ramp;
 
     // ---------- STATE ----------
-    private boolean gateOpen = false;
+    private boolean rampUp = false;
 
     public Intake(HardwareMap hardwareMap) {
         intake = hardwareMap.get(DcMotor.class, "Intake");
-        gate   = hardwareMap.get(Servo.class, "Gate");
+        ramp   = hardwareMap.get(Servo.class, "Ramp");
 
         // Direction is a guess; flip during testing if it spits pieces out on intake().
         intake.setDirection(DcMotorSimple.Direction.FORWARD);
         intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         stop();
-        gate.setPosition(GATE_CLOSED);   // gate starts closed
+        ramp.setPosition(rAMPdOWN);   // gate starts closed
     }
 
     public void intake()  { intake.setPower(INTAKE_POWER); }
@@ -39,12 +39,10 @@ public class Intake {
 
     public void stop()    { intake.setPower(0); }
 
-    public void toggleGate() {
-        gateOpen = !gateOpen;
-        gate.setPosition(gateOpen ? GATE_OPEN : GATE_CLOSED);
+    public void toggleRamp() {
+        rampUp = !rampUp;
+        ramp.setPosition(rampUp ? rAMPuP : rAMPdOWN);
     }
 
-    public boolean isGateOpen() { return gateOpen; }
+    public boolean isRampUp() { return rampUp; }
 }
-
- */

@@ -1,10 +1,10 @@
 package org.firstinspires.ftc.teamcode.methods;
 
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.hardware.Servo;
+
 
 /**
  * Launcher
@@ -27,23 +27,27 @@ public class Launcher {
     // ---------- TUNING ----------
     public static double LAUNCH_POWER = 2000.00;   // flywheel power
     public static double MECH_POWER   = 1000.0;   // launch mechanism power
-    public static double MECH_TIME_MS = 1000;   // how long one launch pulse lasts
+    public static double GateOpen_ = 0.0;
+    public static double GateClosed_   = 0.5;
+
 
     // ---------- HARDWARE ----------
     private final DcMotorEx launch0;
     private final DcMotorEx launch1;
     private final DcMotorEx launchMech;
+    private final Servo gate;
 
     // ---------- STATE ----------
-    private boolean flywheelsOn = false;          // are the flywheels spinning?
-    private boolean firing = false;               // is a launch pulse running right now?
-    private double firePower;
-    private final ElapsedTime fireTimer = new ElapsedTime();
+    private boolean flywheelsOn = false;
+    private boolean firing = false;
+    private boolean gateOpen = true;
+
 
     public Launcher(HardwareMap hardwareMap) {
         launch0    = hardwareMap.get(DcMotorEx.class, "Launch0");
         launch1    = hardwareMap.get(DcMotorEx.class, "Launch1");
         launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
+        gate = hardwareMap.get(Servo.class, "Gate");
 
         // Directions are a guess; flip these during testing if a motor spins the wrong way.
         launch0.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -53,7 +57,7 @@ public class Launcher {
         stopAll();
     }
 
-    /** Flip the flywheels on if they're off, or off if they're on. */
+    //toggle flywheels
     public void toggleOn() {
         flywheelsOn = !flywheelsOn;
         double power = flywheelsOn ? LAUNCH_POWER : 0;
@@ -61,23 +65,30 @@ public class Launcher {
         launch1.setVelocity(power);
     }
 
-    /**
-     * Start one launch pulse. Ignored if a pulse is already running,
-     * so holding the trigger fires once every MECH_TIME_MS.
-     * Fires whether or not the flywheels are on.
-     */
+    //launch mech on
     public void fire() {
         firing = true;
+        gateOpen = false;
         launchMech.setVelocity(MECH_POWER);
+
     }
 
-    /** Call every loop: stops the launch mechanism once the pulse time is up. */
+    //launch mech stop
     public void stopFire() {
         launchMech.setVelocity(0.0);
         firing = false;
+        gateOpen = true;
+
     }
 
-    /** Stop everything (used on init and when the OpMode ends). */
+    public void gateUpdate() {
+        if(!gateOpen)
+            gate.setPosition(GateClosed_);
+        else
+            gate.setPosition(GateOpen_);
+    }
+
+    //stop everything
     public void stopAll() {
         flywheelsOn = false;
         firing = false;
@@ -88,5 +99,6 @@ public class Launcher {
 
     public boolean isFlywheelsOn() { return flywheelsOn; }
     public boolean isFiring()      { return firing; }
-    public double firePower() {return firePower; }
+    public boolean isGateOpen()      { return gateOpen; }
+
 }
