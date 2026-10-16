@@ -15,7 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 
 @TeleOp(name = "April Tag Testing")
 public class AprilTagTest extends OpMode {
-    Servo servo;
+    //Servo servo;
     ElapsedTime timer = new ElapsedTime();
     TelemetryManager panelsTelemetry;
     Limelight3A limelight;
@@ -23,7 +23,7 @@ public class AprilTagTest extends OpMode {
 
     @Override
     public void init() {
-        servo = hardwareMap.get(Servo.class, "servo");
+        //servo = hardwareMap.get(Servo.class, "servo");
 
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
         panelsTelemetry.update(telemetry);
@@ -67,16 +67,18 @@ public class AprilTagTest extends OpMode {
         }
 
         if (timer.seconds() < 2) {
-            servo.setPosition(0.0);
+            //servo.setPosition(0.0);
         }
         else if (timer.seconds() >= 4 && timer.seconds() < 7) {
-            servo.setPosition(1.0);
+            //servo.setPosition(1.0);
         }
         else if (timer.seconds() >= 7) {
             timer.reset();
         }
 
         panelsTelemetry.addData("Time", timer.seconds());
+
+        panelsTelemetry.addData("FPS:", limelight.getStatus().getFps());
 
         panelsTelemetry.update(telemetry);
     }
