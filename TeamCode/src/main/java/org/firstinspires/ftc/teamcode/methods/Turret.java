@@ -90,21 +90,21 @@ public class Turret {
     // =====================================================
 
     /** Pitch range in degrees. */
-    public static double PITCH_MIN_DEG = 0;
-    public static double PITCH_MAX_DEG = 45;
+    public static double PITCH_MIN_DEG = 25;
+    public static double PITCH_MAX_DEG = 60;
 
     /**
      * Calibration: the servo position (0.0 to 1.0) that gives PITCH_MIN_DEG and
      * PITCH_MAX_DEG. Find these by moving the servo and measuring the angle.
      * If the servo goes the wrong way, just swap the two values.
      */
-    public static double PITCH_POS_AT_MIN = 0.5;
-    public static double PITCH_POS_AT_MAX = 0.0;
+    public static double PITCH_POS_AT_MIN = 0.2644;
+    public static double PITCH_POS_AT_MAX = 0.009;
     /** Where pitch starts when the OpMode inits (degrees). */
-    public static double PITCH_START_DEG = 20;
+    public static double PITCH_START_DEG = 25;
 
     /** Manual D-pad pitch speed, in degrees per second while held. */
-    public static double PITCH_MANUAL_DEG_PER_SEC = 30;
+    public static double PITCH_MANUAL_DEG_PER_SEC = 10;
 
     // =====================================================
     // TUNING: AUTO AIM
@@ -504,4 +504,6 @@ public class Turret {
             timer.reset();
         }
     }
+    public double pitchthingy()  {return pitch.getPosition();}
+
 }

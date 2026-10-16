@@ -25,8 +25,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 public class Launcher {
 
     // ---------- TUNING ----------
-    public static double LAUNCH_POWER = 2000.00;   // flywheel power
-    public static double MECH_POWER   = 1000.0;   // launch mechanism power
+    public static double LAUNCH_POWER = 1000.00;   // flywheel power
+    public static double MECH_POWER   = 1000.00;   // launch mechanism power
     public static double GateOpen_ = 0.0;
     public static double GateClosed_   = 0.5;
 
@@ -40,7 +40,7 @@ public class Launcher {
     // ---------- STATE ----------
     private boolean flywheelsOn = false;
     private boolean firing = false;
-    private boolean gateOpen = true;
+    private boolean gateOpen = false;
 
 
     public Launcher(HardwareMap hardwareMap) {
@@ -100,5 +100,6 @@ public class Launcher {
     public boolean isFlywheelsOn() { return flywheelsOn; }
     public boolean isFiring()      { return firing; }
     public boolean isGateOpen()      { return gateOpen; }
+    public double gatethingy()  {return gate.getPosition();}
 
 }
