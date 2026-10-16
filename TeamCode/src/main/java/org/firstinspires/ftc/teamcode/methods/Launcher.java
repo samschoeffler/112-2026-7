@@ -68,7 +68,7 @@ public class Launcher {
     //launch mech on
     public void fire() {
         firing = true;
-        gateOpen = false;
+        gateOpen = true;
         launchMech.setVelocity(MECH_POWER);
 
     }
@@ -77,7 +77,7 @@ public class Launcher {
     public void stopFire() {
         launchMech.setVelocity(0.0);
         firing = false;
-        gateOpen = true;
+        gateOpen = false;
 
     }
 

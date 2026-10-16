@@ -8,11 +8,11 @@ import com.qualcomm.robotcore.hardware.Servo;
 public class Intake {
 
     // ---------- TUNING ----------
-    public static double INTAKE_POWER = 0.5;
+    public static double INTAKE_POWER = 1.0;
 
     // Placeholder servo positions (0.0 to 1.0); tune these on the robot.
-    public static double rAMPdOWN = 0.0;
-    public static double rAMPuP   = 0.5;
+    public static double rAMPdOWN = 0.2;
+    public static double rAMPuP   = 0.3;
 
     // ---------- HARDWARE ----------
     private final DcMotor intake;
