@@ -27,9 +27,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 public class Constants {
 
     public static MecanumConfig drivetrainConfig = new MecanumConfig(c -> {
-        c.frontLeftName.set("lf");
-        c.frontRightName.set("rf");
-        c.backLeftName.set("lr");
+        c.frontLeftName.set("rf");
+        c.frontRightName.set("lr");
+        c.backLeftName.set("lf");
         c.backRightName.set("rr");
         c.frontLeftDirection.set(DcMotorSimple.Direction.REVERSE);
         c.frontRightDirection.set(DcMotorSimple.Direction.FORWARD);
@@ -73,6 +73,9 @@ public class Constants {
                 c.maxAchievableStrafeVelocity.set(50.641501286762946);
                 c.naturalForwardDeceleration.set(41.37927661771546);
                 c.naturalStrafeDeceleration.set(57.64274326185185);
+
+                //c.cosineScale.set(true);
+                c.maxVelocityConstraint.set(ForesightConfig.Constraint.NONE);
             }
     );
     public static Follower create(HardwareMap h) {
