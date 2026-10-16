@@ -49,6 +49,7 @@ public class MainTeleOp extends OpMode {
 
     //uses Booleans to keep last for toggling
     private boolean lastY2 = false;
+    private boolean lastA2 = false;
     private boolean lastLeftTrigger2 = false;
     private boolean lastBothBumpers2 = false;
 
@@ -99,6 +100,12 @@ public class MainTeleOp extends OpMode {
             launcher.toggleOn();
         }
         lastY2 = gamepad2.y;
+
+        //if (gamepad2.a && !lastA2) {
+           // turret.goTo(90,);
+        //}
+        //lastA2 = gamepad2.y;
+
 
         // Right trigger: shoot
         if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
@@ -152,6 +159,9 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Gate Open", launcher.isGateOpen());
         telemetry.addData("Ramp Down", !intake.isRampUp());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
+        telemetry.addData("Ramp Pos", intake.rampthingy());
+        telemetry.addData("Turret Rot", turret.getRotationDeg());
+        telemetry.addData("Turret Pitch", turret.getPitchDeg());
         telemetry.update();
     }
 
