@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.methods;
 
 import com.pedropathing.math.Pose;
+import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -8,6 +9,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 /**
  * Turret
@@ -165,6 +168,20 @@ public class Turret {
 
     private final PD rotationPD = new PD();
 
+    // PD
+
+    private double kP = 0.1;
+    private double kD = 0.0000;
+    private double goalX = 0;
+    private double lastError = 0;
+    private double angleTolerance = 0.2;
+
+    private final double MAX_POWER = 0.8;
+
+    private double power = 0;
+
+    private final ElapsedTime timer = new ElapsedTime();
+
     public Turret(HardwareMap hardwareMap) {
         //rot0  = hardwareMap.get(CRServo.class, "TurretRot0");
         rot1  = hardwareMap.get(CRServo.class, "TurretRot1");
@@ -203,6 +220,55 @@ public class Turret {
         rotServoTotalDeg += delta;
         lastRotServoDeg = raw;
         rotationDeg = rotServoTotalDeg * ROT_FEEDBACK_DIRECTION / ROT_SERVO_DEG_PER_TURRET_DEG;
+    }
+
+    public void setKp(double newKp) {
+        kP = newKp;
+    }
+
+    public double getKp() {
+        return kP;
+    }
+
+    public void setKd(double newKd) {
+        kD = newKd;
+    }
+
+    public double getKd() {
+        return kD;
+    }
+
+    public void resetTimer() {
+        timer.reset();
+    }
+
+    public void update(LLResult curID) {
+        double deltaTime = timer.seconds();
+        timer.reset();
+
+        if (curID.getFiducialResults().isEmpty()) {
+            rot1.setPower(0);
+            rot2.setPower(0);
+            lastError = 0;
+            return;
+        }
+
+        double error = goalX + curID.getFiducialResults().get(0).getTargetXDegrees();
+        double pTerm = error * kP;
+
+        double dTerm = 0;
+        if (deltaTime > 0) {
+            dTerm = ((error - lastError) / deltaTime) * kD;
+        }
+
+        if (Math.abs(error) < angleTolerance) {
+            power = 0;
+        } else {
+            power = Range.clip(pTerm + dTerm, -MAX_POWER, MAX_POWER);
+        }
+
+        rot1.setPower(power);
+        rot2.setPower(power);
     }
 
     /**
