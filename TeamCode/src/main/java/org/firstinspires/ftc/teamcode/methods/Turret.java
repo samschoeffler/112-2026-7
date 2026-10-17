@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.methods;
 
 import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -12,40 +13,8 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
-/**
- * Turret
- *
- * Controls turret rotation and pitch, and automatic aiming (TurretAuto).
- *
- * Hardware (names must match the Robot Configuration on the Driver Hub):
- *   - TurretRot0, TurretRot1, TurretRot2 : Axon servos in CONTINUOUS mode (rotation)
- *   - TurretRotFeedback : Analog Input, the feedback wire from ONE rotation servo
- *                         (TurretRot0's is fine, since all three move together)
- *   - TurretPitch       : Axon servo in normal (POSITION) mode, configured as a Servo
- *
- * ===== ROTATION =====
- * Continuous servos have no built-in position, so we measure it with the Axon
- * feedback wire (0 to 3.3 V = 0 to 360 degrees of the SERVO's shaft).
- * The servos are geared to the turret, so one turret turn = several servo turns.
- * Every loop we compare the new reading to the last one; if it jumped more than
- * 180 degrees, the servo passed the 0/360 point, so we add or subtract 360.
- * That running total ("unwrapping") divided by the gear ratio = turret angle.
- *   -> The turret must be at its zero mark when the first OpMode that creates
- *      a Turret starts (or call zeroRotation() / press the zero button).
- *   -> The reading MUST be taken every loop, or a wrap can be missed. manualControl(),
- *      goTo() and autoAim() all read it, so call one of them every loop.
- *   -> A PD controller drives the servos toward the target angle.
- *
- * ===== PITCH =====
- * The pitch servo is a normal position servo: we tell it an angle and it goes there
- * on its own. No feedback or PD loop needed. Pitch degrees are converted to a servo
- * position (0.0 to 1.0) using two calibration points (see PITCH_POS_AT_MIN / MAX).
- *
- * ===== SIGN RULE (check this first when testing!) =====
- * Positive rotation power must make the measured rotation angle go UP.
- * If it goes down instead, flip ROT_FEEDBACK_DIRECTION to -1.
- * If this is wrong, the controller pushes the wrong way and runs to its limit.
- */
+import java.util.List;
+
 public class Turret {
 
     // =====================================================
@@ -76,12 +45,6 @@ public class Turret {
     public static double ROT_MAX_POWER = 0.8;
     public static double ROT_TOLERANCE_DEG = 1.0;
 
-    /**
-     * Counter-rotation while the robot spins (feedforward).
-     * Power added per (degree/second) of robot turning. Leave at 0 until P works.
-     */
-    public static double ROBOT_TURN_FF = 0.0;
-
     /** Manual D-pad rotation speed. */
     public static double ROTATE_POWER = 0.5;
 
@@ -107,35 +70,13 @@ public class Turret {
     public static double PITCH_MANUAL_DEG_PER_SEC = 10;
 
     // =====================================================
-    // TUNING: AUTO AIM
-    // =====================================================
-
-    /** Goal position on the field (Pedro coords). PLACEHOLDER: measure for your alliance. */
-    public static double GOAL_X = 72;
-    public static double GOAL_Y = 144;
-
-    /** Robot-relative angle the turret faces at 0 degrees. 0 = facing the robot's front. */
-    public static double TURRET_ZERO_OFFSET_DEG = 0;
-
-    /** Where the turret's center is relative to the robot's center (inches). */
-    public static double TURRET_OFFSET_FORWARD = 0;
-    public static double TURRET_OFFSET_LEFT    = 0;
-
-    /**
-     * Distance -> pitch lookup table. PLACEHOLDERS: shoot from each distance,
-     * write down the pitch that scores. Distances must be in increasing order.
-     */
-    public static double[] AIM_DISTANCES = {24, 36, 48, 60, 72, 96, 120};
-    public static double[] AIM_PITCHES   = {40, 35, 30, 26, 22, 18, 15};
-
-    // =====================================================
     // HARDWARE
     // =====================================================
     //private final CRServo rot0;
-    private final CRServo rot1;
-    private final CRServo rot2;
-    private final AnalogInput rotFeedback;
-    private final Servo pitch;
+    private static CRServo rot1;
+    private static CRServo rot2;
+    private static AnalogInput rotFeedback;
+    private static Servo pitch;
 
     // =====================================================
     // STATE
@@ -156,8 +97,6 @@ public class Turret {
     // Pitch: the angle we last commanded (a position servo has no feedback)
     private double pitchDeg = PITCH_START_DEG;
 
-    private double distanceToGoal = 0;
-
     // For measuring how fast the robot is turning
     private double lastHeadingDeg = 0;
     private boolean haveLastHeading = false;
@@ -168,29 +107,15 @@ public class Turret {
 
     private final PD rotationPD = new PD();
 
-    // PD
-
-    private double kP = 0.1;
-    private double kD = 0.0000;
-    private double goalX = 0;
-    private double lastError = 0;
-    private double angleTolerance = 0.2;
-
-    private final double MAX_POWER = 0.8;
-
-    private double power = 0;
-
-    private final ElapsedTime timer = new ElapsedTime();
+    public PD mainPD = new PD();
 
     public Turret(HardwareMap hardwareMap) {
-        //rot0  = hardwareMap.get(CRServo.class, "TurretRot0");
         rot1  = hardwareMap.get(CRServo.class, "TurretRot1");
         rot2  = hardwareMap.get(CRServo.class, "TurretRot2");
         rotFeedback = hardwareMap.get(AnalogInput.class, "RotEnc");
         pitch = hardwareMap.get(Servo.class, "TurretPitch");
 
         // Directions are a guess. All three rotation servos MUST push the same way.
-        //rot0.setDirection(DcMotorSimple.Direction.FORWARD);
         rot1.setDirection(DcMotorSimple.Direction.FORWARD);
         rot2.setDirection(DcMotorSimple.Direction.FORWARD);
 
@@ -222,55 +147,6 @@ public class Turret {
         rotationDeg = rotServoTotalDeg * ROT_FEEDBACK_DIRECTION / ROT_SERVO_DEG_PER_TURRET_DEG;
     }
 
-    public void setKp(double newKp) {
-        kP = newKp;
-    }
-
-    public double getKp() {
-        return kP;
-    }
-
-    public void setKd(double newKd) {
-        kD = newKd;
-    }
-
-    public double getKd() {
-        return kD;
-    }
-
-    public void resetTimer() {
-        timer.reset();
-    }
-
-    public void update(LLResult curID) {
-        double deltaTime = timer.seconds();
-        timer.reset();
-
-        if (curID.getFiducialResults().isEmpty()) {
-            rot1.setPower(0);
-            rot2.setPower(0);
-            lastError = 0;
-            return;
-        }
-
-        double error = goalX + curID.getFiducialResults().get(0).getTargetXDegrees();
-        double pTerm = error * kP;
-
-        double dTerm = 0;
-        if (deltaTime > 0) {
-            dTerm = ((error - lastError) / deltaTime) * kD;
-        }
-
-        if (Math.abs(error) < angleTolerance) {
-            power = 0;
-        } else {
-            power = Range.clip(pTerm + dTerm, -MAX_POWER, MAX_POWER);
-        }
-
-        rot1.setPower(power);
-        rot2.setPower(power);
-    }
-
     /**
      * Call this with the turret at its zero mark to make the current
      * position 0 degrees. Runs automatically the first time a Turret is created.
@@ -280,7 +156,7 @@ public class Turret {
         rotServoTotalDeg = 0;
         rotationDeg = 0;
         rotationZeroed = true;
-        rotationPD.reset();
+        //rotationPD.reset();
     }
 
     // =====================================================
@@ -289,17 +165,20 @@ public class Turret {
 
     /** Spin all three rotation servos together. Positive = angle goes up. */
     public void setRotationPower(double power) {
-        // Never push past the soft limits
-        if (power > 0 && rotationDeg >= ROT_MAX_DEG) power = 0;
-        if (power < 0 && rotationDeg <= ROT_MIN_DEG) power = 0;
-        //rot0.setPower(power);
+        if (power > 0 && rotationDeg >= ROT_MAX_DEG) {
+            power = 0;
+        }
+
+        if (power < 0 && rotationDeg <= ROT_MIN_DEG) {
+            power = 0;
+        }
+
         rot1.setPower(power);
         rot2.setPower(power);
     }
 
     /** Stop the rotation servos. (The pitch servo holds its position on its own.) */
     public void stopRotation() {
-        //rot0.setPower(0);
         rot1.setPower(0);
         rot2.setPower(0);
     }
@@ -331,9 +210,15 @@ public class Turret {
     public void manualControl(boolean left, boolean right, boolean up, boolean down) {
         readRotation();
 
-        if (left)       setRotationPower(-ROTATE_POWER);
-        else if (right) setRotationPower(ROTATE_POWER);
-        else            setRotationPower(0);
+        if (left) {
+            setRotationPower(-ROTATE_POWER);
+        }
+        else if (right) {
+            setRotationPower(ROTATE_POWER);
+        }
+        else {
+            setRotationPower(0);
+        }
 
         // Move pitch at a steady speed, no matter how fast the loop runs
         double dt = manualTimer.seconds();
@@ -359,10 +244,8 @@ public class Turret {
     private void runToAngles(double rotDeg, double pitchTarget, double extraRotPower) {
         // Rotation: PD controller
         rotationTargetDeg = chooseRotationTarget(rotDeg, rotationDeg);
-        double rotPower = rotationPD.calculate(
-                rotationTargetDeg - rotationDeg,
-                ROT_KP, ROT_KD, ROT_KS, ROT_MAX_POWER, ROT_TOLERANCE_DEG);
-        setRotationPower(Range.clip(rotPower + extraRotPower, -ROT_MAX_POWER, ROT_MAX_POWER));
+        //rotationPD.calculate(rotationTargetDeg - rotationDeg,ROT_KP, ROT_KD, ROT_KS, ROT_MAX_POWER, ROT_TOLERANCE_DEG, null);
+        //setRotationPower(Range.clip(rotPower + extraRotPower, -ROT_MAX_POWER, ROT_MAX_POWER));
 
         // Pitch: just tell the servo where to go
         setPitchDeg(pitchTarget);
@@ -372,26 +255,6 @@ public class Turret {
     public void goTo(double rotDeg, double pitchDeg) {
         readRotation();
         runToAngles(rotDeg, pitchDeg, 0);
-    }
-
-    /**
-     * True when the rotation is within tolerance of its target.
-     * (Pitch isn't checked: a position servo gives no feedback. If you shoot
-     * right after a big pitch change, add a short wait for it to arrive.)
-     */
-    public boolean atTarget() {
-        return Math.abs(rotationTargetDeg - rotationDeg) <= ROT_TOLERANCE_DEG;
-    }
-
-    // =====================================================
-    // AUTO AIM (TurretAuto on)
-    // =====================================================
-
-    /**
-     * Aim at the goal using the robot's field pose. Call every loop while TurretAuto is on.
-     *
-     */
-    public void autoAim() {
     }
 
     /** Robot turning speed in degrees/second, measured from heading changes. */
@@ -414,19 +277,24 @@ public class Turret {
 
     public void toggleTurretAuto() {
         turretAuto = !turretAuto;
-        rotationPD.reset();          // clear old derivative history when switching
+        //rotationPD.reset();          // clear old derivative history when switching
         haveLastHeading = false;
         manualTimer.reset();
     }
 
-    public boolean isTurretAuto()      { return turretAuto; }
-    public double getRotationDeg()     { return rotationDeg; }
-    public double getRotationTarget()  { return rotationTargetDeg; }
+    public boolean isTurretAuto() {
+        return turretAuto;
+    }
+    public double getRotationDeg() {
+        return rotationDeg;
+    }
+    public double getRotationTarget() {
+        return rotationTargetDeg;
+    }
     /** Commanded pitch (a position servo has no feedback). */
-    public double getPitchDeg()        { return pitchDeg; }
-    /** Same as getPitchDeg(): for a position servo, the target IS the command. */
-    public double getPitchTarget()     { return pitchDeg; }
-    public double getDistanceToGoal()  { return distanceToGoal; }
+    public double getPitchDeg() {
+        return pitchDeg;
+    }
 
     // =====================================================
     // HELPERS
@@ -464,46 +332,79 @@ public class Turret {
         return best;
     }
 
-    /** Straight-line interpolation in a lookup table. Clamps past either end. */
-    private static double interpolate(double x, double[] xs, double[] ys) {
-        if (x <= xs[0]) return ys[0];
-        int last = xs.length - 1;
-        if (x >= xs[last]) return ys[last];
-        for (int i = 0; i < last; i++) {
-            if (x <= xs[i + 1]) {
-                double t = (x - xs[i]) / (xs[i + 1] - xs[i]);
-                return ys[i] + t * (ys[i + 1] - ys[i]);
-            }
-        }
-        return ys[last];
-    }
-
     /** Simple PD controller with static friction (kS) and a tolerance deadband. */
-    private static class PD {
+    public class PD {
         private double lastError = 0;
-        private boolean first = true;
         private final ElapsedTime timer = new ElapsedTime();
 
-        double calculate(double error, double kP, double kD, double kS,
-                         double maxPower, double tolerance) {
-            double dt = timer.seconds();
+        public void calculate(double error, double kP, double kD, double kS, double maxPower, double angleTolerance, LLResult curID) {
+
+            double deltaTime = timer.seconds();
             timer.reset();
 
-            double derivative = (first || dt <= 0) ? 0 : (error - lastError) / dt;
-            first = false;
-            lastError = error;
+                if (curID.getFiducialResults().isEmpty()) {
+                    rot1.setPower(0);
+                    rot2.setPower(0);
+                    lastError = 0;
+                    return;
+                }
 
-            if (Math.abs(error) <= tolerance) return 0;   // close enough: stop
+            error = priority2(curID.getFiducialResults()).getTargetXDegrees();
 
-            double power = kP * error + kD * derivative + kS * Math.signum(error);
-            return Range.clip(power, -maxPower, maxPower);
+            double pTerm = error * kP;
+
+            double dTerm = 0;
+            if (deltaTime > 0) {
+                dTerm = ((error - lastError) / deltaTime) * kD;
+            }
+
+            double sTerm = kS * Math.signum(error);
+
+            double power;
+
+            if (Math.abs(error) < angleTolerance) {
+                power = 0;
+            } else {
+                power = Range.clip(pTerm + dTerm + sTerm, -maxPower, maxPower);
+            }
+
+            rot1.setPower(power);
+            rot2.setPower(power);
         }
 
-        void reset() {
-            first = true;
+        public void reset() {
             timer.reset();
         }
+
+        public LLResultTypes.FiducialResult priority2(List<LLResultTypes.FiducialResult> results) {
+            int[] tags = {35, 36, 34, 37};
+
+            for (int tag : tags)
+            {
+                for (LLResultTypes.FiducialResult result : results) {
+                    if (result.getFiducialId() == tag) {
+                        return result;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /*void setKp(double newKp) {
+            kP = newKp;
+        }
+
+        public double getKp() {
+            return kP;
+        }
+
+        public void setKd(double newKd) {
+            kD = newKd;
+        }
+
+        public double getKd() {
+            return kD;
+        }*/
     }
-    public double pitchthingy()  {return pitch.getPosition();}
-
 }
