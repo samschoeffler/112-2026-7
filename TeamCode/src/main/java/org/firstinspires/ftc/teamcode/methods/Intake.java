@@ -12,13 +12,14 @@ public class Intake {
     // Placeholder servo positions (0.0 to 1.0); tune these on the robot.
     public static double rAMPdOWN = 0.1;
     public static double rAMPuP   = 0.35;
+    public static double RAMP_HOLD = 0.17;
 
     // ---------- HARDWARE ----------
     private final DcMotorEx intake;
     private final Servo ramp;
 
     // ---------- STATE ----------
-    private boolean rampUp = false;
+    private boolean rampUp = true;
 
     public Intake(HardwareMap hardwareMap) {
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
@@ -38,6 +39,10 @@ public class Intake {
     public void toggleRamp() {
         rampUp = !rampUp;
         ramp.setPosition(rampUp ? rAMPuP : rAMPdOWN);
+    }
+
+    public void holdBalls() {
+        ramp.setPosition(RAMP_HOLD);
     }
 
     public boolean isRampUp() { return rampUp; }

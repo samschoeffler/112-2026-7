@@ -41,6 +41,7 @@ public class Launcher {
     private boolean flywheelsOn = false;
     private boolean firing = false;
     private boolean gateOpen = false;
+    private boolean ejecting = false;
 
 
     public Launcher(HardwareMap hardwareMap) {
@@ -70,7 +71,13 @@ public class Launcher {
         firing = true;
         gateOpen = true;
         launchMech.setVelocity(MECH_POWER);
+    }
 
+    public void eject() {
+        firing = false;
+        gateOpen = true;
+        launchMech.setVelocity(-MECH_POWER);
+        ejecting = true;
     }
 
     //launch mech stop
@@ -100,6 +107,7 @@ public class Launcher {
     public boolean isFlywheelsOn() { return flywheelsOn; }
     public boolean isFiring()      { return firing; }
     public boolean isGateOpen()      { return gateOpen; }
+    public boolean isEjecting()      { return ejecting; }
     public double gatethingy()  {return gate.getPosition();}
 
 }

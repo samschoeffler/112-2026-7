@@ -49,9 +49,9 @@ public class MainTeleOp extends OpMode {
 
     //uses Booleans to keep last for toggling
     private boolean lastY2 = false;
-    private boolean lastA2 = false;
     private boolean lastLeftTrigger2 = false;
-    private boolean lastBothBumpers2 = false;
+    private boolean lastLeftBumper2 = false;
+    private boolean lastLB1 = false;
 
     @Override
     public void init() {
@@ -101,17 +101,15 @@ public class MainTeleOp extends OpMode {
         }
         lastY2 = gamepad2.y;
 
-        //if (gamepad2.a && !lastA2) {
-           // turret.goTo(90,);
-        //}
-        //lastA2 = gamepad2.y;
-
-
         // Right trigger: shoot
         if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
             launcher.fire();
         } else if(gamepad2.right_trigger <= TRIGGER_THRESHOLD)
             launcher.stopFire();
+
+        //eject balls from transfer
+        if(gamepad2.right_bumper)
+            launcher.eject();
 
         //update gate position
         launcher.gateUpdate();
@@ -119,7 +117,7 @@ public class MainTeleOp extends OpMode {
         //intake
         if (gamepad2.x || launcher.isFiring()) {
             intake.intake();
-        } else if (gamepad2.b) {
+        } else if (gamepad2.b || launcher.isEjecting()) {
             intake.outtake();
         } else {
             intake.stop();
@@ -132,15 +130,17 @@ public class MainTeleOp extends OpMode {
         }
         lastLeftTrigger2 = leftTrigger2;
 
+        if(gamepad2.left_bumper && !lastLeftBumper2) {
+            intake.holdBalls();
+        }
+
         //turret auto
-        if (gamepad2.left_bumper && gamepad2.right_bumper && !lastBothBumpers2) {
+        if (gamepad1.left_bumper && !lastLB1) {
             turret.toggleTurretAuto();
         }
-        lastBothBumpers2 = gamepad2.left_bumper && gamepad2.right_bumper;
+        lastLB1 = gamepad1.left_bumper;
 
-        if (turret.isTurretAuto()) {
-            turret.autoAim();      // placeholder until TurretAuto code is written
-        } else {
+        if (!turret.isTurretAuto()) {
             turret.manualControl(
                     gamepad2.dpad_left,
                     gamepad2.dpad_right,

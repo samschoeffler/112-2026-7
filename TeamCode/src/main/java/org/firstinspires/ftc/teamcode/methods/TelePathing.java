@@ -9,20 +9,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
 
-/**
- * TelePathing
- *
- * All the "path to a point" logic from TeleOpTest, moved out of the TeleOp.
- *
- * Gamepad 1 controls handled here:
- *   A          -> build a path from where the robot is now to the waypoint and follow it
- *   B          -> abort pathing and give control back to the driver
- *   Any stick  -> also aborts pathing (driver takes over)
- *   Y          -> save the robot's current pose as the new waypoint (only while not pathing)
- *
- * The TeleOp should only run manual driving when isPathing() is false.
- * update() MUST be called every loop.
- */
 public class TelePathing {
 
     private static final double STICK_DEADZONE = 0.1;
@@ -77,7 +63,6 @@ public class TelePathing {
         }
     }
 
-    /** Stop following the path and hand control back to the driver. */
     public void abort() {
         Scheduler.reset();         // clears the scheduled follow command
         pathing = false;
