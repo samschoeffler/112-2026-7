@@ -10,9 +10,9 @@ public class Intake {
     public static double INTAKE_VELOCITY = 5000.00;
 
     // Placeholder servo positions (0.0 to 1.0); tune these on the robot.
-    public static double rAMPdOWN = 0.4;
+    public static double rAMPdOWN = 0.45;
     public static double rAMPuP   = 0.1;
-    public static double RAMP_HOLD = 0.23;
+    public static double RAMP_HOLD = 0.4;
 
     // ---------- HARDWARE ----------
     private final DcMotorEx intake;
