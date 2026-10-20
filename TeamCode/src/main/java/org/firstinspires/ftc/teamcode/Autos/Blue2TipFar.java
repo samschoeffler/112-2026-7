@@ -11,6 +11,7 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
+import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Blue2TipFar")
@@ -50,4 +51,11 @@ public class Blue2TipFar extends OpMode {
         telemetry.addData("Follower Mode", follower.mode());
         telemetry.update();
     }
+
+    @Override
+    public void stop() {
+        OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
+        OpModeStorage.LastAllegiance = "BLUE";
+    }
+
 }

@@ -73,11 +73,14 @@ public class Launcher {
         launchMech.setVelocity(MECH_POWER);
     }
 
-    public void eject() {
-        firing = false;
-        gateOpen = true;
-        launchMech.setVelocity(-MECH_POWER);
-        ejecting = true;
+    public void eject(boolean thingy) {
+        if(thingy) {
+            firing = false;
+            gateOpen = true;
+            launchMech.setVelocity(-MECH_POWER);
+            ejecting = true;
+        } else
+            ejecting = false;
     }
 
     //launch mech stop
@@ -85,7 +88,6 @@ public class Launcher {
         launchMech.setVelocity(0.0);
         firing = false;
         gateOpen = false;
-
     }
 
     public void gateUpdate() {
@@ -108,6 +110,5 @@ public class Launcher {
     public boolean isFiring()      { return firing; }
     public boolean isGateOpen()      { return gateOpen; }
     public boolean isEjecting()      { return ejecting; }
-    public double gatethingy()  {return gate.getPosition();}
 
 }

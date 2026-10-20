@@ -56,6 +56,7 @@ public class Red2Tip extends OpMode {
     @Override
     public void stop() {
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
+        OpModeStorage.LastAllegiance = "RED";
     }
 
 }

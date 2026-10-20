@@ -14,6 +14,9 @@ import org.firstinspires.ftc.teamcode.methods.TelePathing;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
+import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.hardware.limelightvision.LLResult;
+
 /**
  * MainTeleOp
  *
@@ -46,30 +49,41 @@ public class MainTeleOp extends OpMode {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
+    private Limelight3A limelight;
+
+    // these values are placholders, once tuned we can use those values
+    private static final double kP = 0.06;
+    private static final double kD = 0.0;
 
     //uses Booleans to keep last for toggling
     private boolean lastY2 = false;
     private boolean lastLeftTrigger2 = false;
     private boolean lastLeftBumper2 = false;
     private boolean lastLB1 = false;
+    public String allegiance;
 
     @Override
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
         follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
+        allegiance = OpModeStorage.LastAllegiance;
 
         //hardware mapping for methods
         telePathing = new TelePathing(follower);
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.pipelineSwitch(0);
     }
 
     @Override
     public void start() {
         follower.manual();
         follower.update();
+        limelight.start();
+        turret.mainPD.reset();
     }
 
     @Override
@@ -108,8 +122,7 @@ public class MainTeleOp extends OpMode {
             launcher.stopFire();
 
         //eject balls from transfer
-        if(gamepad2.right_bumper)
-            launcher.eject();
+        launcher.eject(gamepad2.right_bumper);
 
         //update gate position
         launcher.gateUpdate();
@@ -133,14 +146,20 @@ public class MainTeleOp extends OpMode {
         if(gamepad2.left_bumper && !lastLeftBumper2) {
             intake.holdBalls();
         }
+        lastLeftBumper2 = gamepad2.left_bumper;
 
         //turret auto
         if (gamepad1.left_bumper && !lastLB1) {
             turret.toggleTurretAuto();
+            turret.toggleTurretAuto();
+            turret.mainPD.reset();
         }
         lastLB1 = gamepad1.left_bumper;
 
-        if (!turret.isTurretAuto()) {
+        if (turret.isTurretAuto()) {
+            LLResult result = limelight.getLatestResult();
+            turret.mainPD.calculate(0, kP, kD, 0, 1.0, 0.2, result);
+        } else{
             turret.manualControl(
                     gamepad2.dpad_left,
                     gamepad2.dpad_right,
@@ -150,6 +169,8 @@ public class MainTeleOp extends OpMode {
         }
 
         //telem
+        telemetry.addData("Allegiance: ", allegiance);
+        telemetry.addLine("==========================");
         telemetry.addData("Pathing", telePathing.isPathing());
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
@@ -162,6 +183,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
+        telemetry.addLine("I <3 Femboys");
         telemetry.update();
     }
 
@@ -169,7 +191,8 @@ public class MainTeleOp extends OpMode {
     public void stop() {
         OpModeStorage.autonomousEndPose = follower.pose();
         launcher.stopAll();
-        //intake.stop();
+        intake.stop();
         turret.stop();
+        limelight.stop();
     }
 }
