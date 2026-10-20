@@ -83,7 +83,6 @@ public class Launcher {
             ejecting = false;
     }
 
-    //launch mech stop
     public void stopFire() {
         launchMech.setVelocity(0.0);
         firing = false;

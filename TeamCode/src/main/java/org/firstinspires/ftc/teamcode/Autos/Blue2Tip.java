@@ -54,12 +54,22 @@ public class Blue2Tip extends OpMode {
             .setExecute(() -> {
                 intake.intake();
             })
-            .setDone(() -> true);
+            .setDone(() -> !intake.isRampUp() && intake.isIntakeOn());
+
+    Command intakeOff = Command.build()
+            .setStart(() -> intake.toggleRamp())
+            .setExecute(() -> {
+                intake.stop();
+            })
+            .setDone(() -> intake.isRampUp() && !intake.isIntakeOn());
 
     Command toggleWheel = Command.build()
             .setStart(() -> launcher.toggleOn())
-            .setDone(() -> true);
+            .setDone(() -> launcher.isFlywheelsOn());
 
+    Command shoot = Command.build()
+            .setStart(() -> launcher.fire())
+            .setDone(() -> launcher.isFiring());
 
     @Override
     public void init() {
