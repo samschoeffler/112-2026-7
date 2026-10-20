@@ -20,7 +20,7 @@ import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Blue2Tip")
+@Autonomous(name = "Blur2Tip")
 public class Blue2Tip extends OpMode {
 
     private Follower follower;
@@ -31,45 +31,58 @@ public class Blue2Tip extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                toggleWheel,
+                toggleWheelOn,
                 follow(follower, AutoPaths.Blue2Tip.path1()),
-                Commands.waitMs(2000),
-                toggleWheel,
-                parallel(
-                        follow(follower, AutoPaths.Blue2Tip.path2()),
-                        flowerCollect
-                ),
-                parallel(
-                        follow(follower, AutoPaths.Blue2Tip.path3()),
-                        toggleWheel
-                ),
-                Commands.waitMs(2000),
-                toggleWheel,
+                Commands.waitMs(2500),
+                toggleWheelOff,
+                rampDown,
+                follow(follower, AutoPaths.Blue2Tip.path2()),
+                intakeOn,
+                Commands.waitMs(4000),
+                follow(follower, AutoPaths.Blue2Tip.path3()),
+                intakeOff,
+                rampUp,
+                toggleWheelOn,
+                Commands.waitMs(2500),
+                toggleWheelOff,
                 follow(follower, AutoPaths.Blue2Tip.path4())
         );
     }
 
-    Command flowerCollect = Command.build()
-            .setStart(() -> intake.toggleRamp())
-            .setExecute(() -> {
-                intake.intake();
-            })
-            .setDone(() -> !intake.isRampUp() && intake.isIntakeOn());
+    Command rampDown = Command.build()
+            .setStart(() ->
+                    intake.toggleRamp()
+            )
+            .setDone(() -> !intake.isRampUp());
+
+    Command rampUp = Command.build()
+            .setStart(() ->
+                    intake.toggleRamp()
+            )
+            .setDone(() -> intake.isRampUp());
+
+    Command intakeOn = Command.build()
+            .setStart(() ->
+                    intake.intake()
+            )
+            .setDone(() -> intake.isIntakeOn());
 
     Command intakeOff = Command.build()
-            .setStart(() -> intake.toggleRamp())
-            .setExecute(() -> {
-                intake.stop();
-            })
-            .setDone(() -> intake.isRampUp() && !intake.isIntakeOn());
+            .setStart(() -> intake.stop())
+            .setDone(() -> !intake.isIntakeOn());
 
-    Command toggleWheel = Command.build()
+    Command toggleWheelOn = Command.build()
             .setStart(() -> launcher.toggleOn())
             .setDone(() -> launcher.isFlywheelsOn());
+
+    Command toggleWheelOff = Command.build()
+            .setStart(() -> launcher.toggleOn())
+            .setDone(() -> !launcher.isFlywheelsOn());
 
     Command shoot = Command.build()
             .setStart(() -> launcher.fire())
             .setDone(() -> launcher.isFiring());
+
 
     @Override
     public void init() {

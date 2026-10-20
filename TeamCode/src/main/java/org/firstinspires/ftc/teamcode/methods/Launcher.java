@@ -5,23 +5,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
-
-/**
- * Launcher
- *
- * Controls the two launch (flywheel) motors and the launch mechanism.
- *
- * Hardware (names must match the Robot Configuration on the Driver Hub):
- *   - Launch0    : DC motor, flywheel
- *   - Launch1    : DC motor, flywheel
- *   - LaunchMech : DC motor, pushes the game piece into the flywheels
- *
- * Behavior:
- *   - Flywheels are toggled on/off and run at LAUNCH_POWER.
- *   - Calling fire() runs LaunchMech at MECH_POWER for MECH_TIME_MS, then stops it.
- *     This uses a timer instead of sleep(), so the TeleOp loop never freezes.
- *   - update() MUST be called every loop so the timer can stop the mechanism.
- */
 public class Launcher {
 
     // ---------- TUNING ----------

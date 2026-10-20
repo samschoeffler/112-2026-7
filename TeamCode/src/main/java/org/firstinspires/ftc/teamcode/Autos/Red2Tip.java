@@ -38,7 +38,7 @@ public class Red2Tip extends OpMode {
                 rampDown,
                 follow(follower, AutoPaths.Red2Tip.path2()),
                 intakeOn,
-                Commands.waitMs(2000),
+                Commands.waitMs(4000),
                 follow(follower, AutoPaths.Red2Tip.path3()),
                 intakeOff,
                 rampUp,
