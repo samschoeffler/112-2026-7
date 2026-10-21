@@ -21,6 +21,8 @@ public class Intake {
     // ---------- STATE ----------
     private boolean rampUp = true;
     private boolean intakeOn = false;
+    private boolean holdBalls = false;
+
 
     public Intake(HardwareMap hardwareMap) {
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
@@ -49,13 +51,17 @@ public class Intake {
     public void toggleRamp() {
         rampUp = !rampUp;
         ramp.setPosition(rampUp ? rAMPuP : rAMPdOWN);
+        holdBalls = false;
     }
 
     public void holdBalls() {
         ramp.setPosition(RAMP_HOLD);
+        holdBalls = true;
+        rampUp = !rampUp;
     }
 
     public boolean isRampUp() { return rampUp; }
+    public boolean isHoldingBalls() { return holdBalls; }
     public double rampthingy() { return ramp.getPosition(); }
     public boolean isIntakeOn() { return intakeOn; }
 }
