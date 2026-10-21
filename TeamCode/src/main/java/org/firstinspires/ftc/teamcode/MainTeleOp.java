@@ -108,8 +108,7 @@ public class MainTeleOp extends OpMode {
             ManualDrive.driveOrHold(follower, powers);
         }
 
-        //Launcher logic:
-       //toggling launcher
+        //toggle launcher:
         if (gamepad2.y && !lastY2) {
             launcher.toggleOn();
         }

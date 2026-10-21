@@ -18,7 +18,7 @@ import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Blur2Tip")
+@Autonomous(name = "Red2Tip")
 public class Red2Tip extends OpMode {
 
     private Follower follower;
