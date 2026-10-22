@@ -38,13 +38,6 @@ public class Turret {
     public static double ROT_MIN_DEG = -180;
     public static double ROT_MAX_DEG = 180;
 
-    // PD + static friction. Start with only kP, raise until it wobbles, back off.
-    public static double ROT_KP = 0.02;
-    public static double ROT_KD = 0.0;
-    public static double ROT_KS = 0.05;          // minimum power to get the servos moving
-    public static double ROT_MAX_POWER = 0.8;
-    public static double ROT_TOLERANCE_DEG = 1.0;
-
     /** Manual D-pad rotation speed. */
     public static double ROTATE_POWER = 0.5;
 
@@ -93,6 +86,8 @@ public class Turret {
     // Rotation: measured angle + target
     private double rotationDeg = 0;
     private double rotationTargetDeg = 0;
+
+    private double goToTargErr = 0;
 
     // Pitch: the angle we last commanded (a position servo has no feedback)
     private double pitchDeg = PITCH_START_DEG;
@@ -244,8 +239,6 @@ public class Turret {
     private void runToAngles(double rotDeg, double pitchTarget, double extraRotPower) {
         // Rotation: PD controller
         rotationTargetDeg = chooseRotationTarget(rotDeg, rotationDeg);
-        //rotationPD.calculate(rotationTargetDeg - rotationDeg,ROT_KP, ROT_KD, ROT_KS, ROT_MAX_POWER, ROT_TOLERANCE_DEG, null);
-        //setRotationPower(Range.clip(rotPower + extraRotPower, -ROT_MAX_POWER, ROT_MAX_POWER));
 
         // Pitch: just tell the servo where to go
         setPitchDeg(pitchTarget);
@@ -255,7 +248,14 @@ public class Turret {
     public void goTo(double rotDeg, double pitchDeg) {
         readRotation();
         runToAngles(rotDeg, pitchDeg, 0);
+        goToTargErr = rotDeg- getPitchDeg() + pitchDeg - getPitchDeg();
     }
+
+    public boolean isAtPos() {
+        return goToTargErr <= 0.05 || goToTargErr >= -0.05;
+    }
+
+
 
     /** Robot turning speed in degrees/second, measured from heading changes. */
     private double robotTurnRateDegPerSec(double headingDeg) {

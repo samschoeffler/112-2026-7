@@ -22,44 +22,22 @@ public class AutoCommands {
     }
 
 
-    public Command shooterToggInst = instant(() -> launcher.fire());
+    public Command shooterTogg = instant(() -> launcher.fire());
 
-    public Command intakeToggInst = instant(() -> intake.intake());
+    public Command intakeTogg = instant(() -> intake.intake());
 
-    public Command shooterOn = Command.build()
-            .setStart(() -> launcher.fire())
-            .setDone(() -> launcher.isFiring());
+    public Command rampTogg = instant(() -> intake.toggleRamp());
 
-    public Command shooterOff = Command.build()
-            .setStart(() -> launcher.fire())
-            .setDone(() -> !launcher.isFiring());
+    public Command fWheelTogg = instant(() -> launcher.toggleOn());
 
-    public Command rampDown = Command.build()
-            .setStart(() -> intake.toggleRamp())
-            .setDone(() -> !intake.isRampUp());
+    public Command holdBalls = instant(() -> intake.holdBalls());
 
-    public Command rampUp = Command.build()
-            .setStart(() ->intake.toggleRamp())
-            .setDone(() -> intake.isRampUp());
+    public Command turretRunTo(double rotTarg, double pitchTarg) {
+        return Command.build()
+                .setExecute(() -> turret.goTo(rotTarg,pitchTarg))
+                .setDone(() ->turret.isAtPos());
+    }
 
-    public Command intakeOn = Command.build()
-            .setStart(() ->intake.intake())
-            .setDone(() -> intake.isIntakeOn());
 
-    public Command intakeOff = Command.build()
-            .setStart(() -> intake.stop())
-            .setDone(() -> !intake.isIntakeOn());
-
-    public Command toggleWheelOn = Command.build()
-            .setStart(() -> launcher.toggleOn())
-            .setDone(() -> launcher.isFlywheelsOn());
-
-    public Command toggleWheelOff = Command.build()
-            .setStart(() -> launcher.toggleOn())
-            .setDone(() -> !launcher.isFlywheelsOn());
-
-    public Command holdBalls = Command.build()
-            .setStart(() -> intake.holdBalls())
-            .setDone(() -> intake.isHoldingBalls());
 
 }

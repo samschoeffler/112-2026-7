@@ -26,25 +26,26 @@ public class Blue2Tip extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                autoCommand.toggleWheelOn,
+                autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Blue2Tip.path1()),
                 //autoCommand.shooterOn,
                 Commands.waitMs(2500),
                 //autoCommand.shooterOff,
-                autoCommand.toggleWheelOff,
-                autoCommand.rampDown,
+                autoCommand.fWheelTogg,
+                autoCommand.rampTogg,
                 follow(follower, AutoPaths.Blue2Tip.path2()),
-                autoCommand.intakeOn,
+                autoCommand.intakeTogg,
                 Commands.waitMs(3000),
-                autoCommand.toggleWheelOn,
-                autoCommand.intakeOff,
+                autoCommand.fWheelTogg,
+                autoCommand.intakeTogg,
                 follow(follower, AutoPaths.Blue2Tip.path3()),
                 //autoCommand.shooterOn,
                 Commands.waitMs(1000),
-                autoCommand.intakeOn,
+                autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 //autoCommand.shooterOff,
-                autoCommand.toggleWheelOff,
+                autoCommand.fWheelTogg,
+                autoCommand.intakeTogg,
                 follow(follower, AutoPaths.Blue2Tip.path4())
         );
     }
