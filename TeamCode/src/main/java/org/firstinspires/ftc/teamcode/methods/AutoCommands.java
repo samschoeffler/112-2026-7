@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode.methods;
 
+import static com.pedropathing.ivy.commands.Commands.instant;
+
 import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.methods.Intake;
@@ -17,6 +20,11 @@ public class AutoCommands {
         intake = new Intake(hardwareMap);
         turret = new Turret(hardwareMap);
     }
+
+
+    public Command shooterToggInst = instant(() -> launcher.fire());
+
+    public Command intakeToggInst = instant(() -> intake.intake());
 
     public Command shooterOn = Command.build()
             .setStart(() -> launcher.fire())
