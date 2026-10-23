@@ -6,10 +6,6 @@ import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.teamcode.methods.Intake;
-import org.firstinspires.ftc.teamcode.methods.Launcher;
-import org.firstinspires.ftc.teamcode.methods.Turret;
-
 public class AutoCommands {
     private Launcher launcher;
     private Intake intake;

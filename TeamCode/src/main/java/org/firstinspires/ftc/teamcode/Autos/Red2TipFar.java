@@ -3,13 +3,17 @@ package org.firstinspires.ftc.teamcode.Autos;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
+import com.pedropathing.ivy.commands.Commands;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
+import static com.pedropathing.ivy.groups.Groups.parallel;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 
+import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -18,12 +22,36 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class Red2TipFar extends OpMode {
 
     private Follower follower;
+    private AutoCommands autoCommand;
+
 
     private Command autoRoutine() {
         return sequential(
+                autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Red2TipFar.path1()),
-                follow(follower, AutoPaths.Red2TipFar.path2()),
-                follow(follower, AutoPaths.Red2TipFar.path3())
+                autoCommand.shooterTogg,
+                Commands.waitMs(2500),
+                parallel(
+                        autoCommand.shooterTogg,
+                        autoCommand.fWheelTogg,
+                        follow(follower, AutoPaths.Blue2ShotClose.path2()),
+                        autoCommand.intakeTogg,
+                        autoCommand.rampTogg
+                ),
+                Commands.waitMs(2500),
+                parallel(
+                        follow(follower, AutoPaths.Red2TipFar.path2()),
+                        autoCommand.intakeTogg,
+                        autoCommand.rampTogg,
+                        autoCommand.fWheelTogg
+                ),
+                autoCommand.shooterTogg,
+                Commands.waitMs(2500),
+                parallel(
+                        autoCommand.shooterTogg,
+                        autoCommand.fWheelTogg,
+                        follow(follower, AutoPaths.Red2TipFar.path3())
+                )
         );
     }
 
@@ -33,6 +61,8 @@ public class Red2TipFar extends OpMode {
         follower = Constants.create(hardwareMap);
         follower.setPose(AutoPaths.Red2TipFar.start);
         follower.update();
+        autoCommand = new AutoCommands(hardwareMap);
+
     }
 
     @Override
