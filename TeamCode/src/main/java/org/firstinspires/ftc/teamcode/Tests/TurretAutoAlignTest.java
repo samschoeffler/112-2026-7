@@ -111,7 +111,7 @@ public class TurretAutoAlignTest extends OpMode {
     }
 
     public LLResultTypes.FiducialResult priority(List<LLResultTypes.FiducialResult> results) {
-        int[] tags = {35, 36, 34, 37};
+        int[] tags = {31, 32, 30, 33};
 
         for (int tag : tags)
         {

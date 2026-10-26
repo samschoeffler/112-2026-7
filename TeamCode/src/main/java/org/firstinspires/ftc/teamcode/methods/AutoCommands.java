@@ -30,8 +30,7 @@ public class AutoCommands {
 
     public Command turretRunTo(double rotTarg, double pitchTarg) {
         return Command.build()
-                .setExecute(() -> turret.goTo(rotTarg,pitchTarg))
-                .setDone(() ->turret.isAtPos());
+                .setExecute(() -> turret.goTo(rotTarg,pitchTarg));
     }
 
 

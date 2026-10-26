@@ -25,7 +25,7 @@ public class Turret {
     public static double FEEDBACK_MAX_VOLTAGE = 3.3;
 
     /** Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0 */
-    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 5.0;
+    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 2.5;
 
     /** +1 or -1. See the SIGN RULE above. */
     public static double ROT_FEEDBACK_DIRECTION = 1.0;
@@ -35,8 +35,8 @@ public class Turret {
     // =====================================================
 
     /** Soft limits for rotation (turret degrees). Keeps wires from wrapping up. */
-    public static double ROT_MIN_DEG = -180;
-    public static double ROT_MAX_DEG = 180;
+    public static double ROT_MIN_DEG = -15;
+    public static double ROT_MAX_DEG = 295;
 
     /** Manual D-pad rotation speed. */
     public static double ROTATE_POWER = 0.5;
@@ -111,8 +111,8 @@ public class Turret {
         pitch = hardwareMap.get(Servo.class, "TurretPitch");
 
         // Directions are a guess. All three rotation servos MUST push the same way.
-        rot1.setDirection(DcMotorSimple.Direction.FORWARD);
-        rot2.setDirection(DcMotorSimple.Direction.FORWARD);
+        rot1.setDirection(DcMotorSimple.Direction.REVERSE);
+        rot2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // First Turret since the app started: call wherever the turret is now "zero".
         if (!rotationZeroed) {
@@ -377,7 +377,7 @@ public class Turret {
         }
 
         public LLResultTypes.FiducialResult priority2(List<LLResultTypes.FiducialResult> results) {
-            int[] tags = {35, 36, 34, 37};
+            int[] tags = {31, 32, 30, 33};
 
             for (int tag : tags)
             {
