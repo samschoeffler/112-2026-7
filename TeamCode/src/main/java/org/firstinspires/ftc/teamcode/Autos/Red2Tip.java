@@ -38,7 +38,6 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(3000),
                 autoCommand.fWheelTogg,
                 autoCommand.intakeTogg,
-                autoCommand.turretRunTo(269, 25),
                 follow(follower, AutoPaths.Red2Tip.path3()),
                // autoCommand.shooterOn,
                 Commands.waitMs(1000),

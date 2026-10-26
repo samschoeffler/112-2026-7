@@ -21,31 +21,43 @@ public class Turret {
     // TUNING: ROTATION SENSOR
     // =====================================================
 
-    /** Axon feedback voltage at 360 degrees. */
+    /**
+     * Axon feedback voltage at 360 degrees.
+     */
     public static double FEEDBACK_MAX_VOLTAGE = 3.3;
 
-    /** Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0 */
-    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 2.5;
+    /**
+     * Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0
+     */
+    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 2.8;
 
-    /** +1 or -1. See the SIGN RULE above. */
+    /**
+     * +1 or -1. See the SIGN RULE above.
+     */
     public static double ROT_FEEDBACK_DIRECTION = 1.0;
 
     // =====================================================
     // TUNING: ROTATION LIMITS + CONTROL
     // =====================================================
 
-    /** Soft limits for rotation (turret degrees). Keeps wires from wrapping up. */
-    public static double ROT_MIN_DEG = -15;
-    public static double ROT_MAX_DEG = 295;
+    /**
+     * Soft limits for rotation (turret degrees). Keeps wires from wrapping up.
+     */
+    public static double ROT_MIN_DEG = -140;
+    public static double ROT_MAX_DEG = 130;
 
-    /** Manual D-pad rotation speed. */
+    /**
+     * Manual D-pad rotation speed.
+     */
     public static double ROTATE_POWER = 0.5;
 
     // =====================================================
     // TUNING: PITCH (position servo)
     // =====================================================
 
-    /** Pitch range in degrees. */
+    /**
+     * Pitch range in degrees.
+     */
     public static double PITCH_MIN_DEG = 25;
     public static double PITCH_MAX_DEG = 60;
 
@@ -56,10 +68,14 @@ public class Turret {
      */
     public static double PITCH_POS_AT_MIN = 0.2644;
     public static double PITCH_POS_AT_MAX = 0.009;
-    /** Where pitch starts when the OpMode inits (degrees). */
+    /**
+     * Where pitch starts when the OpMode inits (degrees).
+     */
     public static double PITCH_START_DEG = 25;
 
-    /** Manual D-pad pitch speed, in degrees per second while held. */
+    /**
+     * Manual D-pad pitch speed, in degrees per second while held.
+     */
     public static double PITCH_MANUAL_DEG_PER_SEC = 10;
 
     // =====================================================
@@ -88,6 +104,11 @@ public class Turret {
     private double rotationTargetDeg = 0;
 
     private double goToTargErr = 0;
+    public static double ROT_KP = 0.02;          // power per turret degree of error
+    public static double ROT_KS = 0.05;          // minimum power to break static friction
+    public static double ROT_GOTO_MAX_POWER = 0.6;
+    public static double ROT_TOLERANCE_DEG = 2.0;
+
 
     // Pitch: the angle we last commanded (a position servo has no feedback)
     private double pitchDeg = PITCH_START_DEG;
@@ -105,8 +126,8 @@ public class Turret {
     public PD mainPD = new PD();
 
     public Turret(HardwareMap hardwareMap) {
-        rot1  = hardwareMap.get(CRServo.class, "TurretRot1");
-        rot2  = hardwareMap.get(CRServo.class, "TurretRot2");
+        rot1 = hardwareMap.get(CRServo.class, "TurretRot1");
+        rot2 = hardwareMap.get(CRServo.class, "TurretRot2");
         rotFeedback = hardwareMap.get(AnalogInput.class, "RotEnc");
         pitch = hardwareMap.get(Servo.class, "TurretPitch");
 
@@ -128,12 +149,16 @@ public class Turret {
     // ROTATION SENSOR
     // =====================================================
 
-    /** Raw Axon feedback converted to servo degrees (0-360). */
+    /**
+     * Raw Axon feedback converted to servo degrees (0-360).
+     */
     private double rotServoDegrees() {
         return rotFeedback.getVoltage() / FEEDBACK_MAX_VOLTAGE * 360.0;
     }
 
-    /** Read and unwrap the rotation feedback. Runs at the start of every control call. */
+    /**
+     * Read and unwrap the rotation feedback. Runs at the start of every control call.
+     */
     private void readRotation() {
         double raw = rotServoDegrees();
         double delta = wrap180(raw - lastRotServoDeg);   // jump since last loop, -180..180
@@ -158,7 +183,9 @@ public class Turret {
     // LOW-LEVEL OUTPUT
     // =====================================================
 
-    /** Spin all three rotation servos together. Positive = angle goes up. */
+    /**
+     * Spin all three rotation servos together. Positive = angle goes up.
+     */
     public void setRotationPower(double power) {
         if (power > 0 && rotationDeg >= ROT_MAX_DEG) {
             power = 0;
@@ -172,18 +199,24 @@ public class Turret {
         rot2.setPower(power);
     }
 
-    /** Stop the rotation servos. (The pitch servo holds its position on its own.) */
+    /**
+     * Stop the rotation servos. (The pitch servo holds its position on its own.)
+     */
     public void stopRotation() {
         rot1.setPower(0);
         rot2.setPower(0);
     }
 
-    /** Kept so existing code (MainTeleOp.stop()) still works. */
+    /**
+     * Kept so existing code (MainTeleOp.stop()) still works.
+     */
     public void stop() {
         stopRotation();
     }
 
-    /** Send the pitch servo to an angle (clamped to the pitch range). */
+    /**
+     * Send the pitch servo to an angle (clamped to the pitch range).
+     */
     public void setPitchDeg(double deg) {
         pitchDeg = Range.clip(deg, PITCH_MIN_DEG, PITCH_MAX_DEG);
 
@@ -199,26 +232,24 @@ public class Turret {
 
     /**
      * D-pad control. Call every loop while TurretAuto is off.
-     *   left / right -> rotate
-     *   up / down    -> nudge pitch up/down (smoothly, while held)
+     * left / right -> rotate
+     * up / down    -> nudge pitch up/down (smoothly, while held)
      */
     public void manualControl(boolean left, boolean right, boolean up, boolean down) {
         readRotation();
 
         if (left) {
             setRotationPower(-ROTATE_POWER);
-        }
-        else if (right) {
+        } else if (right) {
             setRotationPower(ROTATE_POWER);
-        }
-        else {
+        } else {
             setRotationPower(0);
         }
 
         // Move pitch at a steady speed, no matter how fast the loop runs
         double dt = manualTimer.seconds();
         manualTimer.reset();
-        if (up)        setPitchDeg(pitchDeg + PITCH_MANUAL_DEG_PER_SEC * dt);
+        if (up) setPitchDeg(pitchDeg + PITCH_MANUAL_DEG_PER_SEC * dt);
         else if (down) setPitchDeg(pitchDeg - PITCH_MANUAL_DEG_PER_SEC * dt);
 
         // Show current rotation as the "target" so telemetry makes sense
@@ -244,17 +275,37 @@ public class Turret {
         setPitchDeg(pitchTarget);
     }
 
-    /** Drive to a fixed position (e.g. a preset, or in Auto). Call every loop. */
+    /**
+     * Drive to a fixed position (e.g. a preset, or in Auto). Call every loop.
+     */
     public void goTo(double rotDeg, double pitchDeg) {
         readRotation();
-        runToAngles(rotDeg, pitchDeg, 0);
-        goToTargErr = rotDeg- getPitchDeg() + pitchDeg - getPitchDeg();
+
+        rotationTargetDeg = chooseRotationTarget(rotDeg, rotationDeg);
+        setPitchDeg(pitchDeg);
+
+        goToTargErr = rotationTargetDeg - rotationDeg;
+
+        if (Math.abs(goToTargErr) <= ROT_TOLERANCE_DEG) {
+            stopRotation();
+        } else {
+            double power = ROT_KP * goToTargErr + ROT_KS * Math.signum(goToTargErr);
+            power = Range.clip(power, -ROT_GOTO_MAX_POWER, ROT_GOTO_MAX_POWER);
+            setRotationPower(power);   // keeps the soft-limit check
+        }
+    }
+
+    public void goToClose() {
+        goTo(-34, 25);
+    }
+
+    public void goToFar(){
+        goTo(130,25);
     }
 
     public boolean isAtPos() {
-        return goToTargErr <= 0.05 || goToTargErr >= -0.05;
+        return Math.abs(goToTargErr) <= ROT_TOLERANCE_DEG;
     }
-
 
 
     /** Robot turning speed in degrees/second, measured from heading changes. */

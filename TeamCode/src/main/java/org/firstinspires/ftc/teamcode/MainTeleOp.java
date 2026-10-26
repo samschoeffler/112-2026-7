@@ -87,6 +87,10 @@ public class MainTeleOp extends OpMode {
     @Override
     public void loop() {
 
+        if(gamepad1.y) {
+            turret.goTo(110,25);
+        }
+
 
         DrivePowers powers = ManualDrive.fieldCentric(
                 gamepad1.left_stick_y,

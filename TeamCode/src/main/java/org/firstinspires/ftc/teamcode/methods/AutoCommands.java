@@ -10,6 +10,9 @@ public class AutoCommands {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
+    private  boolean far = false;
+    private double rotTargAu = 0;
+    private double pitchTargAu = 25;
 
     public AutoCommands(HardwareMap hardwareMap) {
         launcher = new Launcher(hardwareMap);
@@ -28,11 +31,19 @@ public class AutoCommands {
 
     public Command holdBalls = instant(() -> intake.holdBalls());
 
-    public Command turretRunTo(double rotTarg, double pitchTarg) {
-        return Command.build()
-                .setExecute(() -> turret.goTo(rotTarg,pitchTarg));
+    public Command turretTargTogg = instant(() -> far = !far);
+
+    public boolean farIs() {
+        return far;
     }
 
+    public double rotTargAuIs() {
+        return rotTargAu;
+    }
 
-
+    public double pitchTargAuIs(){
+        return pitchTargAu;
+    }
 }
+
+

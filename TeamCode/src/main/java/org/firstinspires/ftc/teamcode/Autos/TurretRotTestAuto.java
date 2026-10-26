@@ -15,7 +15,10 @@ import static com.pedropathing.ivy.groups.Groups.sequential;
 
 import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
+import org.firstinspires.ftc.teamcode.methods.Intake;
+import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
+import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "TurretRotTestAuto")
@@ -23,12 +26,19 @@ public class TurretRotTestAuto extends OpMode {
 
     private Follower follower;
     private AutoCommands autoCommand;
+    private Launcher launcher;
+    private Intake intake;
+    private Turret turret;
 
     private Command autoRoutine() {
         return sequential(
                 follow(follower, AutoPaths .Red2Tip.path1()),
-                autoCommand.turretRunTo(269, 25)
-        );
+                autoCommand.turretTargTogg,
+                Commands.waitMs(4000),
+                autoCommand.turretTargTogg,
+                Commands.waitMs(4000),
+                autoCommand.turretTargTogg
+                );
     }
 
     @Override
@@ -37,7 +47,10 @@ public class TurretRotTestAuto extends OpMode {
         follower = Constants.create(hardwareMap);
         follower.setPose(AutoPaths.Red2Tip.start);
         follower.update();
-        autoCommand = new AutoCommands(hardwareMap);
+        launcher    = new Launcher(hardwareMap);
+        intake      = new Intake(hardwareMap);
+        turret      = new Turret(hardwareMap);
+
     }
 
     @Override
@@ -47,14 +60,22 @@ public class TurretRotTestAuto extends OpMode {
 
     @Override
     public void loop() {
+        if(!autoCommand.farIs())
+            turret.goToClose();
+        else
+            turret.goToFar();
         follower.update();
         Scheduler.execute();
-
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
-        telemetry.addData("Follower Mode", follower.mode());
+        telemetry.addData("Turret Rot", turret.getRotationDeg());
+        telemetry.addData("Turret Pitch", turret.getPitchDeg());
+        telemetry.addLine("I <3 Femboys");
+        telemetry.addData("Turret targ rot", autoCommand.rotTargAuIs());
+        telemetry.addData("Turret targ pitch", autoCommand.pitchTargAuIs());
         telemetry.update();
+
     }
 
     @Override

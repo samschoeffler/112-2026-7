@@ -34,8 +34,7 @@ public class ParallelCommandsTest extends OpMode {
                 follow(follower, PathLibrary.path2()),
                 parallel(
                         follow(follower, PathLibrary.path3()),
-                        autoCommand.shooterTogg,
-                        autoCommand.turretRunTo(40, 30)
+                        autoCommand.shooterTogg
                 ),
                 Commands.waitMs(1000),
                 autoCommand.shooterTogg,
