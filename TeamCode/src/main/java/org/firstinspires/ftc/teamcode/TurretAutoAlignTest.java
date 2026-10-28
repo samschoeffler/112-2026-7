@@ -51,7 +51,7 @@ public class TurretAutoAlignTest extends OpMode {
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
-                -gamepad1.right_stick_x,
+                -gamepad1.right_stick_x * 0.25,
                 follower.pose().heading()
         );
 
@@ -95,10 +95,10 @@ public class TurretAutoAlignTest extends OpMode {
 
         LLResult result = limelight.getLatestResult();
 
-        turret.mainPD.calculate(0, kP, kD, 0, 1.0, 0.2, result);
+        turret.mainPD.calculate(0, kP, kD, 0, 1.0, gamepad1.right_trigger, result);
 
         if (!result.getFiducialResults().isEmpty()) {
-            telemetry.addData("ID", priority(result.getFiducialResults()).getFiducialId());
+            telemetry.addData("ID", priority(result.getFiducialResults()));
         } else {
             telemetry.addLine("No Tag Detected. Stopping turret motor.");
         }

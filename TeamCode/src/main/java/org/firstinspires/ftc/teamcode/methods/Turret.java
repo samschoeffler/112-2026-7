@@ -116,8 +116,8 @@ public class Turret {
         pitch = hardwareMap.get(Servo.class, "TurretPitch");
 
         // Directions are a guess. All three rotation servos MUST push the same way.
-        rot1.setDirection(DcMotorSimple.Direction.FORWARD);
-        rot2.setDirection(DcMotorSimple.Direction.FORWARD);
+        rot1.setDirection(DcMotorSimple.Direction.REVERSE);
+        rot2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // First Turret since the app started: call wherever the turret is now "zero".
         if (!rotationZeroed) {
@@ -342,14 +342,16 @@ public class Turret {
             double deltaTime = timer.seconds();
             timer.reset();
 
-                if (curID.getFiducialResults().isEmpty()) {
-                    rot1.setPower(0);
-                    rot2.setPower(0);
-                    lastError = 0;
-                    return;
-                }
+            if (curID.getFiducialResults().isEmpty()) {
+                rot1.setPower(0);
+                rot2.setPower(0);
+                lastError = 0;
+                return;
+            }
 
-            error = priority2(curID.getFiducialResults()).getTargetXDegrees();
+            LLResultTypes.FiducialResult thing = priority2(curID.getFiducialResults());
+
+            error = thing.getTargetXDegrees();
 
             double pTerm = error * kP;
 
