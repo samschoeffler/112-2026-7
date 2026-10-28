@@ -33,11 +33,10 @@ public class TurretRotTestAuto extends OpMode {
     private Command autoRoutine() {
         return sequential(
                 follow(follower, AutoPaths .Red2Tip.path1()),
-                autoCommand.turretTargTogg,
                 Commands.waitMs(4000),
-                autoCommand.turretTargTogg,
-                Commands.waitMs(4000),
-                autoCommand.turretTargTogg
+                follow(follower, AutoPaths .Red2Tip.path2()),
+                follow(follower, AutoPaths .Red2Tip.path3()),
+                Commands.waitMs(4000)
                 );
     }
 
@@ -60,10 +59,11 @@ public class TurretRotTestAuto extends OpMode {
 
     @Override
     public void loop() {
-        if(!autoCommand.farIs())
+        if(follower.pose().y() <= 71)
             turret.goToClose();
         else
             turret.goToFar();
+
         follower.update();
         Scheduler.execute();
         telemetry.addData("X", follower.pose().x());

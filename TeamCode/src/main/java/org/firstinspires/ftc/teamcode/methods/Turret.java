@@ -132,8 +132,8 @@ public class Turret {
         pitch = hardwareMap.get(Servo.class, "TurretPitch");
 
         // Directions are a guess. All three rotation servos MUST push the same way.
-        rot1.setDirection(DcMotorSimple.Direction.REVERSE);
-        rot2.setDirection(DcMotorSimple.Direction.REVERSE);
+       // rot1.setDirection(DcMotorSimple.Direction.REVERSE);
+        //rot2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // First Turret since the app started: call wherever the turret is now "zero".
         if (!rotationZeroed) {

@@ -16,6 +16,7 @@ import static com.pedropathing.ivy.groups.Groups.sequential;
 import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
+import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Red2ShotClose")
@@ -23,15 +24,16 @@ public class Red2ShotClose extends OpMode {
 
     private Follower follower;
     private AutoCommands autoCommand;
+    private Turret turret;
 
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Red2ShotClose.path1()),
-                //autoCommand.shooterOn,
+                autoCommand.shooterTogg,
                 Commands.waitMs(2500),
                 parallel(
-                        //autoCommand.shooterOff,
+                        autoCommand.shooterTogg,
                         autoCommand.fWheelTogg,
                         follow(follower, AutoPaths.Red2ShotClose.path2()),
                         autoCommand.intakeTogg
@@ -43,9 +45,9 @@ public class Red2ShotClose extends OpMode {
                         follow(follower, AutoPaths.Red2ShotClose.path3())
                 ),
                 Commands.waitMs(10000),
-                //autoCommand.shooterOn,
+                autoCommand.shooterTogg,
                 Commands.waitMs(4000),
-                //autoCommand.shooterOff,
+                autoCommand.shooterTogg,
                 autoCommand.fWheelTogg
         );
     }
@@ -57,6 +59,7 @@ public class Red2ShotClose extends OpMode {
         follower.setPose(AutoPaths.Red2ShotClose.start);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
+        turret = new Turret(hardwareMap);
     }
 
     @Override
@@ -68,6 +71,11 @@ public class Red2ShotClose extends OpMode {
     public void loop() {
         follower.update();
         Scheduler.execute();
+
+        if (follower.pose().y() <= 71)
+            turret.goToClose();
+        else
+            turret.goToFar();
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
@@ -81,5 +89,4 @@ public class Red2ShotClose extends OpMode {
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
     }
-
 }

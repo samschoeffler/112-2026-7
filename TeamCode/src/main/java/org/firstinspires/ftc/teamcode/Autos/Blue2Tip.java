@@ -16,21 +16,23 @@ import static com.pedropathing.ivy.groups.Groups.sequential;
 import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
+import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Blur2Tip")
+@Autonomous(name = "Blue2Tip")
 public class Blue2Tip extends OpMode {
 
     private Follower follower;
     private AutoCommands autoCommand;
+    private Turret turret;
 
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Blue2Tip.path1()),
-                //autoCommand.shooterOn,
+                autoCommand.shooterTogg,
                 Commands.waitMs(2500),
-                //autoCommand.shooterOff,
+                autoCommand.shooterTogg,
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Blue2Tip.path2()),
@@ -39,11 +41,11 @@ public class Blue2Tip extends OpMode {
                 autoCommand.fWheelTogg,
                 autoCommand.intakeTogg,
                 follow(follower, AutoPaths.Blue2Tip.path3()),
-                //autoCommand.shooterOn,
+                autoCommand.shooterTogg,
                 Commands.waitMs(1000),
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
-                //autoCommand.shooterOff,
+                autoCommand.shooterTogg,
                 autoCommand.fWheelTogg,
                 autoCommand.intakeTogg,
                 follow(follower, AutoPaths.Blue2Tip.path4())
@@ -57,6 +59,7 @@ public class Blue2Tip extends OpMode {
         follower.setPose(AutoPaths.Blue2Tip.start);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
+        turret = new Turret(hardwareMap);
     }
 
     @Override
@@ -68,6 +71,11 @@ public class Blue2Tip extends OpMode {
     public void loop() {
         follower.update();
         Scheduler.execute();
+
+        if (follower.pose().y() <= 71)
+            turret.goToFar();
+        else
+            turret.goToClose();
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
@@ -81,5 +89,5 @@ public class Blue2Tip extends OpMode {
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "BLUE";
     }
-
 }
+
