@@ -31,25 +31,32 @@ public class Red2Tip extends OpMode {
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Red2Tip.path1()),
                 autoCommand.shooterTogg,
-                Commands.waitMs(2500),
+                autoCommand.intakeTogg,
+                Commands.waitMs(5000),
                 autoCommand.stopShooter,
+                autoCommand.stopIntake,
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
+                autoCommand.rampDowner,
                 autoCommand.intakeTogg,
                 Commands.waitMs(3000),
+                autoCommand.rampTogg,
                 autoCommand.fWheelTogg,
                 autoCommand.stopIntake,
                 follow(follower, AutoPaths.Red2Tip.path3()),
                 autoCommand.shooterTogg,
-                Commands.waitMs(1000),
                 autoCommand.intakeTogg,
-                Commands.waitMs(4000),
+                autoCommand.rampDowner,
+                Commands.waitMs(10000),
+                autoCommand.rampTogg,
                 autoCommand.stopShooter,
                 autoCommand.fWheelTogg,
                 autoCommand.stopIntake,
-                follow(follower, AutoPaths.Red2Tip.path4())
-        );
+                follow(follower, AutoPaths.Red2Tip.path4()),
+                autoCommand.rampTogg,
+                autoCommand.rampTogg
+                );
     }
 
     @Override

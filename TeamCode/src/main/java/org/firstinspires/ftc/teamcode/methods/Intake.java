@@ -13,6 +13,8 @@ public class Intake {
     public static double rAMPdOWN = 0.25;
     public static double rAMPuP   = 0.62;
     public static double RAMP_HOLD = 0.3;
+    public static double RAMP_DOWNER = 0.23;
+
 
     // ---------- HARDWARE ----------
     private final DcMotorEx intake;
@@ -53,6 +55,12 @@ public class Intake {
         ramp.setPosition(rampUp ? rAMPuP : rAMPdOWN);
         holdBalls = false;
     }
+
+    public void rampDowner() {
+        ramp.setPosition(RAMP_DOWNER);
+        rampUp = !rampUp;
+    }
+
 
     public void holdBalls() {
         ramp.setPosition(RAMP_HOLD);
