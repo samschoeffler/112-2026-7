@@ -72,8 +72,6 @@ public class TurretRotTestAuto extends OpMode {
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
         telemetry.addLine("I <3 Femboys");
-        telemetry.addData("Turret targ rot", autoCommand.rotTargAuIs());
-        telemetry.addData("Turret targ pitch", autoCommand.pitchTargAuIs());
         telemetry.update();
 
     }

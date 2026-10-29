@@ -33,7 +33,7 @@ public class Blue2ShotClose extends OpMode {
                 autoCommand.shooterTogg,
                 Commands.waitMs(2500),
                 parallel(
-                        autoCommand.shooterTogg,
+                        autoCommand.stopShooter,
                         autoCommand.fWheelTogg,
                         follow(follower, AutoPaths.Blue2ShotClose.path2()),
                         autoCommand.intakeTogg
@@ -41,13 +41,13 @@ public class Blue2ShotClose extends OpMode {
                 Commands.waitMs(3000),
                 parallel(
                         autoCommand.fWheelTogg,
-                        autoCommand.intakeTogg,
+                        autoCommand.stopIntake,
                         follow(follower, AutoPaths.Blue2ShotClose.path3())
                 ),
                 Commands.waitMs(10000),
                 autoCommand.shooterTogg,
                 Commands.waitMs(4000),
-                autoCommand.shooterTogg,
+                autoCommand.stopShooter,
                 autoCommand.fWheelTogg
         );
     }
@@ -72,10 +72,11 @@ public class Blue2ShotClose extends OpMode {
         follower.update();
         Scheduler.execute();
 
-        if (follower.pose().y() <= 71)
+        /*if (follower.pose().y() <= 71)
             turret.goToFar();
         else
             turret.goToClose();
+         */
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());

@@ -33,7 +33,7 @@ public class Blue2TipFar extends OpMode {
                 autoCommand.shooterTogg,
                 Commands.waitMs(2500),
                 parallel(
-                        autoCommand.shooterTogg,
+                        autoCommand.stopShooter,
                         autoCommand.fWheelTogg,
                         autoCommand.intakeTogg,
                         autoCommand.rampTogg
@@ -41,14 +41,14 @@ public class Blue2TipFar extends OpMode {
                 Commands.waitMs(2500),
                 parallel(
                         follow(follower, AutoPaths.Blue2TipFar.path2()),
-                        autoCommand.intakeTogg,
                         autoCommand.rampTogg,
                         autoCommand.fWheelTogg
                 ),
                 autoCommand.shooterTogg,
                 Commands.waitMs(2500),
                 parallel(
-                        autoCommand.shooterTogg,
+                        autoCommand.stopShooter,
+                        autoCommand.stopIntake,
                         autoCommand.fWheelTogg,
                         follow(follower, AutoPaths.Blue2TipFar.path3())
                 )
@@ -75,10 +75,11 @@ public class Blue2TipFar extends OpMode {
         follower.update();
         Scheduler.execute();
 
-        if (follower.pose().y() <= 71)
+        /*if (follower.pose().y() <= 71)
             turret.goToFar();
         else
             turret.goToClose();
+         */
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
