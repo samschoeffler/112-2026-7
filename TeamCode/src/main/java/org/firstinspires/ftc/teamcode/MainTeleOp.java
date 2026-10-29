@@ -21,18 +21,17 @@ import com.qualcomm.hardware.limelightvision.LLResult;
  * MainTeleOp
  *
  * ===== GAMEPAD 1 (driver) =====
- *   Sticks -> field-centric drive
- *   A      -> path to waypoint
- *   B      -> abort pathing (moving a stick also aborts)
- *   Y      -> set waypoint to current position
+ *   Sticks      -> field-centric drive
+ *   Left Bumper -> toggle TurretAuto on/off (starts off)
  *
  * ===== GAMEPAD 2 (operator) =====
  *   Y              -> toggle launcher flywheels on/off
  *   X (hold)       -> intake
  *   B (hold)       -> outtake
- *   Right Trigger  -> shoot (holding fires again every 500 ms)
- *   Left Trigger   -> toggle gate
- *   Both Bumpers   -> toggle TurretAuto on/off (starts off)
+ *   Right Trigger  -> shoot (hold to keep firing; intake runs while firing)
+ *   Right Bumper   -> eject balls from transfer (intake reverses while ejecting)
+ *   Left Trigger   -> toggle ramp
+ *   Left Bumper    -> hold balls
  *   D-pad          -> turret control while TurretAuto is off
  *                       left/right = rotate, up/down = pitch
  *          thx claude <3
