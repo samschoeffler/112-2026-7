@@ -59,10 +59,6 @@ public class TurretRotTestAuto extends OpMode {
 
     @Override
     public void loop() {
-        if(follower.pose().y() <= 71)
-            turret.goToClose();
-        else
-            turret.goToFar();
 
         follower.update();
         Scheduler.execute();

@@ -4,6 +4,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.ivy.commands.Commands;
+import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -24,7 +25,11 @@ public class Red2Tip extends OpMode {
 
     private Follower follower;
     private AutoCommands autoCommand;
+    private Limelight3A limelight;
     private Turret turret;
+
+    private static final double kP = 0.06;
+    private static final double kD = 0.0;
 
     private Command autoRoutine() {
         return sequential(
@@ -67,17 +72,25 @@ public class Red2Tip extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
+
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        limelight.pipelineSwitch(0);
     }
 
     @Override
     public void start() {
         schedule(autoRoutine());
+        limelight.start();
+        turret.mainPD.reset();
     }
 
     @Override
     public void loop() {
         follower.update();
         Scheduler.execute();
+
+        //LLResult result = limelight.getLatestResult();
+        //turret.mainPD.calculate(0, kP, kD, 0, 1.0, 0.2, result);
 
         /*if (follower.pose().y() <= 71)
             turret.goToClose();
@@ -94,6 +107,8 @@ public class Red2Tip extends OpMode {
 
     @Override
     public void stop() {
+        turret.stop();
+        limelight.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
     }
