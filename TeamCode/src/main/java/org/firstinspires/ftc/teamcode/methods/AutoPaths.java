@@ -6,15 +6,10 @@ import com.pedropathing.math.Pose;
 import com.pedropathing.paths.Path;
 
 public final class AutoPaths {
-
     private AutoPaths() {}
-
     private static final PoseFactory poseFactory = PoseFactory.degrees();
 
-    // =========================
     // RED2TIP
-    // =========================
-
     public static final class Red2Tip {
 
         private Red2Tip() {}
@@ -25,25 +20,31 @@ public final class AutoPaths {
                 poseFactory.of(56, 8, 90);
 
         public static final Pose point1 =
-                poseFactory.of(56.3964, 33.2255, 90);
+                poseFactory.of(56, 36, 90);
 
         public static final Pose point2 =
-                poseFactory.of(12.0154, 47.3074, 180);
+                poseFactory.of(11, 47.25, 180);
 
         public static final Pose point2Control1 =
-                poseFactory.of(17.7423, 48.3711, 0);
+                poseFactory.of(24, 39.5, 0);
+
+        public static final Pose point2Control2 =
+                poseFactory.of(34.5, 50, 0);
 
         public static final Pose point3 =
-                poseFactory.of(57.5308, 109.6289, 270);
+                poseFactory.of(50, 133, 90);
 
         public static final Pose point3Control1 =
-                poseFactory.of(42.3116, 43.7654, 0);
+                poseFactory.of(58.5, 47, 0);
 
         public static final Pose point3Control2 =
-                poseFactory.of(14.3866, 121.7269, 0);
+                poseFactory.of(1, 120.5, 0);
+
+        public static final Pose point3Control3 =
+                poseFactory.of(52, 102, 0);
 
         public static final Pose point4 =
-                poseFactory.of(10.1296, 109.0707, 0);
+                poseFactory.of(47, 115, 90);
 
         // ---------- PATHS ----------
 
@@ -56,6 +57,7 @@ public final class AutoPaths {
             return Paths.curve(
                     point1,
                     point2Control1,
+                    point2Control2,
                     point2
             ).linear(point1, point2);
         }
@@ -65,6 +67,7 @@ public final class AutoPaths {
                     point2,
                     point3Control1,
                     point3Control2,
+                    point3Control3,
                     point3
             ).linear(point2, point3);
         }
@@ -73,13 +76,10 @@ public final class AutoPaths {
             return Paths.line(point3, point4)
                     .linear(point3, point4);
         }
+
     }
 
-    // =========================
-    // BLUE2TIP (Red2Tip rotated 180° around field center (70.75, 70.75))
-    //   x' = 141.5 - x,  y' = 141.5 - y,  heading' = heading + 180
-    // =========================
-
+// BLUE2TIP
     public static final class Blue2Tip {
 
         private Blue2Tip() {}
@@ -90,25 +90,31 @@ public final class AutoPaths {
                 poseFactory.of(85.5, 133.5, 270);
 
         public static final Pose point1 =
-                poseFactory.of(85.1036, 108.2745, 270);
+                poseFactory.of(85.5, 105.5, 270);
 
         public static final Pose point2 =
-                poseFactory.of(129.4846, 94.1926, 0);
+                poseFactory.of(130.5, 94.25, 0);
 
         public static final Pose point2Control1 =
-                poseFactory.of(123.7577, 93.1289, 180);
+                poseFactory.of(117.5, 102, 180);
+
+        public static final Pose point2Control2 =
+                poseFactory.of(107, 91.5, 180);
 
         public static final Pose point3 =
-                poseFactory.of(83.9692, 31.8711, 90);
+                poseFactory.of(91.5, 8.5, 270);
 
         public static final Pose point3Control1 =
-                poseFactory.of(99.1884, 97.7346, 180);
+                poseFactory.of(83, 94.5, 180);
 
         public static final Pose point3Control2 =
-                poseFactory.of(127.1134, 19.7731, 180);
+                poseFactory.of(140.5, 21, 180);
+
+        public static final Pose point3Control3 =
+                poseFactory.of(91, 59.5, 180);
 
         public static final Pose point4 =
-                poseFactory.of(131.3704, 32.4293, 180);
+                poseFactory.of(94.5, 26.5, 270);
 
         // ---------- PATHS ----------
 
@@ -121,6 +127,7 @@ public final class AutoPaths {
             return Paths.curve(
                     point1,
                     point2Control1,
+                    point2Control2,
                     point2
             ).linear(point1, point2);
         }
@@ -130,6 +137,7 @@ public final class AutoPaths {
                     point2,
                     point3Control1,
                     point3Control2,
+                    point3Control3,
                     point3
             ).linear(point2, point3);
         }
@@ -140,10 +148,7 @@ public final class AutoPaths {
         }
     }
 
-    // =========================
     // RED2TIPFAR
-    // =========================
-
     public static final class Red2TipFar {
 
         private Red2TipFar() {}
@@ -208,11 +213,7 @@ public final class AutoPaths {
         }
     }
 
-    // =========================
-    // BLUE2TIPFAR (Red2TipFar rotated 180° around field center (70.75, 70.75))
-    //   x' = 141.5 - x,  y' = 141.5 - y,  heading' = heading + 180
-    // =========================
-
+    // BLUE2TIPFAR
     public static final class Blue2TipFar {
 
         private Blue2TipFar() {}
@@ -265,6 +266,112 @@ public final class AutoPaths {
                     point2Control1,
                     point2
             ).linear(point2Start, point2);
+        }
+
+        public static Path path3() {
+            return Paths.curve(
+                    point2,
+                    point3Control1,
+                    point3Control2,
+                    point3
+            ).linear(point2, point3);
+        }
+    }
+
+    //RED2SHOTCLOSE
+    public static final class Red2ShotClose {
+
+        private Red2ShotClose() {}
+
+        // ---------- POSES ----------
+
+        public static final Pose start =
+                poseFactory.of(56, 8, 90);
+
+        public static final Pose point1 =
+                poseFactory.of(56, 23.9111, 90);
+
+        public static final Pose point2 =
+                poseFactory.of(11.3459, 10, 270);
+
+        public static final Pose point2Control1 =
+                poseFactory.of(15.2276, 47.5987, 0);
+
+        public static final Pose point3 =
+                poseFactory.of(54.9748, 24.5119, 90);
+
+        public static final Pose point3Control1 =
+                poseFactory.of(14.0063, 19.7605, 0);
+
+        public static final Pose point3Control2 =
+                poseFactory.of(14.8263, 47.5217, 0);
+
+        // ---------- PATHS ----------
+
+        public static Path path1() {
+            return Paths.line(start, point1)
+                    .linear(start, point1);
+        }
+
+        public static Path path2() {
+            return Paths.curve(
+                    point1,
+                    point2Control1,
+                    point2
+            ).linear(point1, point2);
+        }
+
+        public static Path path3() {
+            return Paths.curve(
+                    point2,
+                    point3Control1,
+                    point3Control2,
+                    point3
+            ).linear(point2, point3);
+        }
+    }
+
+    //BLUE2SHOTCLOSE
+    public static final class Blue2ShotClose {
+
+        private Blue2ShotClose() {}
+
+        // ---------- POSES ----------
+
+        public static final Pose start =
+                poseFactory.of(85.5, 133.5, 270);
+
+        public static final Pose point1 =
+                poseFactory.of(85.5, 117.5889, 270);
+
+        public static final Pose point2 =
+                poseFactory.of(130.1541, 131.5, 90);
+
+        public static final Pose point2Control1 =
+                poseFactory.of(126.2724, 93.9013, 180);
+
+        public static final Pose point3 =
+                poseFactory.of(86.5252, 116.9881, 270);
+
+        public static final Pose point3Control1 =
+                poseFactory.of(127.4937, 121.7395, 180);
+
+        public static final Pose point3Control2 =
+                poseFactory.of(126.6737, 93.9783, 180);
+
+        // ---------- PATHS ----------
+
+        public static Path path1() {
+            return Paths.line(start, point1)
+                    .linear(start, point1);
+        }
+
+        public static Path path2() {
+            return Paths.curve(
+                    point1,
+                    point2Control1,
+                    point2
+            ).linear(point1, point2);
         }
 
         public static Path path3() {

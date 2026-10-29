@@ -19,7 +19,7 @@ public class AprilTagTest extends OpMode {
     ElapsedTime timer = new ElapsedTime();
     TelemetryManager panelsTelemetry;
     Limelight3A limelight;
-    int[] hiveTags = {42, 43, 44, 45};
+    int[] hiveTags = {31, 32, 30, 33};
 
     @Override
     public void init() {

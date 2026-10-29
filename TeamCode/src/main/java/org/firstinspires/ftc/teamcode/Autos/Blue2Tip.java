@@ -13,9 +13,8 @@ import static com.pedropathing.ivy.groups.Groups.parallel;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 
+import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
-import org.firstinspires.ftc.teamcode.methods.Intake;
-import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -24,42 +23,34 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class Blue2Tip extends OpMode {
 
     private Follower follower;
-    private Launcher launcher;
-    private Intake intake;
+    private AutoCommands autoCommand;
     private Turret turret;
-    private Limelight3A limelight;
 
     private Command autoRoutine() {
         return sequential(
-                toggleWheel,
+                autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Blue2Tip.path1()),
-                Commands.waitMs(2000),
-                toggleWheel,
-                parallel(
-                        follow(follower, AutoPaths.Blue2Tip.path2()),
-                        flowerCollect
-                ),
-                parallel(
-                        follow(follower, AutoPaths.Blue2Tip.path3()),
-                        toggleWheel
-                ),
-                Commands.waitMs(2000),
-                toggleWheel,
+                autoCommand.shooterTogg,
+                Commands.waitMs(2500),
+                autoCommand.stopShooter,
+                autoCommand.fWheelTogg,
+                autoCommand.rampTogg,
+                follow(follower, AutoPaths.Blue2Tip.path2()),
+                autoCommand.intakeTogg,
+                Commands.waitMs(3000),
+                autoCommand.fWheelTogg,
+                autoCommand.stopIntake,
+                follow(follower, AutoPaths.Blue2Tip.path3()),
+                autoCommand.shooterTogg,
+                Commands.waitMs(1000),
+                autoCommand.intakeTogg,
+                Commands.waitMs(4000),
+                autoCommand.stopShooter,
+                autoCommand.fWheelTogg,
+                autoCommand.stopIntake,
                 follow(follower, AutoPaths.Blue2Tip.path4())
         );
     }
-
-    Command flowerCollect = Command.build()
-            .setStart(() -> intake.toggleRamp())
-            .setExecute(() -> {
-                intake.intake();
-            })
-            .setDone(() -> true);
-
-    Command toggleWheel = Command.build()
-            .setStart(() -> launcher.toggleOn())
-            .setDone(() -> true);
-
 
     @Override
     public void init() {
@@ -67,10 +58,8 @@ public class Blue2Tip extends OpMode {
         follower = Constants.create(hardwareMap);
         follower.setPose(AutoPaths.Blue2Tip.start);
         follower.update();
-        launcher = new Launcher(hardwareMap);
-        intake = new Intake(hardwareMap);
+        autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
     }
 
     @Override
@@ -82,6 +71,12 @@ public class Blue2Tip extends OpMode {
     public void loop() {
         follower.update();
         Scheduler.execute();
+
+        /*if (follower.pose().y() <= 71)
+            turret.goToFar();
+        else
+            turret.goToClose();
+         */
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
@@ -95,5 +90,5 @@ public class Blue2Tip extends OpMode {
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "BLUE";
     }
-
 }
+

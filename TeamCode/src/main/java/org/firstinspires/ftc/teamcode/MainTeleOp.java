@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
+
 import com.pedropathing.ivy.Scheduler;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -10,7 +11,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
-import org.firstinspires.ftc.teamcode.methods.TelePathing;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
@@ -21,18 +21,17 @@ import com.qualcomm.hardware.limelightvision.LLResult;
  * MainTeleOp
  *
  * ===== GAMEPAD 1 (driver) =====
- *   Sticks -> field-centric drive
- *   A      -> path to waypoint
- *   B      -> abort pathing (moving a stick also aborts)
- *   Y      -> set waypoint to current position
+ *   Sticks      -> field-centric drive
+ *   Left Bumper -> toggle TurretAuto on/off (starts off)
  *
  * ===== GAMEPAD 2 (operator) =====
  *   Y              -> toggle launcher flywheels on/off
  *   X (hold)       -> intake
  *   B (hold)       -> outtake
- *   Right Trigger  -> shoot (holding fires again every 500 ms)
- *   Left Trigger   -> toggle gate
- *   Both Bumpers   -> toggle TurretAuto on/off (starts off)
+ *   Right Trigger  -> shoot (hold to keep firing; intake runs while firing)
+ *   Right Bumper   -> eject balls from transfer (intake reverses while ejecting)
+ *   Left Trigger   -> toggle ramp
+ *   Left Bumper    -> hold balls
  *   D-pad          -> turret control while TurretAuto is off
  *                       left/right = rotate, up/down = pitch
  *          thx claude <3
@@ -45,7 +44,6 @@ public class MainTeleOp extends OpMode {
 
     //Methods
     private Follower follower;
-    private TelePathing telePathing;
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
@@ -70,7 +68,6 @@ public class MainTeleOp extends OpMode {
         allegiance = OpModeStorage.LastAllegiance;
 
         //hardware mapping for methods
-        telePathing = new TelePathing(follower);
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
@@ -88,28 +85,30 @@ public class MainTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        follower.update();
-        Scheduler.execute();
 
-        //path to a point method
-        telePathing.update(gamepad1);
+        DrivePowers powers = ManualDrive.fieldCentric(
+                gamepad1.left_stick_y,
+                gamepad1.left_stick_x,
+                -gamepad1.right_stick_x,
+                follower.pose().heading()
+        );
+        follower.manual(powers);
+        ManualDrive.driveOrHold(follower, powers);
+        follower.update();
+
+
 
         // Normal driving only when not pathing
-        if (!telePathing.isPathing()) {
+        /*if (!telePathing.isPathing()) {
             //normal FC driving
-            DrivePowers powers = ManualDrive.fieldCentric(
-                    gamepad1.left_stick_y,
-                    gamepad1.left_stick_x,
-                    -gamepad1.right_stick_x,
-                    follower.pose().heading()
-            );
 
             follower.manual(powers);
             ManualDrive.driveOrHold(follower, powers);
         }
+        */
 
-        //Launcher logic:
-       //toggling launcher
+
+        //toggle launcher:
         if (gamepad2.y && !lastY2) {
             launcher.toggleOn();
         }
@@ -123,9 +122,6 @@ public class MainTeleOp extends OpMode {
 
         //eject balls from transfer
         launcher.eject(gamepad2.right_bumper);
-
-        //update gate position
-        launcher.gateUpdate();
 
         //intake
         if (gamepad2.x || launcher.isFiring()) {
@@ -151,7 +147,6 @@ public class MainTeleOp extends OpMode {
         //turret auto
         if (gamepad1.left_bumper && !lastLB1) {
             turret.toggleTurretAuto();
-            turret.toggleTurretAuto();
             turret.mainPD.reset();
         }
         lastLB1 = gamepad1.left_bumper;
@@ -171,13 +166,11 @@ public class MainTeleOp extends OpMode {
         //telem
         telemetry.addData("Allegiance: ", allegiance);
         telemetry.addLine("==========================");
-        telemetry.addData("Pathing", telePathing.isPathing());
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Launcher On", launcher.isFlywheelsOn());
         telemetry.addData("Firing", launcher.isFiring());
-        telemetry.addData("Gate Open", launcher.isGateOpen());
         telemetry.addData("Ramp Down", !intake.isRampUp());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("Ramp Pos", intake.rampthingy());
