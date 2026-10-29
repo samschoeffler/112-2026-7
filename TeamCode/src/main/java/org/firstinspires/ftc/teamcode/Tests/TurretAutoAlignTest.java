@@ -1,49 +1,72 @@
-package org.firstinspires.ftc.teamcode.Tests;
+package org.firstinspires.ftc.teamcode;
 
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
 import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-import java.util.List;
-
-@TeleOp(name="Turret Auto Align")
+@TeleOp(name = "Turret Auto Align")
 public class TurretAutoAlignTest extends OpMode {
+
     private Limelight3A limelight;
     private Turret turret;
-
     private Follower follower;
 
     private double kP = 0.06;
-    private double kD = 0;
+    private double kD = 0.0;
+
+    private final ElapsedTime yawTimer = new ElapsedTime();
+    private boolean haveLastHeading = false;
+    private double lastHeadingRad = 0.0;
+    private double robotYawRateDegPerSec = 0.0;
+
+    /** Uses Pedro's updated heading to estimate actual chassis turn rate. */
+    private void updateRobotYawRate(double headingRad) {
+        double dt = yawTimer.seconds();
+        yawTimer.reset();
+
+        robotYawRateDegPerSec = 0.0;
+        if (haveLastHeading && Double.isFinite(headingRad)
+                && dt >= 0.005 && dt <= 0.25) {
+            double delta = headingRad - lastHeadingRad;
+            // Wrap the delta around +/- pi (no spike at 0/360 crossing).
+            delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+            robotYawRateDegPerSec = Math.toDegrees(delta / dt);
+        }
+
+        lastHeadingRad = headingRad;
+        haveLastHeading = Double.isFinite(headingRad);
+    }
 
     @Override
     public void init() {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         turret = new Turret(hardwareMap);
+        follower = Constants.create(hardwareMap);
 
-        telemetry.addLine("Initialized all mechanisms");
+        //Turret.ROBOT_YAW_FF_GAIN = gamepad1.bWasPressed() ? -Turret.ROBOT_YAW_FF_GAIN : Turret.ROBOT_YAW_FF_GAIN;
 
         limelight.pipelineSwitch(0);
-
-        follower = Constants.create(hardwareMap);
+        telemetry.addLine("Initialized all mechanisms");
+        telemetry.update();
     }
 
     @Override
     public void start() {
-
         limelight.start();
-
         turret.mainPD.reset();
-
+        haveLastHeading = false;
+        robotYawRateDegPerSec = 0.0;
+        yawTimer.reset();
         telemetry.addLine("Limelight Started");
+        telemetry.update();
     }
 
     @Override
@@ -51,77 +74,72 @@ public class TurretAutoAlignTest extends OpMode {
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
-                -gamepad1.right_stick_x,
+                -gamepad1.right_stick_x * 0.25,
                 follower.pose().heading()
         );
 
-        if (gamepad1.dpadUpWasPressed()) {
-            kP += 0.01;
-        }
-        if (gamepad1.dpadDownWasPressed()) {
-            kP -= 0.01;
-        }
-        if (gamepad1.dpadLeftWasPressed()) {
-            kP -= 0.001;
-        }
-        if (gamepad1.dpadRightWasPressed()) {
-            kP += 0.001;
-        }
+        // Update localization BEFORE calculating turret correction so the
+        // yaw feedforward uses the newest available measured heading.
+        follower.manual(powers);
+        follower.update();
+        updateRobotYawRate(follower.pose().heading());
 
-        if (gamepad1.yWasPressed()) {
-            kD += 0.01;
-        }
-        if (gamepad1.aWasPressed()) {
-            kD -= 0.01;
-        }
-        if (gamepad1.xWasPressed()) {
-            kD -= 0.001;
-        }
-        if (gamepad1.bWasPressed()) {
-            kD += 0.001;
-        }
+        // Existing controller gain adjustments.
+        if (gamepad1.dpadUpWasPressed())    kP += 0.01;
+        if (gamepad1.dpadDownWasPressed())  kP -= 0.01;
+        if (gamepad1.dpadLeftWasPressed())  kP -= 0.001;
+        if (gamepad1.dpadRightWasPressed()) kP += 0.001;
 
-        telemetry.addLine("Dpad Up = kP +0.01");
-        telemetry.addLine("Dpad Down = kP -0.01");
-        telemetry.addLine("Dpad Left = kP -0.001");
-        telemetry.addLine("Dpad Right = kP +0.001");
-        telemetry.addLine("Y = kD +0.01");
-        telemetry.addLine("A = kD -0.01");
-        telemetry.addLine("X = kD -0.001");
-        telemetry.addLine("B = kD +0.001");
-
-        telemetry.addData("kP", kP);
-        telemetry.addData("kD", kD);
+        if (gamepad1.yWasPressed()) Turret.ROBOT_YAW_FF_GAIN += 0.001;
+        if (gamepad1.aWasPressed()) Turret.ROBOT_YAW_FF_GAIN -= 0.001;
+        if (gamepad1.xWasPressed()) Turret.ROBOT_YAW_FF_GAIN -= 0.0001;
+        if (gamepad1.bWasPressed()) Turret.ROBOT_YAW_FF_GAIN += 0.0001;
 
         LLResult result = limelight.getLatestResult();
 
-        turret.mainPD.calculate(0, kP, kD, 0, 1.0, 0.2, result);
-
-        if (!result.getFiducialResults().isEmpty()) {
-            telemetry.addData("ID", priority(result.getFiducialResults()).getFiducialId());
-        } else {
-            telemetry.addLine("No Tag Detected. Stopping turret motor.");
-        }
-
-        follower.manual(
-                powers
+        // This now aligns to the geometric midpoint of tags 35 and 36,
+        // estimated using ANY visible subset of IDs 34, 35, 36, 37.
+        // Use a consistent 1-degree deadband instead of using the trigger
+        // value as the tolerance, which was zero when untouched.
+        turret.mainPD.calculate(
+                0.0,
+                kP,
+                kD,
+                Turret.ROT_KS,
+                Turret.ROT_MAX_POWER,
+                Turret.ROT_TOLERANCE_DEG,
+                result,
+                robotYawRateDegPerSec
         );
 
-        follower.update();
-    }
+        telemetry.addLine("Dpad Up/Down = kP +/-0.01");
+        telemetry.addLine("Dpad Right/Left = kP +/-0.001");
+        telemetry.addLine("Y/A = kD +/-0.01");
+        telemetry.addLine("B/X = kD +/-0.001");
+        telemetry.addData("kP", kP);
+        telemetry.addData("kD", kD);
+        telemetry.addData("Valid Cluster Tags", turret.mainPD.getTargetCount());
+        telemetry.addData("Midpoint Error (deg)", turret.mainPD.getTargetErrorDeg());
+        telemetry.addData("Raw Midpoint (deg)", turret.mainPD.getRawErrorDeg());
+        telemetry.addData("Per-Tag Spread (deg)", turret.mainPD.getEstimateSpreadDeg());
+        telemetry.addData("Robot Yaw Rate (deg/s)", robotYawRateDegPerSec);
+        telemetry.addData("Yaw Feedforward Power", turret.mainPD.getYawFeedforwardPower());
+        telemetry.addData("Turret Command Power", turret.mainPD.getCommandedPower());
+        telemetry.addData("Limelight Staleness (ms)",
+                result == null ? "no result" : result.getStaleness());
+        telemetry.addData("Pose Convention", Turret.LIMELIGHT_2027_NWU
+                ? "2027 NWU" : "Legacy optical");
 
-    public LLResultTypes.FiducialResult priority(List<LLResultTypes.FiducialResult> results) {
-        int[] tags = {31, 32, 30, 33};
-
-        for (int tag : tags)
-        {
-            for (LLResultTypes.FiducialResult result : results) {
-                if (result.getFiducialId() == tag) {
-                    return result;
-                }
-            }
+        if (turret.mainPD.getTargetCount() == 0) {
+            telemetry.addLine("No usable tag 34-37 pose; turret stopped.");
         }
 
-        return null;
+        telemetry.update();
+    }
+
+    @Override
+    public void stop() {
+        turret.stopRotation();
+        limelight.stop();
     }
 }

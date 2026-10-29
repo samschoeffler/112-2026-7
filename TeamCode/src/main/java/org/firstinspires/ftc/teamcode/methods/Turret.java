@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.methods;
 
-import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -11,7 +10,9 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
+
 
 import java.util.List;
 
@@ -21,43 +22,38 @@ public class Turret {
     // TUNING: ROTATION SENSOR
     // =====================================================
 
-    /**
-     * Axon feedback voltage at 360 degrees.
-     */
+    /** Axon feedback voltage at 360 degrees. */
     public static double FEEDBACK_MAX_VOLTAGE = 3.3;
 
-    /**
-     * Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0
-     */
-    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 2.8;
+    /** Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0 */
+    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 5.0;
 
-    /**
-     * +1 or -1. See the SIGN RULE above.
-     */
+    /** +1 or -1. See the SIGN RULE above. */
     public static double ROT_FEEDBACK_DIRECTION = 1.0;
 
     // =====================================================
     // TUNING: ROTATION LIMITS + CONTROL
     // =====================================================
 
-    /**
-     * Soft limits for rotation (turret degrees). Keeps wires from wrapping up.
-     */
-    public static double ROT_MIN_DEG = -140;
-    public static double ROT_MAX_DEG = 130;
+    /** Soft limits for rotation (turret degrees). Keeps wires from wrapping up. */
+    public static double ROT_MIN_DEG = -180;
+    public static double ROT_MAX_DEG = 180;
 
-    /**
-     * Manual D-pad rotation speed.
-     */
+    // PD + static friction. Start with only kP, raise until it wobbles, back off.
+    public static double ROT_KP = 0.02;
+    public static double ROT_KD = 0.0;
+    public static double ROT_KS = 0.05;          // minimum power to get the servos moving
+    public static double ROT_MAX_POWER = 0.8;
+    public static double ROT_TOLERANCE_DEG = 1.0;
+
+    /** Manual D-pad rotation speed. */
     public static double ROTATE_POWER = 0.5;
 
     // =====================================================
     // TUNING: PITCH (position servo)
     // =====================================================
 
-    /**
-     * Pitch range in degrees.
-     */
+    /** Pitch range in degrees. */
     public static double PITCH_MIN_DEG = 25;
     public static double PITCH_MAX_DEG = 60;
 
@@ -68,14 +64,10 @@ public class Turret {
      */
     public static double PITCH_POS_AT_MIN = 0.2644;
     public static double PITCH_POS_AT_MAX = 0.009;
-    /**
-     * Where pitch starts when the OpMode inits (degrees).
-     */
+    /** Where pitch starts when the OpMode inits (degrees). */
     public static double PITCH_START_DEG = 25;
 
-    /**
-     * Manual D-pad pitch speed, in degrees per second while held.
-     */
+    /** Manual D-pad pitch speed, in degrees per second while held. */
     public static double PITCH_MANUAL_DEG_PER_SEC = 10;
 
     // =====================================================
@@ -103,13 +95,6 @@ public class Turret {
     private double rotationDeg = 0;
     private double rotationTargetDeg = 0;
 
-    private double goToTargErr = 0;
-    public static double ROT_KP = 0.02;          // power per turret degree of error
-    public static double ROT_KS = 0.05;          // minimum power to break static friction
-    public static double ROT_GOTO_MAX_POWER = 0.6;
-    public static double ROT_TOLERANCE_DEG = 2.0;
-
-
     // Pitch: the angle we last commanded (a position servo has no feedback)
     private double pitchDeg = PITCH_START_DEG;
 
@@ -126,14 +111,14 @@ public class Turret {
     public PD mainPD = new PD();
 
     public Turret(HardwareMap hardwareMap) {
-        rot1 = hardwareMap.get(CRServo.class, "TurretRot1");
-        rot2 = hardwareMap.get(CRServo.class, "TurretRot2");
+        rot1  = hardwareMap.get(CRServo.class, "TurretRot1");
+        rot2  = hardwareMap.get(CRServo.class, "TurretRot2");
         rotFeedback = hardwareMap.get(AnalogInput.class, "RotEnc");
         pitch = hardwareMap.get(Servo.class, "TurretPitch");
 
         // Directions are a guess. All three rotation servos MUST push the same way.
-       // rot1.setDirection(DcMotorSimple.Direction.REVERSE);
-        //rot2.setDirection(DcMotorSimple.Direction.REVERSE);
+        rot1.setDirection(DcMotorSimple.Direction.REVERSE);
+        rot2.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // First Turret since the app started: call wherever the turret is now "zero".
         if (!rotationZeroed) {
@@ -149,16 +134,12 @@ public class Turret {
     // ROTATION SENSOR
     // =====================================================
 
-    /**
-     * Raw Axon feedback converted to servo degrees (0-360).
-     */
+    /** Raw Axon feedback converted to servo degrees (0-360). */
     private double rotServoDegrees() {
         return rotFeedback.getVoltage() / FEEDBACK_MAX_VOLTAGE * 360.0;
     }
 
-    /**
-     * Read and unwrap the rotation feedback. Runs at the start of every control call.
-     */
+    /** Read and unwrap the rotation feedback. Runs at the start of every control call. */
     private void readRotation() {
         double raw = rotServoDegrees();
         double delta = wrap180(raw - lastRotServoDeg);   // jump since last loop, -180..180
@@ -183,9 +164,7 @@ public class Turret {
     // LOW-LEVEL OUTPUT
     // =====================================================
 
-    /**
-     * Spin all three rotation servos together. Positive = angle goes up.
-     */
+    /** Spin all three rotation servos together. Positive = angle goes up. */
     public void setRotationPower(double power) {
         if (power > 0 && rotationDeg >= ROT_MAX_DEG) {
             power = 0;
@@ -199,24 +178,18 @@ public class Turret {
         rot2.setPower(power);
     }
 
-    /**
-     * Stop the rotation servos. (The pitch servo holds its position on its own.)
-     */
+    /** Stop the rotation servos. (The pitch servo holds its position on its own.) */
     public void stopRotation() {
         rot1.setPower(0);
         rot2.setPower(0);
     }
 
-    /**
-     * Kept so existing code (MainTeleOp.stop()) still works.
-     */
+    /** Kept so existing code (MainTeleOp.stop()) still works. */
     public void stop() {
         stopRotation();
     }
 
-    /**
-     * Send the pitch servo to an angle (clamped to the pitch range).
-     */
+    /** Send the pitch servo to an angle (clamped to the pitch range). */
     public void setPitchDeg(double deg) {
         pitchDeg = Range.clip(deg, PITCH_MIN_DEG, PITCH_MAX_DEG);
 
@@ -232,24 +205,26 @@ public class Turret {
 
     /**
      * D-pad control. Call every loop while TurretAuto is off.
-     * left / right -> rotate
-     * up / down    -> nudge pitch up/down (smoothly, while held)
+     *   left / right -> rotate
+     *   up / down    -> nudge pitch up/down (smoothly, while held)
      */
     public void manualControl(boolean left, boolean right, boolean up, boolean down) {
         readRotation();
 
         if (left) {
             setRotationPower(-ROTATE_POWER);
-        } else if (right) {
+        }
+        else if (right) {
             setRotationPower(ROTATE_POWER);
-        } else {
+        }
+        else {
             setRotationPower(0);
         }
 
         // Move pitch at a steady speed, no matter how fast the loop runs
         double dt = manualTimer.seconds();
         manualTimer.reset();
-        if (up) setPitchDeg(pitchDeg + PITCH_MANUAL_DEG_PER_SEC * dt);
+        if (up)        setPitchDeg(pitchDeg + PITCH_MANUAL_DEG_PER_SEC * dt);
         else if (down) setPitchDeg(pitchDeg - PITCH_MANUAL_DEG_PER_SEC * dt);
 
         // Show current rotation as the "target" so telemetry makes sense
@@ -270,43 +245,18 @@ public class Turret {
     private void runToAngles(double rotDeg, double pitchTarget, double extraRotPower) {
         // Rotation: PD controller
         rotationTargetDeg = chooseRotationTarget(rotDeg, rotationDeg);
+        //rotationPD.calculate(rotationTargetDeg - rotationDeg,ROT_KP, ROT_KD, ROT_KS, ROT_MAX_POWER, ROT_TOLERANCE_DEG, null);
+        //setRotationPower(Range.clip(rotPower + extraRotPower, -ROT_MAX_POWER, ROT_MAX_POWER));
 
         // Pitch: just tell the servo where to go
         setPitchDeg(pitchTarget);
     }
 
-    /**
-     * Drive to a fixed position (e.g. a preset, or in Auto). Call every loop.
-     */
+    /** Drive to a fixed position (e.g. a preset, or in Auto). Call every loop. */
     public void goTo(double rotDeg, double pitchDeg) {
         readRotation();
-
-        rotationTargetDeg = chooseRotationTarget(rotDeg, rotationDeg);
-        setPitchDeg(pitchDeg);
-
-        goToTargErr = rotationTargetDeg - rotationDeg;
-
-        if (Math.abs(goToTargErr) <= ROT_TOLERANCE_DEG) {
-            stopRotation();
-        } else {
-            double power = ROT_KP * goToTargErr + ROT_KS * Math.signum(goToTargErr);
-            power = Range.clip(power, -ROT_GOTO_MAX_POWER, ROT_GOTO_MAX_POWER);
-            setRotationPower(power);   // keeps the soft-limit check
-        }
+        runToAngles(rotDeg, pitchDeg, 0);
     }
-
-    public void goToClose() {
-        goTo(-34, 25);
-    }
-
-    public void goToFar(){
-        goTo(130,25);
-    }
-
-    public boolean isAtPos() {
-        return Math.abs(goToTargErr) <= ROT_TOLERANCE_DEG;
-    }
-
 
     /** Robot turning speed in degrees/second, measured from heading changes. */
     private double robotTurnRateDegPerSec(double headingDeg) {
@@ -383,79 +333,267 @@ public class Turret {
         return best;
     }
 
-    /** Simple PD controller with static friction (kS) and a tolerance deadband. */
+    // =====================================================
+    // BIOBUZZ FOUR-TAG MIDPOINT TARGETING
+    // =====================================================
+
+    /**
+     * False: Limelight legacy target space: X right, Y down, Z out of tag.
+     * True:  Limelight OS 2027.0 NWU target space: X out of tag, Y left, Z up.
+     * Match this to your Limelight firmware before enabling the turret.
+     */
+    public static boolean LIMELIGHT_2027_NWU = true;
+
+    /** Max accepted Limelight result age, milliseconds. */
+    public static long LIMELIGHT_MAX_STALENESS_MS = 250;
+
+    /**
+     * Exponential smoothing (0 < alpha <= 1). Larger = quicker response,
+     * smaller = more smoothing when the visible-tag set changes.
+     */
+    public static double MIDPOINT_SMOOTHING_ALPHA = 1.0;
+
+    /**
+     * Robot yaw-rate feedforward. Pedro heading is CCW-positive (degrees/sec).
+     * With a conventional positive-tx/rightward turret controller, positive
+     * chassis CCW rotation calls for positive turret power to counter-rotate.
+     * If the turret moves the WRONG way during a chassis turn, set this
+     * coefficient negative. Tune on the real robot starting at low turn speed.
+     */
+    public static double ROBOT_YAW_FF_GAIN = -0.0030; // power per deg/sec
+    public static double ROBOT_YAW_FF_MAX_POWER = 0.35;
+    public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 5.0;
+
+    /**
+     * Measured from the exact center between tags 35 and 36.
+     * These offsets come from FIRST's US-Letter production layout:
+     * sheet half width = 8.50 inches, tag center marks at 2.75, 6.50 inches
+     * on the left sheet, mirrored across the centerline on the right.
+     * Negative = left of midpoint when looking at the cluster.
+     */
+    private static double tagOffsetInches(int id) {
+        switch (id) {
+            case 34: return -5.75;
+            case 35: return -2.00;
+            case 36: return  2.00;
+            case 37: return  5.75;
+            default: return Double.NaN;
+        }
+    }
+
+    /** Normalize the difference of two bearing angles to [-180, 180]. */
+    private static double bearingDifferenceDegrees(double desired, double actual) {
+        return wrap180(desired - actual);
+    }
+
+    /**
+     * Converts ONE visible tag's position into a horizontal angular error
+     * to the SAME virtual midpoint between tags 35 and 36.
+     *
+     * We use the camera's position in tag coordinates. That avoids depending
+     * on a guessed interpretation of the tag's reported Euler rotations.
+     * The change in horizontal bearing from tag -> midpoint is added to the
+     * Limelight's measured tx, preserving its existing crosshair offset.
+     *
+     * Assumes the camera is upright on the turret and the tag cluster is a
+     * horizontal row. Perspective due to a severely tilted/rolled mounting
+     * should be measured and calibrated on the actual robot.
+     */
+    private static double midpointErrorFromTag(LLResultTypes.FiducialResult tag) {
+        if (tag == null) return Double.NaN;
+
+        double offsetInches = tagOffsetInches(tag.getFiducialId());
+        if (!Double.isFinite(offsetInches)) return Double.NaN;
+
+        Pose3D pose = tag.getCameraPoseTargetSpace();
+        if (pose == null || pose.getPosition() == null) return Double.NaN;
+
+        Position p = pose.getPosition();
+        if (p.unit == null) return Double.NaN;
+
+        double offsetMeters = offsetInches * 0.0254;
+        double tagBearing;
+        double midpointBearing;
+
+        if (LIMELIGHT_2027_NWU) {
+            // Target axes: X out of tag (positive toward camera), Y left.
+            double depth = p.unit.toMeters(p.x);
+            double cameraLeft = p.unit.toMeters(p.y);
+
+            if (!Double.isFinite(depth) || depth <= 0.05 ||
+                    !Double.isFinite(cameraLeft)) return Double.NaN;
+
+            // Sign convention: positive bearing is to the camera's right.
+            tagBearing = Math.toDegrees(Math.atan2(cameraLeft, depth));
+            midpointBearing = Math.toDegrees(
+                    Math.atan2(cameraLeft - offsetMeters, depth));
+        } else {
+            // Legacy target axes: X right (viewed from front), Z out of tag.
+            double cameraRight = p.unit.toMeters(p.x);
+            double depth = p.unit.toMeters(p.z);
+
+            if (!Double.isFinite(depth) || depth <= 0.05 ||
+                    !Double.isFinite(cameraRight)) return Double.NaN;
+
+            tagBearing = Math.toDegrees(Math.atan2(-cameraRight, depth));
+            midpointBearing = Math.toDegrees(
+                    Math.atan2(-cameraRight - offsetMeters, depth));
+        }
+
+        double measuredTx = tag.getTargetXDegrees();
+        if (!Double.isFinite(measuredTx)) return Double.NaN;
+
+        return measuredTx + bearingDifferenceDegrees(midpointBearing, tagBearing);
+    }
+
+    /** Original PD interface retained so other callers still compile. */
     public class PD {
         private double lastError = 0;
+        private boolean haveLastError = false;
+        private double targetErrorDeg = Double.NaN;
+        private double rawErrorDeg = Double.NaN;
+        private double estimateSpreadDeg = Double.NaN;
+        private int targetCount = 0;
+        private double yawFeedforwardPower = 0;
+        private double commandedPower = 0;
         private final ElapsedTime timer = new ElapsedTime();
 
-        public void calculate(double error, double kP, double kD, double kS, double maxPower, double angleTolerance, LLResult curID) {
+        // Keep the existing method signature for other OpModes.
+        public void calculate(double ignoredError, double kP, double kD,
+                              double kS, double maxPower, double angleTolerance,
+                              LLResult result) {
+            calculate(ignoredError, kP, kD, kS, maxPower,
+                    angleTolerance, result, 0.0);
+        }
 
+        /**
+         * Adds immediate chassis-turn counter-rotation to vision feedback.
+         * robotYawRateDegPerSec comes from Pedro pose heading changes, positive CCW.
+         */
+        public void calculate(double ignoredError, double kP, double kD,
+                              double kS, double maxPower, double angleTolerance,
+                              LLResult result, double robotYawRateDegPerSec) {
             double deltaTime = timer.seconds();
             timer.reset();
 
-                if (curID.getFiducialResults().isEmpty()) {
-                    rot1.setPower(0);
-                    rot2.setPower(0);
-                    lastError = 0;
-                    return;
-                }
+            // Keep encoder-derived limits current while using camera error.
+            readRotation();
 
-            error = priority2(curID.getFiducialResults()).getTargetXDegrees();
+            if (result == null || !result.isValid() ||
+                    result.getStaleness() > LIMELIGHT_MAX_STALENESS_MS) {
+                stopTracking();
+                return;
+            }
+
+            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+            if (tags == null || tags.isEmpty()) {
+                stopTracking();
+                return;
+            }
+
+            double sum = 0;
+            double low = Double.POSITIVE_INFINITY;
+            double high = Double.NEGATIVE_INFINITY;
+            targetCount = 0;
+
+            // Each detected tag independently predicts the *same* midpoint.
+            // Average those predictions, never the tag tx values themselves.
+            for (LLResultTypes.FiducialResult tag : tags) {
+                double estimate = midpointErrorFromTag(tag);
+                if (!Double.isFinite(estimate)) continue;
+
+                sum += estimate;
+                low = Math.min(low, estimate);
+                high = Math.max(high, estimate);
+                targetCount++;
+            }
+
+            if (targetCount < 3) {
+                stopTracking();
+                return;
+            }
+
+            rawErrorDeg = sum / targetCount;
+            estimateSpreadDeg = high - low;
+
+            // Smooth transitions as tags enter or leave the camera's view.
+            double alpha = Range.clip(MIDPOINT_SMOOTHING_ALPHA, 0.01, 1.0);
+            double error = haveLastError
+                    ? targetErrorDeg + alpha * (rawErrorDeg - targetErrorDeg)
+                    : rawErrorDeg;
+            targetErrorDeg = error;
 
             double pTerm = error * kP;
-
             double dTerm = 0;
-            if (deltaTime > 0) {
-                dTerm = ((error - lastError) / deltaTime) * kD;
+            if (haveLastError && deltaTime > 0) {
+                dTerm = (error - lastError) / deltaTime * kD;
             }
 
-            double sTerm = kS * Math.signum(error);
+            // Vision correction is zero within the aiming deadband, but
+            // feedforward still counter-rotates the turret while chassis turns.
+            double visionPower = (Math.abs(error) <= angleTolerance)
+                    ? 0.0 : (pTerm + dTerm);
 
-            double power;
-
-            if (Math.abs(error) < angleTolerance) {
-                power = 0;
-            } else {
-                power = Range.clip(pTerm + dTerm + sTerm, -maxPower, maxPower);
+            yawFeedforwardPower = 0.0;
+            if (Double.isFinite(robotYawRateDegPerSec) &&
+                    Math.abs(robotYawRateDegPerSec) >= ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC) {
+                yawFeedforwardPower = Range.clip(
+                        robotYawRateDegPerSec * ROBOT_YAW_FF_GAIN,
+                        -ROBOT_YAW_FF_MAX_POWER, ROBOT_YAW_FF_MAX_POWER);
             }
 
-            rot1.setPower(power);
-            rot2.setPower(power);
+            double request = visionPower + yawFeedforwardPower;
+            // Static friction compensation applies to BOTH feedback and
+            // feedforward; otherwise a small yaw request may not move servos.
+            if (Math.abs(request) > 1e-6) {
+                request += Math.abs(kS) * Math.signum(request);
+            }
+
+            commandedPower = Range.clip(request, -maxPower, maxPower);
+            setRotationPower(commandedPower); // Respect existing soft limits.
+            lastError = error;
+            haveLastError = true;
+        }
+
+        private void stopTracking() {
+            stopRotation();
+            lastError = 0;
+            haveLastError = false;
+            targetErrorDeg = Double.NaN;
+            rawErrorDeg = Double.NaN;
+            estimateSpreadDeg = Double.NaN;
+            targetCount = 0;
+            yawFeedforwardPower = 0;
+            commandedPower = 0;
         }
 
         public void reset() {
+            stopTracking();
             timer.reset();
         }
 
-        public LLResultTypes.FiducialResult priority2(List<LLResultTypes.FiducialResult> results) {
-            int[] tags = {31, 32, 30, 33};
-
-            for (int tag : tags)
-            {
-                for (LLResultTypes.FiducialResult result : results) {
-                    if (result.getFiducialId() == tag) {
-                        return result;
-                    }
-                }
-            }
-
-            return null;
+        public int getTargetCount() {
+            return targetCount;
         }
 
-        /*void setKp(double newKp) {
-            kP = newKp;
+        public double getTargetErrorDeg() {
+            return targetErrorDeg;
         }
 
-        public double getKp() {
-            return kP;
+        public double getRawErrorDeg() {
+            return rawErrorDeg;
         }
 
-        public void setKd(double newKd) {
-            kD = newKd;
+        public double getEstimateSpreadDeg() {
+            return estimateSpreadDeg;
         }
 
-        public double getKd() {
-            return kD;
-        }*/
+        public double getYawFeedforwardPower() {
+            return yawFeedforwardPower;
+        }
+
+        public double getCommandedPower() {
+            return commandedPower;
+        }
     }
 }
