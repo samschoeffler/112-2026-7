@@ -11,11 +11,13 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 public class LauncherTuning extends OpMode {
     private DcMotorEx launch1, transfer, intake;
 
-    private double highVelo = 700;
+    private double highVelo = 1400;
 
     private double lowVelo = 300;
 
     private double curTargetVelo = highVelo;
+
+    double pwr;
 
     private double F = 0;
     private double P = 0;
@@ -26,12 +28,13 @@ public class LauncherTuning extends OpMode {
 
     @Override
     public void init() {
-        //launch0 = hardwareMap.get(DcMotorEx.class, "Launch0");
         launch1 = hardwareMap.get(DcMotorEx.class, "Launch1");
         transfer = hardwareMap.get(DcMotorEx.class, "LaunchMech");
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
 
         launch1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        pwr = 0;
 
         PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
         launch1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficients);
@@ -40,8 +43,21 @@ public class LauncherTuning extends OpMode {
 
     @Override
     public void loop() {
-        transfer.setPower(1.0);
+        transfer.setPower(pwr);
         intake.setPower(1.0);
+
+        if (gamepad2.dpadUpWasPressed()) {
+            pwr += 0.1;
+        }
+        else if (gamepad2.dpadDownWasPressed()) {
+            pwr -= 0.1;
+        }
+        else if (gamepad2.dpadRightWasPressed()) {
+            curTargetVelo += 10;
+        }
+        else if (gamepad2.dpadLeftWasPressed()) {
+            curTargetVelo -= 10;
+        }
 
         if (gamepad1.yWasPressed()) {
             if (curTargetVelo == highVelo) {
@@ -73,7 +89,7 @@ public class LauncherTuning extends OpMode {
 
         launch1.setVelocity(curTargetVelo);
 
-        double curVelocity = launch1.getVelocity();
+        double curVelocity = -(launch1.getVelocity());
 
         double error = curTargetVelo - curVelocity;
 

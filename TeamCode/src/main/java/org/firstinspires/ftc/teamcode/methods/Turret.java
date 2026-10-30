@@ -10,9 +10,6 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
-
 
 import java.util.List;
 
@@ -26,7 +23,7 @@ public class Turret {
     public static double FEEDBACK_MAX_VOLTAGE = 3.3;
 
     /** Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0 */
-    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 5.0;
+    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 2.5;
 
     /** +1 or -1. See the SIGN RULE above. */
     public static double ROT_FEEDBACK_DIRECTION = 1.0;
@@ -95,6 +92,14 @@ public class Turret {
     private double rotationDeg = 0;
     private double rotationTargetDeg = 0;
 
+    // Encoder-based derivative: velocity is in turret degrees/second.
+    private double lastRotationDeg = 0.0;
+    private double turretAngularVelocityDegPerSec = 0.0;
+    private boolean haveLastRotation = false;
+    private final ElapsedTime velocityTimer = new ElapsedTime();
+    /** 0..1; lower values smooth encoder noise, 1 uses raw velocity. */
+    public static double VELOCITY_FILTER_ALPHA = 0.35;
+
     // Pitch: the angle we last commanded (a position servo has no feedback)
     private double pitchDeg = PITCH_START_DEG;
 
@@ -146,6 +151,19 @@ public class Turret {
         rotServoTotalDeg += delta;
         lastRotServoDeg = raw;
         rotationDeg = rotServoTotalDeg * ROT_FEEDBACK_DIRECTION / ROT_SERVO_DEG_PER_TURRET_DEG;
+
+        double dt = velocityTimer.seconds();
+        velocityTimer.reset();
+        if (haveLastRotation && dt >= 0.005 && dt <= 0.25) {
+            double rawVelocity = (rotationDeg - lastRotationDeg) / dt;
+            double alpha = Range.clip(VELOCITY_FILTER_ALPHA, 0.01, 1.0);
+            turretAngularVelocityDegPerSec +=
+                    alpha * (rawVelocity - turretAngularVelocityDegPerSec);
+        } else {
+            turretAngularVelocityDegPerSec = 0.0;
+        }
+        lastRotationDeg = rotationDeg;
+        haveLastRotation = true;
     }
 
     /**
@@ -156,6 +174,10 @@ public class Turret {
         lastRotServoDeg = rotServoDegrees();
         rotServoTotalDeg = 0;
         rotationDeg = 0;
+        lastRotationDeg = 0;
+        turretAngularVelocityDegPerSec = 0;
+        haveLastRotation = false;
+        velocityTimer.reset();
         rotationZeroed = true;
         //rotationPD.reset();
     }
@@ -176,6 +198,23 @@ public class Turret {
 
         rot1.setPower(power);
         rot2.setPower(power);
+    }
+
+    /**
+     * Update the global software rotation bounds during DISARMED calibration only.
+     * Caller must ensure both endpoints are within the mechanism's verified safe travel.
+     * This method does not detect hard stops and must not be used as a homing routine.
+     */
+    public boolean configureRotationLimits(double minDeg, double maxDeg) {
+        if (!Double.isFinite(minDeg) || !Double.isFinite(maxDeg)
+                || minDeg < -360.0 || maxDeg > 360.0
+                || minDeg >= maxDeg - 10.0) {
+            return false;
+        }
+        stopRotation();
+        ROT_MIN_DEG = minDeg;
+        ROT_MAX_DEG = maxDeg;
+        return true;
     }
 
     /** Stop the rotation servos. (The pitch servo holds its position on its own.) */
@@ -289,6 +328,9 @@ public class Turret {
     public double getRotationDeg() {
         return rotationDeg;
     }
+    public double getTurretAngularVelocityDegPerSec() {
+        return turretAngularVelocityDegPerSec;
+    }
     public double getRotationTarget() {
         return rotationTargetDeg;
     }
@@ -334,266 +376,268 @@ public class Turret {
     }
 
     // =====================================================
-    // BIOBUZZ FOUR-TAG MIDPOINT TARGETING
+    // APRILTAG DIRECT TARGETING: IDs 34, 35, 36, 37
     // =====================================================
-
-    /**
-     * False: Limelight legacy target space: X right, Y down, Z out of tag.
-     * True:  Limelight OS 2027.0 NWU target space: X out of tag, Y left, Z up.
-     * Match this to your Limelight firmware before enabling the turret.
-     */
-    public static boolean LIMELIGHT_2027_NWU = true;
 
     /** Max accepted Limelight result age, milliseconds. */
     public static long LIMELIGHT_MAX_STALENESS_MS = 250;
 
     /**
-     * Exponential smoothing (0 < alpha <= 1). Larger = quicker response,
-     * smaller = more smoothing when the visible-tag set changes.
+     * Smooths the horizontal angle error (0 < alpha <= 1).
+     * Use 1.0 for immediate response, or lower to reduce jitter.
      */
-    public static double MIDPOINT_SMOOTHING_ALPHA = 1.0;
+    public static double TARGET_SMOOTHING_ALPHA = 1.0;
 
     /**
-     * Robot yaw-rate feedforward. Pedro heading is CCW-positive (degrees/sec).
-     * With a conventional positive-tx/rightward turret controller, positive
-     * chassis CCW rotation calls for positive turret power to counter-rotate.
-     * If the turret moves the WRONG way during a chassis turn, set this
-     * coefficient negative. Tune on the real robot starting at low turn speed.
+     * Robot yaw-rate feedforward. Verify direction on the physical turret.
      */
-    public static double ROBOT_YAW_FF_GAIN = -0.0030; // power per deg/sec
+    public static double ROBOT_YAW_FF_GAIN = -0.0030;
     public static double ROBOT_YAW_FF_MAX_POWER = 0.35;
     public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 5.0;
 
-    /**
-     * Measured from the exact center between tags 35 and 36.
-     * These offsets come from FIRST's US-Letter production layout:
-     * sheet half width = 8.50 inches, tag center marks at 2.75, 6.50 inches
-     * on the left sheet, mirrored across the centerline on the right.
-     * Negative = left of midpoint when looking at the cluster.
-     */
-    private static double tagOffsetInches(int id) {
-        switch (id) {
-            case 34: return -5.75;
-            case 35: return -2.00;
-            case 36: return  2.00;
-            case 37: return  5.75;
-            default: return Double.NaN;
-        }
-    }
+    /** Maximum duration to counter-rotate without a valid tag after a visual lock. */
+    public static double TAG_LOSS_HOLD_SECONDS = 2.0;
 
-    /** Normalize the difference of two bearing angles to [-180, 180]. */
-    private static double bearingDifferenceDegrees(double desired, double actual) {
-        return wrap180(desired - actual);
-    }
+    // Hybrid stabilization. Heading is accumulated continuously (not wrapped at 360).
+    public static double HEADING_HOLD_KP = 0.020;
+    public static double HEADING_HOLD_KD = 0.0;
+    public static double JOYSTICK_PREDICT_GAIN = 0.0; // Begin at zero; tune sign at low speed.
+    public static double JOYSTICK_PREDICT_MAX_POWER = 0.20;
+    public static double FAST_TURN_STICK_THRESHOLD = 0.10;
+    public static double HOLD_SETTLE_TOLERANCE_DEG = 3.0;
+    // A positive camera tx is assumed to demand positive turret angle correction.
+    // Verify sign against working vision control on robot.
+    public static double VISION_TO_TURRET_SIGN = 1.0;
 
     /**
-     * Converts ONE visible tag's position into a horizontal angular error
-     * to the SAME virtual midpoint between tags 35 and 36.
-     *
-     * We use the camera's position in tag coordinates. That avoids depending
-     * on a guessed interpretation of the tag's reported Euler rotations.
-     * The change in horizontal bearing from tag -> midpoint is added to the
-     * Limelight's measured tx, preserving its existing crosshair offset.
-     *
-     * Assumes the camera is upright on the turret and the tag cluster is a
-     * horizontal row. Perspective due to a severely tilted/rolled mounting
-     * should be measured and calibrated on the actual robot.
+     * Degrees of desired turret ENCODER rotation per degree of robot heading change.
+     * The former implementation implicitly used -1.0. On this robot, field-hold
+     * visibly diverged in both turn directions, so reverse that mapping to +1.0.
+     * Do NOT change ROT_FEEDBACK_DIRECTION: that would alter working vision damping.
      */
-    private static double midpointErrorFromTag(LLResultTypes.FiducialResult tag) {
-        if (tag == null) return Double.NaN;
+    public static double HEADING_COMPENSATION_SIGN = 1.0;
 
-        double offsetInches = tagOffsetInches(tag.getFiducialId());
-        if (!Double.isFinite(offsetInches)) return Double.NaN;
-
-        Pose3D pose = tag.getCameraPoseTargetSpace();
-        if (pose == null || pose.getPosition() == null) return Double.NaN;
-
-        Position p = pose.getPosition();
-        if (p.unit == null) return Double.NaN;
-
-        double offsetMeters = offsetInches * 0.0254;
-        double tagBearing;
-        double midpointBearing;
-
-        if (LIMELIGHT_2027_NWU) {
-            // Target axes: X out of tag (positive toward camera), Y left.
-            double depth = p.unit.toMeters(p.x);
-            double cameraLeft = p.unit.toMeters(p.y);
-
-            if (!Double.isFinite(depth) || depth <= 0.05 ||
-                    !Double.isFinite(cameraLeft)) return Double.NaN;
-
-            // Sign convention: positive bearing is to the camera's right.
-            tagBearing = Math.toDegrees(Math.atan2(cameraLeft, depth));
-            midpointBearing = Math.toDegrees(
-                    Math.atan2(cameraLeft - offsetMeters, depth));
-        } else {
-            // Legacy target axes: X right (viewed from front), Z out of tag.
-            double cameraRight = p.unit.toMeters(p.x);
-            double depth = p.unit.toMeters(p.z);
-
-            if (!Double.isFinite(depth) || depth <= 0.05 ||
-                    !Double.isFinite(cameraRight)) return Double.NaN;
-
-            tagBearing = Math.toDegrees(Math.atan2(-cameraRight, depth));
-            midpointBearing = Math.toDegrees(
-                    Math.atan2(-cameraRight - offsetMeters, depth));
-        }
-
-        double measuredTx = tag.getTargetXDegrees();
-        if (!Double.isFinite(measuredTx)) return Double.NaN;
-
-        return measuredTx + bearingDifferenceDegrees(midpointBearing, tagBearing);
+    private static boolean isTargetTag(int id) {
+        return id == 34 || id == 35 || id == 36 || id == 37;
     }
 
-    /** Original PD interface retained so other callers still compile. */
+    /** Maintains the existing API, with an optional hybrid heading-hold path. */
     public class PD {
-        private double lastError = 0;
-        private boolean haveLastError = false;
         private double targetErrorDeg = Double.NaN;
         private double rawErrorDeg = Double.NaN;
         private double estimateSpreadDeg = Double.NaN;
         private int targetCount = 0;
+        private int trackedTagId = -1;
         private double yawFeedforwardPower = 0;
+        private double predictivePower = 0;
         private double commandedPower = 0;
-        private final ElapsedTime timer = new ElapsedTime();
+        private boolean haveFilteredError = false;
+        private boolean acquiredVisualLock = false;
+        private boolean haveHeading = false;
+        private double previousHeadingRad = 0;
+        private double unwrappedRobotHeadingDeg = 0;
+        private double desiredFieldHeadingDeg = Double.NaN;
+        private double headingHoldErrorDeg = Double.NaN;
+        private boolean catchingUp = false;
+        private String trackingMode = "NO TARGET";
+        private final ElapsedTime sinceLastVisual = new ElapsedTime();
+        /** Disarmed test positioning; caller must ensure tracking is disabled. */
+        public void calibrationJog(double power) {
+            readRotation();
+            setRotationPower(Range.clip(power, -0.12, 0.12));
+        }
 
-        // Keep the existing method signature for other OpModes.
         public void calculate(double ignoredError, double kP, double kD,
                               double kS, double maxPower, double angleTolerance,
                               LLResult result) {
-            calculate(ignoredError, kP, kD, kS, maxPower,
-                    angleTolerance, result, 0.0);
+            calculate(ignoredError, kP, kD, kS, maxPower, angleTolerance,
+                    result, 0.0);
         }
 
-        /**
-         * Adds immediate chassis-turn counter-rotation to vision feedback.
-         * robotYawRateDegPerSec comes from Pedro pose heading changes, positive CCW.
-         */
+        // Legacy signature, for callers that have no heading input. Vision still works.
         public void calculate(double ignoredError, double kP, double kD,
                               double kS, double maxPower, double angleTolerance,
                               LLResult result, double robotYawRateDegPerSec) {
-            double deltaTime = timer.seconds();
-            timer.reset();
+            calculateHybrid(kP, kD, kS, maxPower, angleTolerance, result,
+                    robotYawRateDegPerSec, Double.NaN, 0.0);
+        }
 
-            // Keep encoder-derived limits current while using camera error.
+        /**
+         * @param robotHeadingRad Pedro heading in radians (CCW-positive)
+         * @param turnStick signed chassis rotation command after the drive multiplier,
+         *                  in the same convention as ManualDrive's turn input.
+         */
+        // No radar/search-sweep behavior: without valid vision, only bounded heading hold.
+        public void calculateHybrid(double kP, double kD, double kS,
+                                    double maxPower, double angleTolerance,
+                                    LLResult result, double robotYawRateDegPerSec,
+                                    double robotHeadingRad, double turnStick) {
             readRotation();
-
-            if (result == null || !result.isValid() ||
-                    result.getStaleness() > LIMELIGHT_MAX_STALENESS_MS) {
-                stopTracking();
-                return;
+            if (Double.isFinite(robotHeadingRad)) {
+                if (haveHeading) {
+                    double delta = Math.atan2(Math.sin(robotHeadingRad - previousHeadingRad),
+                            Math.cos(robotHeadingRad - previousHeadingRad));
+                    unwrappedRobotHeadingDeg += Math.toDegrees(delta);
+                } else {
+                    unwrappedRobotHeadingDeg = Math.toDegrees(robotHeadingRad);
+                    haveHeading = true;
+                }
+                previousHeadingRad = robotHeadingRad;
             }
 
-            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
-            if (tags == null || tags.isEmpty()) {
-                stopTracking();
-                return;
-            }
-
-            double sum = 0;
-            double low = Double.POSITIVE_INFINITY;
-            double high = Double.NEGATIVE_INFINITY;
+            double bestTx = Double.NaN;
+            int bestId = -1;
             targetCount = 0;
-
-            // Each detected tag independently predicts the *same* midpoint.
-            // Average those predictions, never the tag tx values themselves.
-            for (LLResultTypes.FiducialResult tag : tags) {
-                double estimate = midpointErrorFromTag(tag);
-                if (!Double.isFinite(estimate)) continue;
-
-                sum += estimate;
-                low = Math.min(low, estimate);
-                high = Math.max(high, estimate);
-                targetCount++;
+            if (result != null && result.isValid()
+                    && result.getStaleness() <= LIMELIGHT_MAX_STALENESS_MS) {
+                List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+                if (tags != null) {
+                    for (LLResultTypes.FiducialResult tag : tags) {
+                        if (tag == null || !isTargetTag(tag.getFiducialId())) continue;
+                        double tx = tag.getTargetXDegrees();
+                        if (!Double.isFinite(tx)) continue;
+                        targetCount++;
+                        if (!Double.isFinite(bestTx) || Math.abs(tx) < Math.abs(bestTx)) {
+                            bestTx = tx;
+                            bestId = tag.getFiducialId();
+                        }
+                    }
+                }
             }
 
-            if (targetCount < 3) {
+            final boolean visual = bestId != -1;
+            double visionPower = 0;
+            if (visual) {
+                if (trackedTagId != bestId) haveFilteredError = false;
+                trackedTagId = bestId;
+                rawErrorDeg = bestTx;
+                estimateSpreadDeg = Double.NaN;
+                double alpha = Range.clip(TARGET_SMOOTHING_ALPHA, 0.01, 1.0);
+                targetErrorDeg = haveFilteredError
+                        ? targetErrorDeg + alpha * (bestTx - targetErrorDeg) : bestTx;
+                haveFilteredError = true;
+                acquiredVisualLock = true;
+                sinceLastVisual.reset();
+
+                double dTerm = -Math.max(0, kD) * turretAngularVelocityDegPerSec;
+                visionPower = Math.abs(targetErrorDeg) <= angleTolerance
+                        ? dTerm : targetErrorDeg * kP + dTerm;
+                if (Math.abs(targetErrorDeg) <= angleTolerance
+                        && Math.abs(turretAngularVelocityDegPerSec) < 2.0) visionPower = 0;
+
+                // Re-anchor the remembered world bearing while vision is present.
+                // Camera error is measured relative to the turret's current direction.
+                if (haveHeading) {
+                    // Store the target in encoder-relative heading coordinates.
+                    // Desired encoder angle on a later heading change dH is
+                    // current encoder angle + HEADING_COMPENSATION_SIGN * dH.
+                    desiredFieldHeadingDeg = rotationDeg
+                            - HEADING_COMPENSATION_SIGN * unwrappedRobotHeadingDeg
+                            + VISION_TO_TURRET_SIGN * targetErrorDeg;
+                }
+            } else {
+                trackedTagId = -1;
+                rawErrorDeg = Double.NaN;
+                targetErrorDeg = Double.NaN;
+                haveFilteredError = false;
+            }
+
+            boolean fastTurn = haveHeading && Math.abs(turnStick)
+                    >= Range.clip(FAST_TURN_STICK_THRESHOLD, 0.0, 1.0);
+            boolean withinRecoveryTime = acquiredVisualLock
+                    && sinceLastVisual.seconds() <= Range.clip(TAG_LOSS_HOLD_SECONDS, 0.0, 5.0)
+                    ;
+            boolean canHold = haveHeading && Double.isFinite(desiredFieldHeadingDeg)
+                    && (visual || withinRecoveryTime);
+
+            headingHoldErrorDeg = canHold
+                    ? (desiredFieldHeadingDeg
+                       + HEADING_COMPENSATION_SIGN * unwrappedRobotHeadingDeg)
+                      - rotationDeg
+                    : Double.NaN;
+            // Once a fast turn starts, hold until the turret has caught up, even
+            // if the stick returns to center. Do not switch solely on stick release.
+            if (fastTurn && canHold) catchingUp = true;
+            if (catchingUp && (!canHold || (visual
+                    && Math.abs(headingHoldErrorDeg) <= HOLD_SETTLE_TOLERANCE_DEG
+                    && !fastTurn))) catchingUp = false;
+
+            if (!visual && !canHold) {
                 stopTracking();
                 return;
             }
 
-            rawErrorDeg = sum / targetCount;
-            estimateSpreadDeg = high - low;
-
-            // Smooth transitions as tags enter or leave the camera's view.
-            double alpha = Range.clip(MIDPOINT_SMOOTHING_ALPHA, 0.01, 1.0);
-            double error = haveLastError
-                    ? targetErrorDeg + alpha * (rawErrorDeg - targetErrorDeg)
-                    : rawErrorDeg;
-            targetErrorDeg = error;
-
-            double pTerm = error * kP;
-            double dTerm = 0;
-            if (haveLastError && deltaTime > 0) {
-                dTerm = (error - lastError) / deltaTime * kD;
+            double feedback;
+            if (canHold && (catchingUp || !visual)) {
+                // Heading hold acts on POSITION error, so it keeps catching up
+                // after the chassis stops and yaw-rate FF falls to zero.
+                feedback = HEADING_HOLD_KP * headingHoldErrorDeg
+                        - HEADING_HOLD_KD * turretAngularVelocityDegPerSec;
+                if (Math.abs(headingHoldErrorDeg) <= HOLD_SETTLE_TOLERANCE_DEG
+                        && Math.abs(turretAngularVelocityDegPerSec) < 2.0) feedback = 0;
+                trackingMode = visual ? "VISION + HOLD" : "HEADING HOLD";
+            } else {
+                feedback = visionPower;
+                trackingMode = "VISION";
             }
 
-            // Vision correction is zero within the aiming deadband, but
-            // feedforward still counter-rotates the turret while chassis turns.
-            double visionPower = (Math.abs(error) <= angleTolerance)
-                    ? 0.0 : (pTerm + dTerm);
-
-            yawFeedforwardPower = 0.0;
-            if (Double.isFinite(robotYawRateDegPerSec) &&
-                    Math.abs(robotYawRateDegPerSec) >= ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC) {
+            yawFeedforwardPower = 0;
+            if (Double.isFinite(robotYawRateDegPerSec)
+                    && Math.abs(robotYawRateDegPerSec) >= ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC) {
                 yawFeedforwardPower = Range.clip(
                         robotYawRateDegPerSec * ROBOT_YAW_FF_GAIN,
                         -ROBOT_YAW_FF_MAX_POWER, ROBOT_YAW_FF_MAX_POWER);
             }
-
-            double request = visionPower + yawFeedforwardPower;
-            // Static friction compensation applies to BOTH feedback and
-            // feedforward; otherwise a small yaw request may not move servos.
-            if (Math.abs(request) > 1e-6) {
-                request += Math.abs(kS) * Math.signum(request);
+            predictivePower = 0;
+            if (canHold && fastTurn) {
+                predictivePower = Range.clip(turnStick * JOYSTICK_PREDICT_GAIN,
+                        -JOYSTICK_PREDICT_MAX_POWER, JOYSTICK_PREDICT_MAX_POWER);
             }
-
-            commandedPower = Range.clip(request, -maxPower, maxPower);
-            setRotationPower(commandedPower); // Respect existing soft limits.
-            lastError = error;
-            haveLastError = true;
+            double request = feedback + yawFeedforwardPower + predictivePower;
+            if (Math.abs(request) > 1e-6) request += Math.abs(kS) * Math.signum(request);
+            commandedPower = Range.clip(request, -Math.abs(maxPower), Math.abs(maxPower));
+            setRotationPower(commandedPower); // Respects hard software angle limits.
         }
 
         private void stopTracking() {
             stopRotation();
-            lastError = 0;
-            haveLastError = false;
             targetErrorDeg = Double.NaN;
             rawErrorDeg = Double.NaN;
             estimateSpreadDeg = Double.NaN;
             targetCount = 0;
+            trackedTagId = -1;
             yawFeedforwardPower = 0;
+            predictivePower = 0;
             commandedPower = 0;
+            acquiredVisualLock = false;
+            haveFilteredError = false;
+            catchingUp = false;
+            desiredFieldHeadingDeg = Double.NaN;
+            headingHoldErrorDeg = Double.NaN;
+            trackingMode = "NO TARGET";
         }
 
         public void reset() {
             stopTracking();
-            timer.reset();
+            haveHeading = false;
+            sinceLastVisual.reset();
         }
 
-        public int getTargetCount() {
-            return targetCount;
+        public String getTrackingMode() { return trackingMode; }
+        public double getSecondsSinceVisual() {
+            return acquiredVisualLock ? sinceLastVisual.seconds() : Double.NaN;
         }
-
-        public double getTargetErrorDeg() {
-            return targetErrorDeg;
+        public int getTrackedTagId() { return trackedTagId; }
+        public int getTargetCount() { return targetCount; }
+        public double getTargetErrorDeg() { return targetErrorDeg; }
+        public double getRawErrorDeg() { return rawErrorDeg; }
+        public double getEstimateSpreadDeg() { return estimateSpreadDeg; }
+        public double getYawFeedforwardPower() { return yawFeedforwardPower; }
+        public double getPredictivePower() { return predictivePower; }
+        public double getHeadingHoldErrorDeg() { return headingHoldErrorDeg; }
+        public double getHeadingHoldTargetDeg() {
+            return Double.isFinite(headingHoldErrorDeg) ? rotationDeg + headingHoldErrorDeg : Double.NaN;
         }
-
-        public double getRawErrorDeg() {
-            return rawErrorDeg;
-        }
-
-        public double getEstimateSpreadDeg() {
-            return estimateSpreadDeg;
-        }
-
-        public double getYawFeedforwardPower() {
-            return yawFeedforwardPower;
-        }
-
-        public double getCommandedPower() {
-            return commandedPower;
-        }
+        public double getCommandedPower() { return commandedPower; }
     }
 }

@@ -14,10 +14,10 @@ public class TestMotors extends OpMode {
 
     @Override
     public void init() {
-        launch0 = hardwareMap.get(DcMotorEx.class, "rr");
-        launch1 = hardwareMap.get(DcMotorEx.class, "lr");
-        transfer0 = hardwareMap.get(DcMotorEx.class, "rf");
-        transfer1 = hardwareMap.get(DcMotorEx.class, "lf");
+        launch0 = hardwareMap.get(DcMotorEx.class, "Launch0");
+        launch1 = hardwareMap.get(DcMotorEx.class, "Launch1");
+        transfer0 = hardwareMap.get(DcMotorEx.class, "Intake");
+        transfer1 = hardwareMap.get(DcMotorEx.class, "LaunchMech");
 
         launch1.setDirection(DcMotorSimple.Direction.REVERSE);
 

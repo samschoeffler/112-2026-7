@@ -8,13 +8,17 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
 import static com.pedropathing.ivy.groups.Groups.parallel;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
@@ -24,24 +28,49 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 @Autonomous(name = "Red2Tip")
 public class Red2Tip extends OpMode {
 
+    private IMU imu;
+    private boolean imuAvailable = false;
+    private String yawSource = "Pedro";
+
     private Follower follower;
     private AutoCommands autoCommand;
     private Limelight3A limelight;
     private Turret turret;
     private Servo led;
 
-    private static final double kP = 0.06;
-    private static final double kD = 0.0;
+    private double kP = 0.02;
+    private double kD = 0.0;
+
+    private final ElapsedTime yawTimer = new ElapsedTime();
+    private boolean haveLastHeading = false;
+
+
+    private double lastHeadingRad = 0;
+    private double robotYawRateDegPerSec = 0;
+
+    private void updateRobotYawRate(double headingRad) {
+        double dt = yawTimer.seconds();
+        yawTimer.reset();
+        robotYawRateDegPerSec = 0;
+        if (haveLastHeading && Double.isFinite(headingRad) && dt >= 0.005 && dt <= 0.25) {
+            double delta = headingRad - lastHeadingRad;
+            delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+            robotYawRateDegPerSec = Math.toDegrees(delta / dt);
+        }
+        lastHeadingRad = headingRad;
+        haveLastHeading = Double.isFinite(headingRad);
+    }
 
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Red2Tip.path1()),
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
+                follow(follower, AutoPaths.Red2Tip.path1()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
@@ -73,7 +102,18 @@ public class Red2Tip extends OpMode {
         led = hardwareMap.get(Servo.class, "led");
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+
+        try {
+            imu = hardwareMap.get(IMU.class, "imu");
+            imuAvailable = true;
+        } catch (RuntimeException ex) {
+            imuAvailable = false; // Pedro heading-rate fallback
+        }
+        limelight.pipelineSwitch(1);
+        // Conservative starting limits; adjustable with gamepad2 during this OpMode.
+
+        Turret.ROT_MAX_POWER = 0.2;
+        Turret.ROBOT_YAW_FF_GAIN = 0;
     }
 
     @Override
@@ -81,6 +121,8 @@ public class Red2Tip extends OpMode {
         schedule(autoRoutine());
         limelight.start();
         turret.mainPD.reset();
+        haveLastHeading = false;
+        yawTimer.reset();
     }
 
     @Override
@@ -89,9 +131,25 @@ public class Red2Tip extends OpMode {
         Scheduler.execute();
 
         LLResult result = limelight.getLatestResult();
-        turret.mainPD.calculate(0, kP, kD, 0, 1.0, 0.2, result);
+        turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
+                Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
+                result, robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
 
         led.setPosition(Math.random());
+
+        updateRobotYawRate(follower.pose().heading());
+        yawSource = "Pedro fallback";
+        if (imuAvailable) {
+            try {
+                AngularVelocity av = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
+                if (av != null && Double.isFinite(av.zRotationRate)) {
+                    robotYawRateDegPerSec = av.zRotationRate;
+                    yawSource = "Hub IMU";
+                }
+            } catch (RuntimeException ex) {
+                yawSource = "Pedro fallback";
+            }
+        }
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
