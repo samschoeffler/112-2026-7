@@ -15,7 +15,7 @@ public class LauncherTuning extends OpMode {
 
     private double lowVelo = 300;
 
-    private double curTargetVelo = highVelo;
+    private double curTargetVelo = -highVelo;
 
     double pwr;
 
@@ -25,6 +25,11 @@ public class LauncherTuning extends OpMode {
     double[] stepSizes = {10.0, 1.0, 0.1, 0.001, 0.0001};
 
     int stepIndex = 1;
+
+    private void applyPIDF() {
+        PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
+        launch1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficients);
+    }
 
     @Override
     public void init() {
@@ -36,8 +41,7 @@ public class LauncherTuning extends OpMode {
 
         pwr = 0;
 
-        PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
-        launch1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficients);
+        applyPIDF();
         telemetry.addLine("Init complete");
     }
 
@@ -71,27 +75,36 @@ public class LauncherTuning extends OpMode {
             stepIndex = (stepIndex + 1) % stepSizes.length;
         }
 
+
+        boolean gainsChanged = false;
+
         if (gamepad1.dpadLeftWasPressed()) {
             F -= stepSizes[stepIndex];
+            gainsChanged = true;
         }
         if (gamepad1.dpadRightWasPressed()) {
             F += stepSizes[stepIndex];
+            gainsChanged = true;
         }
         if (gamepad1.dpadUpWasPressed()) {
             P += stepSizes[stepIndex];
+            gainsChanged = true;
         }
         if (gamepad1.dpadDownWasPressed()) {
             P -= stepSizes[stepIndex];
+            gainsChanged = true;
         }
 
-        PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
-        launch1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficients);
+        if (gainsChanged) {
+            applyPIDF();
+        }
+
 
         launch1.setVelocity(curTargetVelo);
 
-        double curVelocity = -(launch1.getVelocity());
+        double curVelocity = launch1.getVelocity();
 
-        double error = curTargetVelo - curVelocity;
+        double error = curTargetVelo + curVelocity;
 
         telemetry.addData("Target Velo", curTargetVelo);
         telemetry.addData("Current Velo", curVelocity);
