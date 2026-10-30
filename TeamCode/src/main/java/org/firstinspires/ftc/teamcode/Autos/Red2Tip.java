@@ -68,13 +68,13 @@ public class Red2Tip extends OpMode {
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
+                follow(follower, AutoPaths.Red2Tip.path1()),
                 Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
-                follow(follower, AutoPaths.Red2Tip.path1()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
@@ -85,6 +85,7 @@ public class Red2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 Commands.waitMs(4000),
                 follow(follower, AutoPaths.Red2Tip.path4()),
+                Commands.waitMs(500),
                 follow(follower, AutoPaths.Red2Tip.path5()),
                 Commands.waitMs(6000),
                 follow(follower, AutoPaths.Red2Tip.path6()),

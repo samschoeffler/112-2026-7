@@ -8,6 +8,8 @@ import com.pedropathing.ivy.Scheduler;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
@@ -16,7 +18,9 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
  * MainTeleOp
@@ -51,10 +55,21 @@ public class MainTeleOp extends OpMode {
     private Limelight3A limelight;
     private Servo led;
 
+    private String yawSource = "Pedro";
+    private IMU imu;
+    private boolean imuAvailable = false;
 
-    // these values are placholders, once tuned we can use those values
-    private static final double kP = 0.06;
-    private static final double kD = 0.0;
+
+    //turret stuff
+    private double kP = 0.02;
+    private double kD = 0.0;
+
+    private final ElapsedTime yawTimer = new ElapsedTime();
+    private boolean haveLastHeading = false;
+
+
+    private double lastHeadingRad = 0;
+    private double robotYawRateDegPerSec = 0;
 
     //uses Booleans to keep last for toggling
     private boolean lastY2 = false;
@@ -62,6 +77,19 @@ public class MainTeleOp extends OpMode {
     private boolean lastLeftBumper2 = false;
     private boolean lastLB1 = false;
     public String allegiance;
+
+    private void updateRobotYawRate(double headingRad) {
+        double dt = yawTimer.seconds();
+        yawTimer.reset();
+        robotYawRateDegPerSec = 0;
+        if (haveLastHeading && Double.isFinite(headingRad) && dt >= 0.005 && dt <= 0.25) {
+            double delta = headingRad - lastHeadingRad;
+            delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+            robotYawRateDegPerSec = Math.toDegrees(delta / dt);
+        }
+        lastHeadingRad = headingRad;
+        haveLastHeading = Double.isFinite(headingRad);
+    }
 
     @Override
     public void init() {
@@ -76,7 +104,19 @@ public class MainTeleOp extends OpMode {
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+
+        try {
+            imu = hardwareMap.get(IMU.class, "imu");
+            imuAvailable = true;
+        } catch (RuntimeException ex) {
+            imuAvailable = false; // Pedro heading-rate fallback
+        }
+        limelight.pipelineSwitch(1);
+
+
+        Turret.ROT_MAX_POWER = 0.2;
+        Turret.ROBOT_YAW_FF_GAIN = 0;
+
     }
 
     @Override
@@ -85,6 +125,8 @@ public class MainTeleOp extends OpMode {
         follower.update();
         limelight.start();
         turret.mainPD.reset();
+        haveLastHeading = false;
+        yawTimer.reset();
     }
 
     @Override
@@ -157,7 +199,9 @@ public class MainTeleOp extends OpMode {
 
         if (turret.isTurretAuto()) {
             LLResult result = limelight.getLatestResult();
-            turret.mainPD.calculate(0, kP, kD, 0, 1.0, 0.2, result);
+            turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
+                    Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
+                    result, robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
@@ -165,6 +209,20 @@ public class MainTeleOp extends OpMode {
                     gamepad2.dpad_up,
                     gamepad2.dpad_down
             );
+        }
+
+        updateRobotYawRate(follower.pose().heading());
+        yawSource = "Pedro fallback";
+        if (imuAvailable) {
+            try {
+                AngularVelocity av = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
+                if (av != null && Double.isFinite(av.zRotationRate)) {
+                    robotYawRateDegPerSec = av.zRotationRate;
+                    yawSource = "Hub IMU";
+                }
+            } catch (RuntimeException ex) {
+                yawSource = "Pedro fallback";
+            }
         }
 
         //led updates

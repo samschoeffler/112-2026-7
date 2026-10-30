@@ -20,7 +20,7 @@ public final class AutoPaths {
                 poseFactory.of(56, 8, 90);
 
         public static final Pose point1 =
-                poseFactory.of(56, 36, 90);
+                poseFactory.of(56, 12, 90);
 
         public static final Pose point2 =
                 poseFactory.of(11, 48.5, 180);
@@ -44,7 +44,7 @@ public final class AutoPaths {
                 poseFactory.of(35, 109, 0);
 
         public static final Pose point4 =
-                poseFactory.of(47, 118, 90);
+                poseFactory.of(47, 118, 30);
 
         public static final Pose point4Control1 =
                 poseFactory.of(45, 110, 0);
