@@ -92,6 +92,7 @@ public class Red2Tip extends OpMode {
                 follow(follower, AutoPaths.Red2Tip.path6()),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
+                follow(follower, AutoPaths.Red2Tip.path7()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
                 );
@@ -127,7 +128,8 @@ public class Red2Tip extends OpMode {
                 AutoPaths.Red2Tip.path3(),
                 AutoPaths.Red2Tip.path4(),
                 AutoPaths.Red2Tip.path5(),
-                AutoPaths.Red2Tip.path6()
+                AutoPaths.Red2Tip.path6(),
+                AutoPaths.Red2Tip.path7()
         );
 
         visualizer.drawNow(follower.pose());

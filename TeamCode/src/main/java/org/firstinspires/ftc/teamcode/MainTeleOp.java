@@ -59,7 +59,6 @@ public class MainTeleOp extends OpMode {
     private IMU imu;
     private boolean imuAvailable = false;
 
-
     //turret stuff
     private double kP = 0.02;
     private double kD = 0.0;
@@ -67,6 +66,11 @@ public class MainTeleOp extends OpMode {
     private final ElapsedTime yawTimer = new ElapsedTime();
     private boolean haveLastHeading = false;
 
+    //teleop swithcing sides variables
+    private static final double RED_FORWARD_DEG  = 90;
+    private static final double BLUE_FORWARD_DEG = 270;
+    private double driverOffsetRad = 0;
+    private boolean lastOptions1 = false;
 
     private double lastHeadingRad = 0;
     private double robotYawRateDegPerSec = 0;
@@ -93,18 +97,24 @@ public class MainTeleOp extends OpMode {
 
     @Override
     public void init() {
-        Scheduler.reset();
+        //hardware mapping
         follower = Constants.create(hardwareMap);
-        follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
-        allegiance = OpModeStorage.LastAllegiance;
         led = hardwareMap.get(Servo.class, "led");
-
-        //hardware mapping for methods
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
+        //setting up follower from autos
+        follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
+        allegiance = OpModeStorage.LastAllegiance;
+        if (allegiance.equals("BLUE")) {
+            driverOffsetRad = Math.toRadians(BLUE_FORWARD_DEG);
+        } else {
+            driverOffsetRad = Math.toRadians(RED_FORWARD_DEG); // RED or Undefined
+        }
+
+        //setting up Lime Light
         try {
             imu = hardwareMap.get(IMU.class, "imu");
             imuAvailable = true;
@@ -113,10 +123,9 @@ public class MainTeleOp extends OpMode {
         }
         limelight.pipelineSwitch(1);
 
-
+        //setting up turret auto stuff
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
-
     }
 
     @Override
@@ -132,27 +141,22 @@ public class MainTeleOp extends OpMode {
     @Override
     public void loop() {
 
+        //drivecode
+
+        if (gamepad1.options && !lastOptions1) {
+            driverOffsetRad = follower.pose().heading();
+        }
+        lastOptions1 = gamepad1.options;
+
         DrivePowers powers = ManualDrive.fieldCentric(
                 gamepad1.left_stick_y,
                 gamepad1.left_stick_x,
                 -gamepad1.right_stick_x,
-                follower.pose().heading()
+                follower.pose().heading() - driverOffsetRad
         );
         follower.manual(powers);
         ManualDrive.driveOrHold(follower, powers);
         follower.update();
-
-
-
-        // Normal driving only when not pathing
-        /*if (!telePathing.isPathing()) {
-            //normal FC driving
-
-            follower.manual(powers);
-            ManualDrive.driveOrHold(follower, powers);
-        }
-        */
-
 
         //toggle launcher:
         if (gamepad2.y && !lastY2) {
@@ -197,6 +201,7 @@ public class MainTeleOp extends OpMode {
         }
         lastLB1 = gamepad1.left_bumper;
 
+        //turret manual/auto logic
         if (turret.isTurretAuto()) {
             LLResult result = limelight.getLatestResult();
             turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
@@ -211,6 +216,7 @@ public class MainTeleOp extends OpMode {
             );
         }
 
+        //turret auto sight loss correction
         updateRobotYawRate(follower.pose().heading());
         yawSource = "Pedro fallback";
         if (imuAvailable) {
@@ -235,7 +241,7 @@ public class MainTeleOp extends OpMode {
         else
             led.setPosition(0.500);
 
-        //telem
+        //telemetry updates
         telemetry.addData("Allegiance: ", allegiance);
         telemetry.addLine("==========================");
         telemetry.addData("X", follower.pose().x());
