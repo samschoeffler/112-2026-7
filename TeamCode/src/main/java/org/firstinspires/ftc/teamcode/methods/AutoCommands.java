@@ -27,7 +27,6 @@ public class AutoCommands {
 
     public Command rampDowner = instant(() -> intake.rampDowner());
 
-
     public Command fWheelTogg = instant(() -> launcher.toggleOn());
 
     public Command holdBalls = instant(() -> intake.holdBalls());

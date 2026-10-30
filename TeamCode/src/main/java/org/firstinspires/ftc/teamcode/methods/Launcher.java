@@ -12,7 +12,6 @@ public class Launcher {
 
     public static double MECH_POWER   = 1000.00;   // launch mechanism power
 
-
     // ---------- HARDWARE ----------
     private final DcMotorEx launch0;
     private final DcMotorEx launch1;
@@ -22,7 +21,6 @@ public class Launcher {
     private boolean flywheelsOn = false;
     private boolean firing = false;
     private boolean ejecting = false;
-
 
     public Launcher(HardwareMap hardwareMap) {
         launch0    = hardwareMap.get(DcMotorEx.class, "Launch0");
@@ -65,8 +63,6 @@ public class Launcher {
         firing = false;
     }
 
-
-
     //stop everything
     public void stopAll() {
         flywheelsOn = false;
@@ -80,5 +76,4 @@ public class Launcher {
     public boolean isFiring()      { return firing; }
     public boolean isEjecting()      { return ejecting; }
     public boolean flywheelAtSpeed() {return launch1.getVelocity() >= 1400;}
-
 }
