@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Tests;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -15,7 +17,7 @@ public class LauncherTuning extends OpMode {
 
     private double lowVelo = 300;
 
-    private double curTargetVelo = -highVelo;
+    private double curTargetVelo = highVelo;
 
     double pwr;
 
@@ -26,6 +28,12 @@ public class LauncherTuning extends OpMode {
 
     int stepIndex = 1;
 
+    // Dashboard graphing at 10 Hz to avoid excessive telemetry traffic.
+    private static final long DASHBOARD_INTERVAL_NS = 100_000_000L;
+    private long lastDashboardNs = 0;
+    private FtcDashboard dashboard;
+
+
     private void applyPIDF() {
         PIDFCoefficients pidfCoefficients = new PIDFCoefficients(P, 0, 0, F);
         launch1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfCoefficients);
@@ -33,6 +41,7 @@ public class LauncherTuning extends OpMode {
 
     @Override
     public void init() {
+        dashboard = FtcDashboard.getInstance();
         launch1 = hardwareMap.get(DcMotorEx.class, "Launch1");
         transfer = hardwareMap.get(DcMotorEx.class, "LaunchMech");
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
@@ -75,9 +84,7 @@ public class LauncherTuning extends OpMode {
             stepIndex = (stepIndex + 1) % stepSizes.length;
         }
 
-
         boolean gainsChanged = false;
-
         if (gamepad1.dpadLeftWasPressed()) {
             F -= stepSizes[stepIndex];
             gainsChanged = true;
@@ -99,12 +106,11 @@ public class LauncherTuning extends OpMode {
             applyPIDF();
         }
 
-
         launch1.setVelocity(curTargetVelo);
 
-        double curVelocity = launch1.getVelocity();
+        double curVelocity = -(launch1.getVelocity());
 
-        double error = curTargetVelo + curVelocity;
+        double error = curTargetVelo - curVelocity;
 
         telemetry.addData("Target Velo", curTargetVelo);
         telemetry.addData("Current Velo", curVelocity);
@@ -112,6 +118,19 @@ public class LauncherTuning extends OpMode {
         telemetry.addData("Tuning P", P);
         telemetry.addData("Tuning F", F);
         telemetry.addData("Step Size", stepSizes[stepIndex]);
+        // These numerical keys appear as selectable time-series in FTC Dashboard.
+        long nowNs = System.nanoTime();
+        if (nowNs - lastDashboardNs >= DASHBOARD_INTERVAL_NS) {
+            lastDashboardNs = nowNs;
+            TelemetryPacket packet = new TelemetryPacket();
+            packet.put("Launcher / Target velocity (ticks/s)", curTargetVelo);
+            packet.put("Launcher / Measured velocity (ticks/s)", curVelocity);
+            packet.put("Launcher / Velocity error (ticks/s)", error);
+            packet.put("Launcher / P", P);
+            packet.put("Launcher / F", F);
+            packet.put("Launcher / Transfer power", pwr);
+            dashboard.sendTelemetryPacket(packet);
+        }
         telemetry.addLine("Women are scary");
     }
 }
