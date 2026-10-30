@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.robotcore.hardware.Servo;
 
 /**
  * MainTeleOp
@@ -48,6 +49,8 @@ public class MainTeleOp extends OpMode {
     private Intake intake;
     private Turret turret;
     private Limelight3A limelight;
+    private Servo led;
+
 
     // these values are placholders, once tuned we can use those values
     private static final double kP = 0.06;
@@ -66,6 +69,7 @@ public class MainTeleOp extends OpMode {
         follower = Constants.create(hardwareMap);
         follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
         allegiance = OpModeStorage.LastAllegiance;
+        led = hardwareMap.get(Servo.class, "led");
 
         //hardware mapping for methods
         launcher    = new Launcher(hardwareMap);
@@ -162,6 +166,16 @@ public class MainTeleOp extends OpMode {
                     gamepad2.dpad_down
             );
         }
+
+        //led updates
+        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed())
+            led.setPosition(0.611);
+        else if(launcher.isFlywheelsOn() && !launcher.flywheelAtSpeed())
+            led.setPosition(0.277);
+        else if(!turret.isTurretAuto())
+            led.setPosition(0.333);
+        else
+            led.setPosition(0.500);
 
         //telem
         telemetry.addData("Allegiance: ", allegiance);

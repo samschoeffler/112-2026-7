@@ -72,12 +72,13 @@ public class Launcher {
         flywheelsOn = false;
         firing = false;
         launch1.setPower(0);
-        launch1.setPower(0);
+        launch0.setPower(0);
         launchMech.setVelocity(0);
     }
 
     public boolean isFlywheelsOn() { return flywheelsOn; }
     public boolean isFiring()      { return firing; }
     public boolean isEjecting()      { return ejecting; }
+    public boolean flywheelAtSpeed() {return launch1.getVelocity() >= 1400;}
 
 }

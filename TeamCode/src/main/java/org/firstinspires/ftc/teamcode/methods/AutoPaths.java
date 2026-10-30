@@ -20,7 +20,7 @@ public final class AutoPaths {
                 poseFactory.of(56, 8, 90);
 
         public static final Pose point1 =
-                poseFactory.of(56, 36, 90);
+                poseFactory.of(56, 36, 0);
 
         public static final Pose point2 =
                 poseFactory.of(11, 48.5, 180);
@@ -32,19 +32,28 @@ public final class AutoPaths {
                 poseFactory.of(34.5, 50, 0);
 
         public static final Pose point3 =
-                poseFactory.of(50, 130, 90);
+                poseFactory.of(56, 110, 270);
 
         public static final Pose point3Control1 =
-                poseFactory.of(58.5, 47, 0);
+                poseFactory.of(47, 44, 0);
 
         public static final Pose point3Control2 =
-                poseFactory.of(1, 120.5, 0);
+                poseFactory.of(6, 107, 0);
 
         public static final Pose point3Control3 =
-                poseFactory.of(52, 102, 0);
+                poseFactory.of(35, 109, 0);
 
         public static final Pose point4 =
-                poseFactory.of(47, 115, 90);
+                poseFactory.of(47, 118, 90);
+
+        public static final Pose point4Control1 =
+                poseFactory.of(45, 110, 0);
+
+        public static final Pose point5 =
+                poseFactory.of(50, 130, 90);
+
+        public static final Pose point6 =
+                poseFactory.of(46, 118, 90);
 
         // ---------- PATHS ----------
 
@@ -73,9 +82,23 @@ public final class AutoPaths {
         }
 
         public static Path path4() {
-            return Paths.line(point3, point4)
-                    .linear(point3, point4);
+            return Paths.curve(
+                    point3,
+                    point4Control1,
+                    point4
+            );
         }
+
+        public static Path path5() {
+            return Paths.line(point4, point5)
+                    .linear(point4, point5);
+        }
+
+        public static Path path6() {
+            return Paths.line(point5, point6)
+                    .linear(point5, point6);
+        }
+
 
     }
 
