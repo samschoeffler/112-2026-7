@@ -418,7 +418,7 @@ public class Turret {
     public static double HEADING_COMPENSATION_SIGN = 1.0;
 
     private static boolean isTargetTag(int id) {
-        return id == 34 || id == 35 || id == 36 || id == 37;
+        return id == 34 || id == 35 || id == 36 || id == 37 || id == 32 || id == 31 || id == 30 || id == 33;
     }
 
     /** Maintains the existing API, with an optional hybrid heading-hold path. */

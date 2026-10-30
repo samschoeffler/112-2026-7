@@ -72,7 +72,7 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(4000),
+                Commands.waitMs(3000),
                 autoCommand.stopShooter,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
@@ -83,7 +83,7 @@ public class Red2Tip extends OpMode {
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
                 autoCommand.shooterTogg,
-                Commands.waitMs(4000),
+                Commands.waitMs(3000),
                 follow(follower, AutoPaths.Red2Tip.path4()),
                 autoCommand.rampTogg,
                 Commands.waitMs(500),

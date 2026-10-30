@@ -4,7 +4,6 @@ import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
 
-import com.pedropathing.ivy.Scheduler;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -141,8 +140,7 @@ public class MainTeleOp extends OpMode {
     @Override
     public void loop() {
 
-        //drivecode
-
+        //drive code
         if (gamepad1.options && !lastOptions1) {
             driverOffsetRad = follower.pose().heading();
         }
