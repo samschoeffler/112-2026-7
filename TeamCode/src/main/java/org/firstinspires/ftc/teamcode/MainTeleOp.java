@@ -115,7 +115,7 @@ public class MainTeleOp extends OpMode {
 
 
         Turret.ROT_MAX_POWER = 0.2;
-        Turret.ROBOT_YAW_FF_GAIN = 0;
+        Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
     }
 

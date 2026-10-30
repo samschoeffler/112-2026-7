@@ -39,7 +39,7 @@ public class Turret {
     // PD + static friction. Start with only kP, raise until it wobbles, back off.
     public static double ROT_KP = 0.02;
     public static double ROT_KD = 0.0;
-    public static double ROT_KS = 0.05;          // minimum power to get the servos moving
+    public static double ROT_KS = 0.02;          // minimum power to get the servos moving
     public static double ROT_MAX_POWER = 0.8;
     public static double ROT_TOLERANCE_DEG = 1.0;
 
@@ -86,7 +86,7 @@ public class Turret {
     private static double lastRotServoDeg = 0;     // last raw reading (0-360)
     private static double rotServoTotalDeg = 0;    // unwrapped running total
 
-    private boolean turretAuto = false;
+    private boolean turretAuto = true;
 
     // Rotation: measured angle + target
     private double rotationDeg = 0;
@@ -396,13 +396,13 @@ public class Turret {
     public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 5.0;
 
     /** Maximum duration to counter-rotate without a valid tag after a visual lock. */
-    public static double TAG_LOSS_HOLD_SECONDS = 2.0;
+    public static double TAG_LOSS_HOLD_SECONDS = 3.1;
 
     // Hybrid stabilization. Heading is accumulated continuously (not wrapped at 360).
-    public static double HEADING_HOLD_KP = 0.020;
+    public static double HEADING_HOLD_KP = 0.030;
     public static double HEADING_HOLD_KD = 0.0;
     public static double JOYSTICK_PREDICT_GAIN = 0.0; // Begin at zero; tune sign at low speed.
-    public static double JOYSTICK_PREDICT_MAX_POWER = 0.20;
+    public static double JOYSTICK_PREDICT_MAX_POWER = 0.50;
     public static double FAST_TURN_STICK_THRESHOLD = 0.10;
     public static double HOLD_SETTLE_TOLERANCE_DEG = 3.0;
     // A positive camera tx is assumed to demand positive turret angle correction.

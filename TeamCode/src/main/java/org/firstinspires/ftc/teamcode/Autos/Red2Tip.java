@@ -74,17 +74,18 @@ public class Red2Tip extends OpMode {
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 autoCommand.stopShooter,
-                autoCommand.stopIntake,
-                autoCommand.fWheelTogg,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
-                autoCommand.intakeTogg,
                 Commands.waitMs(3000),
-                autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Red2Tip.path3()),
+                autoCommand.holdBalls,
+                follow(
+                        follower, AutoPaths.Red2Tip.path3()
+                                .with(Constants.foresightConfig.brakeAggression.at(0.5))
+                ),
                 autoCommand.shooterTogg,
                 Commands.waitMs(4000),
                 follow(follower, AutoPaths.Red2Tip.path4()),
+                autoCommand.rampTogg,
                 Commands.waitMs(500),
                 follow(follower, AutoPaths.Red2Tip.path5()),
                 Commands.waitMs(6000),
@@ -118,7 +119,7 @@ public class Red2Tip extends OpMode {
         // Conservative starting limits; adjustable with gamepad2 during this OpMode.
 
         Turret.ROT_MAX_POWER = 0.2;
-        Turret.ROBOT_YAW_FF_GAIN = 0;
+        Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
         visualizer = new PathVisualizer(
                 AutoPaths.Red2Tip.path1(),
