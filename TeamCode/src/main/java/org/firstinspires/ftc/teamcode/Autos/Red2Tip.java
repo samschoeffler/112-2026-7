@@ -22,6 +22,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
+import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
@@ -29,6 +30,9 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class Red2Tip extends OpMode {
 
     private IMU imu;
+
+    private PathVisualizer visualizer;
+
     private boolean imuAvailable = false;
     private String yawSource = "Pedro";
 
@@ -114,6 +118,17 @@ public class Red2Tip extends OpMode {
 
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0;
+
+        visualizer = new PathVisualizer(
+                AutoPaths.Red2Tip.path1(),
+                AutoPaths.Red2Tip.path2(),
+                AutoPaths.Red2Tip.path3(),
+                AutoPaths.Red2Tip.path4(),
+                AutoPaths.Red2Tip.path5(),
+                AutoPaths.Red2Tip.path6()
+        );
+
+        visualizer.drawNow(follower.pose());
     }
 
     @Override
@@ -123,11 +138,17 @@ public class Red2Tip extends OpMode {
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
+
+        visualizer.startRecording(follower.pose());
     }
 
     @Override
     public void loop() {
         follower.update();
+
+        visualizer.recordPose(follower.pose());
+        visualizer.draw(follower.pose());
+
         Scheduler.execute();
 
         LLResult result = limelight.getLatestResult();
