@@ -30,4 +30,21 @@ public class AutoCommands {
     public Command fWheelTogg = instant(() -> launcher.toggleOn());
 
     public Command holdBalls = instant(() -> intake.holdBalls());
+
+    public void updateLauncher() {
+        launcher.update();
+
+        if (!launcher.getFault().isEmpty()) {
+            intake.stop();
+        }
+    }
+
+    public void stopAll() {
+        launcher.stopAll();
+        intake.stop();
+    }
+
+    public String getLauncherFault() {
+        return launcher.getFault();
+    }
 }

@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 public class Intake {
 
     // ---------- TUNING ----------
-    public static double INTAKE_VELOCITY = 5000.00;
+    public static double INTAKE_POWER = 0.75;
 
     // Placeholder servo positions (0.0 to 1.0); tune these on the robot.
     public static double rAMPdOWN = 0.25;
@@ -36,12 +36,12 @@ public class Intake {
     }
 
     public void intake()  {
-        intake.setVelocity(INTAKE_VELOCITY);
+        intake.setPower(INTAKE_POWER);
         intakeOn = true;
     }
 
     public void outtake() {
-        intake.setVelocity(-INTAKE_VELOCITY);
+        intake.setPower(-INTAKE_POWER);
         intakeOn = true;
     }
 

@@ -31,7 +31,7 @@ public class Red2Tip extends OpMode {
 
     private IMU imu;
 
-    private PathVisualizer visualizer;
+    //private PathVisualizer visualizer;
 
     private boolean imuAvailable = false;
     private String yawSource = "Pedro";
@@ -72,7 +72,7 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(3000),
+                Commands.waitMs(8000),
                 autoCommand.stopShooter,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
@@ -122,7 +122,7 @@ public class Red2Tip extends OpMode {
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
-        visualizer = new PathVisualizer(
+        /*visualizer = new PathVisualizer(
                 AutoPaths.Red2Tip.path1(),
                 AutoPaths.Red2Tip.path2(),
                 AutoPaths.Red2Tip.path3(),
@@ -130,9 +130,9 @@ public class Red2Tip extends OpMode {
                 AutoPaths.Red2Tip.path5(),
                 AutoPaths.Red2Tip.path6(),
                 AutoPaths.Red2Tip.path7()
-        );
+        );*/
 
-        visualizer.drawNow(follower.pose());
+        //visualizer.drawNow(follower.pose());
     }
 
     @Override
@@ -143,17 +143,19 @@ public class Red2Tip extends OpMode {
         haveLastHeading = false;
         yawTimer.reset();
 
-        visualizer.startRecording(follower.pose());
+        //visualizer.startRecording(follower.pose());
     }
 
     @Override
     public void loop() {
         follower.update();
 
-        visualizer.recordPose(follower.pose());
-        visualizer.draw(follower.pose());
+        //visualizer.recordPose(follower.pose());
+        //visualizer.draw(follower.pose());
 
         Scheduler.execute();
+
+        autoCommand.updateLauncher();
 
         LLResult result = limelight.getLatestResult();
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
@@ -189,5 +191,7 @@ public class Red2Tip extends OpMode {
         limelight.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
+
+        autoCommand.stopAll();
     }
 }

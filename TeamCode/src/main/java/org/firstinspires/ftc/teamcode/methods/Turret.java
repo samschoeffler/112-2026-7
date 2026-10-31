@@ -28,6 +28,8 @@ public class Turret {
     /** +1 or -1. See the SIGN RULE above. */
     public static double ROT_FEEDBACK_DIRECTION = 1.0;
 
+    // Replace these zeros with your final voltage-model gains.
+
     // =====================================================
     // TUNING: ROTATION LIMITS + CONTROL
     // =====================================================

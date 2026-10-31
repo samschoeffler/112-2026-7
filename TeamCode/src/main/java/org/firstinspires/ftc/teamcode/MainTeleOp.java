@@ -157,22 +157,30 @@ public class MainTeleOp extends OpMode {
         follower.update();
 
         //toggle launcher:
+        // Toggle flywheel speed control.
         if (gamepad2.y && !lastY2) {
             launcher.toggleOn();
         }
         lastY2 = gamepad2.y;
 
-        // Right trigger: shoot
+// Request shooting while the right trigger is held.
         if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
             launcher.fire();
-        } else if(gamepad2.right_trigger <= TRIGGER_THRESHOLD)
+        } else {
             launcher.stopFire();
+        }
 
-        //eject balls from transfer
+// Request reverse transfer operation.
         launcher.eject(gamepad2.right_bumper);
 
-        //intake
-        if (gamepad2.x || launcher.isFiring()) {
+// REQUIRED: calculate flywheel power and update the transfer every loop.
+        launcher.update();
+
+// Intake follows the launcher's updated firing/ejecting state.
+// Stop it if the launcher reports a fault.
+        if (!launcher.getFault().isEmpty()) {
+            intake.stop();
+        } else if (gamepad2.x || launcher.isFiring()) {
             intake.intake();
         } else if (gamepad2.b || launcher.isEjecting()) {
             intake.outtake();
