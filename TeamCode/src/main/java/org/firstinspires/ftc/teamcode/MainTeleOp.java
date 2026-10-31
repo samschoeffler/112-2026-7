@@ -4,6 +4,7 @@ import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
 
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -66,8 +67,8 @@ public class MainTeleOp extends OpMode {
     private boolean haveLastHeading = false;
 
     //teleop swithcing sides variables
-    private static final double RED_FORWARD_DEG  = 90;
-    private static final double BLUE_FORWARD_DEG = 270;
+    private static final double RED_FORWARD_DEG  = 0;
+    private static final double BLUE_FORWARD_DEG = 180;
     private double driverOffsetRad = 0;
     private boolean lastOptions1 = false;
 
@@ -201,11 +202,10 @@ public class MainTeleOp extends OpMode {
         lastLeftBumper2 = gamepad2.left_bumper;
 
         //turret auto
-        if (gamepad1.left_bumper && !lastLB1) {
+        if (gamepad1.aWasPressed()) {
             turret.toggleTurretAuto();
             turret.mainPD.reset();
         }
-        lastLB1 = gamepad1.left_bumper;
 
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
@@ -221,6 +221,11 @@ public class MainTeleOp extends OpMode {
                     gamepad2.dpad_down
             );
         }
+
+        //adjust ramp
+        intake.adjustRamp(
+                gamepad2.dpad_up,
+                gamepad2.dpad_down);
 
         //turret auto sight loss correction
         updateRobotYawRate(follower.pose().heading());
@@ -238,10 +243,8 @@ public class MainTeleOp extends OpMode {
         }
 
         //led updates
-        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed())
+        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed() && turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults()))
             led.setPosition(0.611);
-        else if(launcher.isFlywheelsOn() && !launcher.flywheelAtSpeed())
-            led.setPosition(0.277);
         else if(!turret.isTurretAuto())
             led.setPosition(0.333);
         else
@@ -261,6 +264,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
         telemetry.addLine("I <3 Femboys");
+        telemetry.addData("Is Targeting?",  turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults()));
         telemetry.update();
     }
 

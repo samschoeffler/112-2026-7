@@ -641,5 +641,16 @@ public class Turret {
             return Double.isFinite(headingHoldErrorDeg) ? rotationDeg + headingHoldErrorDeg : Double.NaN;
         }
         public double getCommandedPower() { return commandedPower; }
+
+        public boolean LLisTargeting(List<LLResultTypes.FiducialResult> tags)
+        {
+            for (LLResultTypes.FiducialResult tag : tags)
+            {
+                if (isTargetTag(tag.getFiducialId())) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

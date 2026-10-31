@@ -40,6 +40,16 @@ public class Intake {
         intakeOn = true;
     }
 
+    public void adjustRamp(boolean up, boolean down) {
+        if(up) rAMPdOWN += 0.01;
+        if (up) rAMPuP += 0.01;
+        if(up) RAMP_HOLD += 0.01;
+
+        if(down) rAMPdOWN -= 0.01;
+        if (down) rAMPuP -= 0.01;
+        if(down) RAMP_HOLD -= 0.01;
+    }
+
     public void outtake() {
         intake.setPower(-INTAKE_POWER);
         intakeOn = true;
