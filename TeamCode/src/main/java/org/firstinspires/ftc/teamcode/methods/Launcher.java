@@ -90,6 +90,7 @@ public class Launcher {
         if (!fireRequested) fireRequestedAt = System.nanoTime();
         fireRequested = true;
         ejecting = false;
+        launchMech.setPower(0.75);
     }
 
     public void stopFire() {

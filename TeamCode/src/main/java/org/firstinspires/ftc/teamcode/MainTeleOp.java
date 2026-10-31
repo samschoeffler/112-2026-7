@@ -45,7 +45,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class MainTeleOp extends OpMode {
 
     // How far a trigger must be pressed to count as "pressed"
-    private static final double TRIGGER_THRESHOLD = 0.5;
+    private static final double TRIGGER_THRESHOLD = 0.2;
 
     //Methods
     private Follower follower;
@@ -67,8 +67,11 @@ public class MainTeleOp extends OpMode {
     private boolean haveLastHeading = false;
 
     //teleop swithcing sides variables
-    private static final double RED_FORWARD_DEG  = 0;
+    private static final double RED_FORWARD_DEG  = 180;
+
+    //six seven i love Sophia Lapter
     private static final double BLUE_FORWARD_DEG = 180;
+
     private double driverOffsetRad = 0;
     private boolean lastOptions1 = false;
 
@@ -263,6 +266,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
+        telemetry.addData("r trig thresh", gamepad2.right_trigger);
         telemetry.addLine("I <3 Femboys");
         telemetry.addData("Is Targeting?",  turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults()));
         telemetry.update();
