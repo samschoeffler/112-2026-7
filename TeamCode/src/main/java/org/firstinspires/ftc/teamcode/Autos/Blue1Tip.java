@@ -99,6 +99,7 @@ public class Blue1Tip extends OpMode {
             imuAvailable = false; // Pedro heading-rate fallback
         }
         limelight.pipelineSwitch(2);
+
         // Conservative starting limits; adjustable with gamepad2 during this OpMode.
 
         Turret.ROT_MAX_POWER = 0.2;

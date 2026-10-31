@@ -30,8 +30,6 @@ public class Red1TipFar extends OpMode {
 
     private IMU imu;
 
-    private PathVisualizer visualizer;
-
     private boolean imuAvailable = false;
     private String yawSource = "Pedro";
 
@@ -66,17 +64,16 @@ public class Red1TipFar extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Red2Opp.path1()),
-                Commands.waitMs(12000),
+                Commands.waitMs(10000),
+                autoCommand.fWheelTogg,
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 autoCommand.stopShooter,
-                autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Opp.path2()),
                 autoCommand.shooterTogg,
-                // ---- copied from end of Red2Tip ----
                 follow(follower, AutoPaths.Red2Opp.path3()),
                 autoCommand.rampTogg,
                 Commands.waitMs(500),
@@ -114,17 +111,6 @@ public class Red1TipFar extends OpMode {
 
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
-
-        visualizer = new PathVisualizer(
-                AutoPaths.Red2Opp.path1(),
-                AutoPaths.Red2Opp.path2(),
-                AutoPaths.Red2Opp.path3(),
-                AutoPaths.Red2Opp.path4(),
-                AutoPaths.Red2Opp.path5(),
-                AutoPaths.Red2Opp.path6()
-        );
-
-        visualizer.drawNow(follower.pose());
     }
 
     @Override
@@ -134,18 +120,15 @@ public class Red1TipFar extends OpMode {
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
-
-        visualizer.startRecording(follower.pose());
     }
 
     @Override
     public void loop() {
         follower.update();
 
-        visualizer.recordPose(follower.pose());
-        visualizer.draw(follower.pose());
-
         Scheduler.execute();
+
+        autoCommand.updateLauncher();
 
         LLResult result = limelight.getLatestResult();
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
@@ -181,5 +164,7 @@ public class Red1TipFar extends OpMode {
         limelight.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
+
+        autoCommand.stopAll();
     }
 }
