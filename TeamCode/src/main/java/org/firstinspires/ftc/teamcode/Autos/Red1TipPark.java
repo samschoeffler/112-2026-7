@@ -98,7 +98,7 @@ public class Red1TipPark extends OpMode {
         } catch (RuntimeException ex) {
             imuAvailable = false; // Pedro heading-rate fallback
         }
-        limelight.pipelineSwitch(1);
+        limelight.pipelineSwitch(3);
         // Conservative starting limits; adjustable with gamepad2 during this OpMode.
 
         Turret.ROT_MAX_POWER = 0.2;

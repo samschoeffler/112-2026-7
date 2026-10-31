@@ -93,6 +93,11 @@ public class Launcher {
         launchMech.setPower(0.75);
     }
 
+    public void actFire() {
+        launchMech.setPower(0.75);
+    }
+
+
     public void stopFire() {
         fireRequested = false;
         firing = false;

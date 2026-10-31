@@ -119,7 +119,7 @@ public class MainTeleOp extends OpMode {
             limelight.pipelineSwitch(1);
         } else {
             driverOffsetRad = Math.toRadians(RED_FORWARD_DEG);
-            limelight.pipelineSwitch(0);
+            limelight.pipelineSwitch(1);
         }
 
         //setting up Lime Light
@@ -172,8 +172,9 @@ public class MainTeleOp extends OpMode {
         lastY2 = gamepad2.y;
 
 // Request shooting while the right trigger is held.
-        if (gamepad2.right_trigger > TRIGGER_THRESHOLD) {
+        if (gamepad2.a) {
             launcher.fire();
+            launcher.actFire();
         } else {
             launcher.stopFire();
         }
@@ -233,6 +234,16 @@ public class MainTeleOp extends OpMode {
         intake.adjustRamp(
                 gamepad2.dpad_up,
                 gamepad2.dpad_down);
+
+        boolean canSee = false;
+
+        if (turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults())) {
+            canSee = true;
+        }
+
+
+
+
 
         //turret auto sight loss correction
         updateRobotYawRate(follower.pose().heading());

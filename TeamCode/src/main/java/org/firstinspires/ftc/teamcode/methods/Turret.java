@@ -146,6 +146,12 @@ public class Turret {
         return rotFeedback.getVoltage() / FEEDBACK_MAX_VOLTAGE * 360.0;
     }
 
+
+    public void nudgePitch(boolean up) {
+        setPitchDeg(pitchDeg + (up ? 5.0 : -5.0));
+    }
+
+
     /** Read and unwrap the rotation feedback. Runs at the start of every control call. */
     private void readRotation() {
         double raw = rotServoDegrees();

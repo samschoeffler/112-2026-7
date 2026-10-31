@@ -33,7 +33,6 @@ import java.util.Locale;
  */
 @TeleOp(name = "Launcher Distance Test", group = "Tests")
 public class LauncherDistanceTest extends OpMode {
-    private static final int PIPELINE = 1;
     private static final int[] TAG_IDS = {34, 35, 36, 37};
     private static final double MIN_VELOCITY = 100.0;
     private static final double MAX_VELOCITY = 5000.0; // Adjustable target limit; actual speed depends on available motor output.
@@ -97,7 +96,7 @@ public class LauncherDistanceTest extends OpMode {
         ramp = hardwareMap.get(Servo.class, "Ramp");
         ramp.setPosition(Intake.rAMPuP);
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(PIPELINE);
+        limelight.pipelineSwitch(1);
         originalTurretPower = Turret.ROTATE_POWER;
         originalTransferPower = Launcher.MECH_POWER;
         settingsSaved = true;
@@ -231,8 +230,7 @@ public class LauncherDistanceTest extends OpMode {
     private void updateRange(long now) {
         visionValid = false;
         LLResult result = limelight.getLatestResult();
-        if (result != null && result.isValid() && result.getPipelineIndex() == PIPELINE
-                && result.getStaleness() >= 0 && result.getStaleness() <= MAX_RESULT_AGE_MS) {
+        if (result != null && result.isValid() && result.getStaleness() >= 0 && result.getStaleness() <= MAX_RESULT_AGE_MS) {
             double stamp = result.getTimestamp();
             if (Double.isFinite(stamp) && stamp != lastFrame) {
                 lastFrame = stamp;
