@@ -207,6 +207,9 @@ public final class AutoPaths {
         public static final Pose point1 =
                 poseFactory.of(56, 12, 90);
 
+        public static final Pose point2Control1 =
+                poseFactory.of(20, 37, 0);
+
         public static final Pose point2 =
                 poseFactory.of(12, 94, 270);
 
@@ -218,9 +221,13 @@ public final class AutoPaths {
         }
 
         public static Path path2() {
-            return Paths.line(point1, point2)
-                    .linear(point1, point2);
+            return Paths.curve(
+                    point1,
+                    point2Control1,
+                    point2
+            ).linear(point1, point2);
         }
+
     }
 
     // RED2FLOWERUP
