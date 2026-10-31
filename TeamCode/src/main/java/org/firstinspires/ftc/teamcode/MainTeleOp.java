@@ -113,8 +113,13 @@ public class MainTeleOp extends OpMode {
         allegiance = OpModeStorage.LastAllegiance;
         if (allegiance.equals("BLUE")) {
             driverOffsetRad = Math.toRadians(BLUE_FORWARD_DEG);
+            limelight.pipelineSwitch(2);
+        } else if(allegiance.equals("RED")) {
+            driverOffsetRad = Math.toRadians(RED_FORWARD_DEG);
+            limelight.pipelineSwitch(1);
         } else {
-            driverOffsetRad = Math.toRadians(RED_FORWARD_DEG); // RED or Undefined
+            driverOffsetRad = Math.toRadians(RED_FORWARD_DEG);
+            limelight.pipelineSwitch(0);
         }
 
         //setting up Lime Light
@@ -124,7 +129,6 @@ public class MainTeleOp extends OpMode {
         } catch (RuntimeException ex) {
             imuAvailable = false; // Pedro heading-rate fallback
         }
-        limelight.pipelineSwitch(1);
 
         //setting up turret auto stuff
         Turret.ROT_MAX_POWER = 0.2;

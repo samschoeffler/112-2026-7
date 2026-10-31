@@ -69,10 +69,10 @@ public class Blue2Tip extends OpMode {
         return sequential(
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Blue2Tip.path1()),
-                Commands.waitMs(2000),
+                Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(3000),
+                Commands.waitMs(3500),
                 autoCommand.stopShooter,
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Blue2Tip.path2()),
@@ -83,19 +83,19 @@ public class Blue2Tip extends OpMode {
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
                 autoCommand.shooterTogg,
-                Commands.waitMs(3000),
+                Commands.waitMs(3500),
                 follow(follower, AutoPaths.Blue2Tip.path4()),
                 autoCommand.rampTogg,
                 Commands.waitMs(500),
                 follow(follower, AutoPaths.Blue2Tip.path5()),
-                Commands.waitMs(6000),
+                Commands.waitMs(4500),
                 follow(follower, AutoPaths.Blue2Tip.path6()),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
                 follow(follower, AutoPaths.Blue2Tip.path7()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
-                );
+        );
     }
 
     @Override
