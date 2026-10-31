@@ -155,6 +155,8 @@ public class Blue2Tip extends OpMode {
 
         Scheduler.execute();
 
+        autoCommand.updateLauncher();
+
         LLResult result = limelight.getLatestResult();
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
@@ -189,5 +191,7 @@ public class Blue2Tip extends OpMode {
         limelight.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "BLUE";
+
+        autoCommand.stopAll();
     }
 }
