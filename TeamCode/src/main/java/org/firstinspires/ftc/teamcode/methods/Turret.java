@@ -4,103 +4,39 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-
 import java.util.List;
 
 public class Turret {
 
-    // =====================================================
-    // TUNING: ROTATION SENSOR
-    // =====================================================
+    public static double GearRatio = 2.5;
+    public static double TPR = 384.5;
+    public static double RotMinLim = -180;
+    public static double RotMaxLim = 180;
+    public static double ROTATE_POWER = 0.2;
 
-    /** Axon feedback voltage at 360 degrees. */
-    public static double FEEDBACK_MAX_VOLTAGE = 3.3;
-
-    /** Servo degrees per 1 degree of turret rotation (gear ratio). Example: 5:1 -> 5.0 */
-    public static double ROT_SERVO_DEG_PER_TURRET_DEG = 2.5;
-
-    /** +1 or -1. See the SIGN RULE above. */
-    public static double ROT_FEEDBACK_DIRECTION = 1.0;
-
-    // Replace these zeros with your final voltage-model gains.
-
-    // =====================================================
-    // TUNING: ROTATION LIMITS + CONTROL
-    // =====================================================
-
-    /** Soft limits for rotation (turret degrees). Keeps wires from wrapping up. */
-    public static double ROT_MIN_DEG = -180;
-    public static double ROT_MAX_DEG = 180;
-
-    // PD + static friction. Start with only kP, raise until it wobbles, back off.
-    public static double ROT_KP = 0.02;
-    public static double ROT_KD = 0.0;
-    public static double ROT_KS = 0.02;          // minimum power to get the servos moving
-    public static double ROT_MAX_POWER = 0.8;
-    public static double ROT_TOLERANCE_DEG = 1.0;
-
-    /** Manual D-pad rotation speed. */
-    public static double ROTATE_POWER = 0.5;
-
-    // =====================================================
-    // TUNING: PITCH (position servo)
-    // =====================================================
-
-    /** Pitch range in degrees. */
     public static double PITCH_MIN_DEG = 25;
     public static double PITCH_MAX_DEG = 60;
-
-    /**
-     * Calibration: the servo position (0.0 to 1.0) that gives PITCH_MIN_DEG and
-     * PITCH_MAX_DEG. Find these by moving the servo and measuring the angle.
-     * If the servo goes the wrong way, just swap the two values.
-     */
     public static double PITCH_POS_AT_MIN = 0.2644;
     public static double PITCH_POS_AT_MAX = 0.009;
-    /** Where pitch starts when the OpMode inits (degrees). */
     public static double PITCH_START_DEG = 25;
-
-    /** Manual D-pad pitch speed, in degrees per second while held. */
     public static double PITCH_MANUAL_DEG_PER_SEC = 10;
-
-    // =====================================================
-    // HARDWARE
-    // =====================================================
-    //private final CRServo rot0;
-    private static CRServo rot1;
-    private static CRServo rot2;
-    private static AnalogInput rotFeedback;
+    private static DcMotorEx rotation;
     private static Servo pitch;
-
-    // =====================================================
-    // STATE
-    // =====================================================
 
     // static = these survive between OpModes (Auto -> TeleOp), like OpModeStorage.
     // They reset only when the robot app restarts.
-    private static boolean rotationZeroed = false;
-    private static double lastRotServoDeg = 0;     // last raw reading (0-360)
-    private static double rotServoTotalDeg = 0;    // unwrapped running total
-
+    private static double turretPosition = 0;
     private boolean turretAuto = true;
 
-    // Rotation: measured angle + target
-    private double rotationDeg = 0;
     private double rotationTargetDeg = 0;
-
-    // Encoder-based derivative: velocity is in turret degrees/second.
-    private double lastRotationDeg = 0.0;
-    private double turretAngularVelocityDegPerSec = 0.0;
-    private boolean haveLastRotation = false;
-    private final ElapsedTime velocityTimer = new ElapsedTime();
-    /** 0..1; lower values smooth encoder noise, 1 uses raw velocity. */
-    public static double VELOCITY_FILTER_ALPHA = 0.35;
 
     // Pitch: the angle we last commanded (a position servo has no feedback)
     private double pitchDeg = PITCH_START_DEG;
@@ -110,31 +46,18 @@ public class Turret {
     private boolean haveLastHeading = false;
     private final ElapsedTime headingTimer = new ElapsedTime();
 
-    // For smooth manual pitch speed
-    private final ElapsedTime manualTimer = new ElapsedTime();
-
-    private final PD rotationPD = new PD();
-
     public PD mainPD = new PD();
 
     public Turret(HardwareMap hardwareMap) {
-        rot1  = hardwareMap.get(CRServo.class, "TurretRot1");
-        rot2  = hardwareMap.get(CRServo.class, "TurretRot2");
-        rotFeedback = hardwareMap.get(AnalogInput.class, "RotEnc");
-        pitch = hardwareMap.get(Servo.class, "TurretPitch");
+        rotation  = hardwareMap.get(DcMotorEx.class, "rotation");
+        pitch = hardwareMap.get(Servo.class, "pitch");
 
         // Directions are a guess. All three rotation servos MUST push the same way.
-        rot1.setDirection(DcMotorSimple.Direction.REVERSE);
-        rot2.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        // First Turret since the app started: call wherever the turret is now "zero".
-        if (!rotationZeroed) {
-            zeroRotation();
-        }
+        rotation.setDirection(DcMotorSimple.Direction.FORWARD);
 
         stopRotation();
         setPitchDeg(PITCH_START_DEG);   // note: the pitch servo moves here, at init
-        readRotation();
+        updatePosition();
     }
 
     // =====================================================
@@ -142,8 +65,8 @@ public class Turret {
     // =====================================================
 
     /** Raw Axon feedback converted to servo degrees (0-360). */
-    private double rotServoDegrees() {
-        return rotFeedback.getVoltage() / FEEDBACK_MAX_VOLTAGE * 360.0;
+    private void updatePosition() {
+        turretPosition = rotation.getCurrentPosition() * GearRatio;
     }
 
 
@@ -152,67 +75,10 @@ public class Turret {
     }
 
 
-    /** Read and unwrap the rotation feedback. Runs at the start of every control call. */
-    private void readRotation() {
-        double raw = rotServoDegrees();
-        double delta = wrap180(raw - lastRotServoDeg);   // jump since last loop, -180..180
-        rotServoTotalDeg += delta;
-        lastRotServoDeg = raw;
-        rotationDeg = rotServoTotalDeg * ROT_FEEDBACK_DIRECTION / ROT_SERVO_DEG_PER_TURRET_DEG;
-
-        double dt = velocityTimer.seconds();
-        velocityTimer.reset();
-        if (haveLastRotation && dt >= 0.005 && dt <= 0.25) {
-            double rawVelocity = (rotationDeg - lastRotationDeg) / dt;
-            double alpha = Range.clip(VELOCITY_FILTER_ALPHA, 0.01, 1.0);
-            turretAngularVelocityDegPerSec +=
-                    alpha * (rawVelocity - turretAngularVelocityDegPerSec);
-        } else {
-            turretAngularVelocityDegPerSec = 0.0;
-        }
-        lastRotationDeg = rotationDeg;
-        haveLastRotation = true;
-    }
-
-    /**
-     * Call this with the turret at its zero mark to make the current
-     * position 0 degrees. Runs automatically the first time a Turret is created.
-     */
-    public void zeroRotation() {
-        lastRotServoDeg = rotServoDegrees();
-        rotServoTotalDeg = 0;
-        rotationDeg = 0;
-        lastRotationDeg = 0;
-        turretAngularVelocityDegPerSec = 0;
-        haveLastRotation = false;
-        velocityTimer.reset();
-        rotationZeroed = true;
-        //rotationPD.reset();
-    }
-
     // =====================================================
     // LOW-LEVEL OUTPUT
     // =====================================================
 
-    /** Spin all three rotation servos together. Positive = angle goes up. */
-    public void setRotationPower(double power) {
-        if (power > 0 && rotationDeg >= ROT_MAX_DEG) {
-            power = 0;
-        }
-
-        if (power < 0 && rotationDeg <= ROT_MIN_DEG) {
-            power = 0;
-        }
-
-        rot1.setPower(power);
-        rot2.setPower(power);
-    }
-
-    /**
-     * Update the global software rotation bounds during DISARMED calibration only.
-     * Caller must ensure both endpoints are within the mechanism's verified safe travel.
-     * This method does not detect hard stops and must not be used as a homing routine.
-     */
     public boolean configureRotationLimits(double minDeg, double maxDeg) {
         if (!Double.isFinite(minDeg) || !Double.isFinite(maxDeg)
                 || minDeg < -360.0 || maxDeg > 360.0
@@ -220,23 +86,15 @@ public class Turret {
             return false;
         }
         stopRotation();
-        ROT_MIN_DEG = minDeg;
-        ROT_MAX_DEG = maxDeg;
+        RotMinLim = minDeg;
+        RotMaxLim = maxDeg;
         return true;
     }
 
-    /** Stop the rotation servos. (The pitch servo holds its position on its own.) */
     public void stopRotation() {
-        rot1.setPower(0);
-        rot2.setPower(0);
+        rotation.setPower(0);
     }
 
-    /** Kept so existing code (MainTeleOp.stop()) still works. */
-    public void stop() {
-        stopRotation();
-    }
-
-    /** Send the pitch servo to an angle (clamped to the pitch range). */
     public void setPitchDeg(double deg) {
         pitchDeg = Range.clip(deg, PITCH_MIN_DEG, PITCH_MAX_DEG);
 
@@ -256,26 +114,20 @@ public class Turret {
      *   up / down    -> nudge pitch up/down (smoothly, while held)
      */
     public void manualControl(boolean left, boolean right, boolean up, boolean down) {
-        readRotation();
-
         if (left) {
-            setRotationPower(-ROTATE_POWER);
+            rotation.setPower(-ROTATE_POWER);
         }
         else if (right) {
-            setRotationPower(ROTATE_POWER);
+            rotation.setPower(ROTATE_POWER);
         }
         else {
-            setRotationPower(0);
+            rotation.setPower(0);
         }
 
-        // Move pitch at a steady speed, no matter how fast the loop runs
-        double dt = manualTimer.seconds();
-        manualTimer.reset();
-        if (up)        setPitchDeg(pitchDeg + PITCH_MANUAL_DEG_PER_SEC * dt);
-        else if (down) setPitchDeg(pitchDeg - PITCH_MANUAL_DEG_PER_SEC * dt);
+        if (up)        setPitchDeg(pitchDeg + PITCH_MANUAL_DEG_PER_SEC );
+        else if (down) setPitchDeg(pitchDeg - PITCH_MANUAL_DEG_PER_SEC );
 
-        // Show current rotation as the "target" so telemetry makes sense
-        rotationTargetDeg = rotationDeg;
+        updatePosition();
     }
 
     // =====================================================
@@ -290,18 +142,13 @@ public class Turret {
      * @param extraRotPower feedforward added to the rotation power (0 if unused)
      */
     private void runToAngles(double rotDeg, double pitchTarget, double extraRotPower) {
-        // Rotation: PD controller
-        rotationTargetDeg = chooseRotationTarget(rotDeg, rotationDeg);
-        //rotationPD.calculate(rotationTargetDeg - rotationDeg,ROT_KP, ROT_KD, ROT_KS, ROT_MAX_POWER, ROT_TOLERANCE_DEG, null);
-        //setRotationPower(Range.clip(rotPower + extraRotPower, -ROT_MAX_POWER, ROT_MAX_POWER));
-
-        // Pitch: just tell the servo where to go
+        rotateTo(rotDeg);
         setPitchDeg(pitchTarget);
     }
 
     /** Drive to a fixed position (e.g. a preset, or in Auto). Call every loop. */
     public void goTo(double rotDeg, double pitchDeg) {
-        readRotation();
+        updatePosition();
         runToAngles(rotDeg, pitchDeg, 0);
     }
 
@@ -327,22 +174,15 @@ public class Turret {
         turretAuto = !turretAuto;
         //rotationPD.reset();          // clear old derivative history when switching
         haveLastHeading = false;
-        manualTimer.reset();
+        updatePosition();
     }
 
     public boolean isTurretAuto() {
         return turretAuto;
     }
     public double getRotationDeg() {
-        return rotationDeg;
+        return turretPosition;
     }
-    public double getTurretAngularVelocityDegPerSec() {
-        return turretAngularVelocityDegPerSec;
-    }
-    public double getRotationTarget() {
-        return rotationTargetDeg;
-    }
-    /** Commanded pitch (a position servo has no feedback). */
     public double getPitchDeg() {
         return pitchDeg;
     }
@@ -364,12 +204,15 @@ public class Turret {
      * Pick the one inside the soft limits that's closest to where we are now.
      * If none fit, clamp to the nearest limit.
      */
-    private static double chooseRotationTarget(double target, double current) {
+    public void rotateTo(double target) {
+        double ticksPerDeg = TPR * GearRatio / 360.0;
+        double current = rotation.getCurrentPosition() / ticksPerDeg;
+
         double best = Double.NaN;
         double bestDist = Double.MAX_VALUE;
         for (int k = -1; k <= 1; k++) {
             double candidate = wrap180(target) + 360 * k;
-            if (candidate >= ROT_MIN_DEG && candidate <= ROT_MAX_DEG) {
+            if (candidate >= RotMinLim && candidate <= RotMaxLim) {
                 double dist = Math.abs(candidate - current);
                 if (dist < bestDist) {
                     best = candidate;
@@ -378,11 +221,13 @@ public class Turret {
             }
         }
         if (Double.isNaN(best)) {
-            best = Range.clip(target, ROT_MIN_DEG, ROT_MAX_DEG);
+            best = Range.clip(target, RotMinLim, RotMaxLim);
         }
-        return best;
-    }
 
+        rotation.setTargetPosition((int) Math.round(best * ticksPerDeg));
+        rotation.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rotation.setPower(ROTATE_POWER);
+    }
     // =====================================================
     // APRILTAG DIRECT TARGETING: IDs 34, 35, 36, 37
     // =====================================================
@@ -451,8 +296,7 @@ public class Turret {
         private final ElapsedTime sinceLastVisual = new ElapsedTime();
         /** Disarmed test positioning; caller must ensure tracking is disabled. */
         public void calibrationJog(double power) {
-            readRotation();
-            setRotationPower(Range.clip(power, -0.12, 0.12));
+            updatePosition();
         }
 
         public void calculate(double ignoredError, double kP, double kD,
@@ -480,7 +324,7 @@ public class Turret {
                                     double maxPower, double angleTolerance,
                                     LLResult result, double robotYawRateDegPerSec,
                                     double robotHeadingRad, double turnStick) {
-            readRotation();
+            updatePosition();
             if (Double.isFinite(robotHeadingRad)) {
                 if (haveHeading) {
                     double delta = Math.atan2(Math.sin(robotHeadingRad - previousHeadingRad),

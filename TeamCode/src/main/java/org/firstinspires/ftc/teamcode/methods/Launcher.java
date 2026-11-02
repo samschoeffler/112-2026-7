@@ -59,7 +59,7 @@ public class Launcher {
     }
 
     public void toggleOn() {
-        if (flywheelsOn) stopAll();
+        if (!flywheelsOn) stopAll();
         else setTargetVelocity(SHOOTING_VELOCITY);
     }
 
@@ -90,11 +90,11 @@ public class Launcher {
         if (!fireRequested) fireRequestedAt = System.nanoTime();
         fireRequested = true;
         ejecting = false;
-        launchMech.setPower(0.75);
+        launchMech.setPower(1.0);
     }
 
     public void actFire() {
-        launchMech.setPower(0.75);
+        launchMech.setPower(1.0);
     }
 
 
