@@ -16,8 +16,7 @@ import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.hardware.limelightvision.LLResult;
+import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -52,7 +51,7 @@ public class MainTeleOp extends OpMode {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
-    private Limelight3A limelight;
+    private LimelightVision vision;
     private Servo led;
 
     private String yawSource = "Pedro";
@@ -105,21 +104,23 @@ public class MainTeleOp extends OpMode {
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
         //setting up follower from autos
         follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
         allegiance = OpModeStorage.LastAllegiance;
         if (allegiance.equals("BLUE")) {
             driverOffsetRad = Math.toRadians(BLUE_FORWARD_DEG);
-            limelight.pipelineSwitch(2);
         } else if(allegiance.equals("RED")) {
             driverOffsetRad = Math.toRadians(RED_FORWARD_DEG);
-            limelight.pipelineSwitch(1);
         } else {
             driverOffsetRad = Math.toRadians(RED_FORWARD_DEG);
-            limelight.pipelineSwitch(1);
         }
+
+        int pipeline = "BLUE".equals(allegiance) ? 2 : 1;
+
+        vision = new LimelightVision(hardwareMap, pipeline);
+
+        telemetry.setMsTransmissionInterval(100);
 
         //setting up Lime Light
         try {
@@ -138,7 +139,7 @@ public class MainTeleOp extends OpMode {
     public void start() {
         follower.manual();
         follower.update();
-        limelight.start();
+        vision.start();
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
@@ -162,6 +163,8 @@ public class MainTeleOp extends OpMode {
         follower.manual(powers);
         ManualDrive.driveOrHold(follower, powers);
         follower.update();
+
+        vision.update();
 
         //toggle launcher:
         // Toggle flywheel speed control.
@@ -212,10 +215,9 @@ public class MainTeleOp extends OpMode {
 
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
-            LLResult result = limelight.getLatestResult();
             turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                     Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                    result, robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
@@ -229,12 +231,6 @@ public class MainTeleOp extends OpMode {
         intake.adjustRamp(
                 gamepad2.dpad_up,
                 gamepad2.dpad_down);
-
-        boolean canSee = false;
-
-        if (turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults())) {
-            canSee = true;
-        }
 
 
 
@@ -256,7 +252,7 @@ public class MainTeleOp extends OpMode {
         }
 
         //led updates
-        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed() && turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults()))
+        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed() && vision.hasAimingTarget())
             led.setPosition(0.611);
         else if(!turret.isTurretAuto())
             led.setPosition(0.333);
@@ -278,7 +274,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
         telemetry.addData("r trig thresh", gamepad2.right_trigger);
         telemetry.addLine("I <3 Femboys");
-        telemetry.addData("Is Targeting?",  turret.mainPD.LLisTargeting(limelight.getLatestResult().getFiducialResults()));
+        telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
         telemetry.update();
     }
 
@@ -288,6 +284,6 @@ public class MainTeleOp extends OpMode {
         launcher.stopAll();
         intake.stop();
         turret.stop();
-        limelight.stop();
+        vision.stop();
     }
 }

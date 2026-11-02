@@ -2,17 +2,12 @@ package org.firstinspires.ftc.teamcode.Tests;
 
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
+import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
@@ -45,7 +40,7 @@ public class LauncherDistanceTest extends OpMode {
 
     private Launcher launcher;
     private Turret turret;
-    private Limelight3A limelight;
+    private LimelightVision vision;
     private DcMotorEx intake;
     private Servo ramp;
     private final TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
@@ -94,8 +89,7 @@ public class LauncherDistanceTest extends OpMode {
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         ramp = hardwareMap.get(Servo.class, "Ramp");
         ramp.setPosition(Intake.rAMPuP);
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(1);
+        vision = new LimelightVision(hardwareMap, 1);
         originalTurretPower = Turret.ROTATE_POWER;
         originalTransferPower = Launcher.MECH_POWER;
         settingsSaved = true;
@@ -113,7 +107,7 @@ public class LauncherDistanceTest extends OpMode {
     }
 
     @Override
-    public void start() { limelight.start(); }
+    public void start() { vision.start(); }
 
     @Override
     public void loop() {
@@ -154,6 +148,7 @@ public class LauncherDistanceTest extends OpMode {
             }
         } else turret.manualControl(false, false, false, false);
 
+        vision.update();
         updateRange(now);
         if (spin) {
             if (launcher.isFlywheelsOn()) {
@@ -228,37 +223,43 @@ public class LauncherDistanceTest extends OpMode {
 
     private void updateRange(long now) {
         visionValid = false;
-        LLResult result = limelight.getLatestResult();
-        if (result != null && result.isValid() && result.getStaleness() >= 0 && result.getStaleness() <= MAX_RESULT_AGE_MS) {
-            double stamp = result.getTimestamp();
-            if (Double.isFinite(stamp) && stamp != lastFrame) {
+        LimelightVision.TagObservation selected = vision.getTag(TAG_IDS[tagIndex]);
+        double stamp = vision.getFrameTimestamp();
+
+        // Keep the stricter 150 ms calibration freshness requirement.
+        if (vision.hasValidFrame() && vision.getFrameAgeMs() >= 0
+                && vision.getFrameAgeMs() <= MAX_RESULT_AGE_MS
+                && Double.isFinite(stamp)) {
+            if (stamp != lastFrame) {
                 lastFrame = stamp;
-                LLResultTypes.FiducialResult selected = null;
-                if (result.getFiducialResults() != null) {
-                    for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
-                        if (tag != null && tag.getFiducialId() == TAG_IDS[tagIndex]) { selected = tag; break; }
-                    }
-                }
                 if (selected != null) {
-                    Pose3D pose = selected.getTargetPoseCameraSpace();
-                    if (pose != null && pose.getPosition() != null) {
-                        Position p = pose.getPosition().toUnit(DistanceUnit.METER);
-                        double distance = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
-                        if (Double.isFinite(distance) && distance >= 0.10 && distance <= 12.0
-                                && Double.isFinite(selected.getTargetXDegrees())) {
-                            if (lastNewFrameAt != 0 && now - lastNewFrameAt > MAX_FRAME_GAP_NS) window.clear();
-                            cameraX = p.x; cameraY = p.y; cameraZ = p.z;
-                            tx = selected.getTargetXDegrees(); tagArea = selected.getTargetArea();
-                            lastNewFrameAt = now;
-                            window.add(new RangeReading(now, distance));
-                        } else resetRange();
+                    double distance = selected.distanceMeters;
+                    if (Double.isFinite(distance) && distance >= 0.10 && distance <= 12.0
+                            && Double.isFinite(selected.cameraXmeters)
+                            && Double.isFinite(selected.cameraYmeters)
+                            && Double.isFinite(selected.cameraZmeters)) {
+                        if (lastNewFrameAt != 0 && now - lastNewFrameAt > MAX_FRAME_GAP_NS)
+                            window.clear();
+                        cameraX = selected.cameraXmeters;
+                        cameraY = selected.cameraYmeters;
+                        cameraZ = selected.cameraZmeters;
+                        tx = selected.txDeg;
+                        tagArea = selected.areaPercent;
+                        lastNewFrameAt = now;
+                        window.add(new RangeReading(now, distance));
                     } else resetRange();
                 } else resetRange();
             }
             visionValid = lastNewFrameAt != 0 && now - lastNewFrameAt <= MAX_FRAME_GAP_NS;
         }
-        if (!visionValid) { window.clear(); meanRange = stdRange = Double.NaN; rangeStable = false; return; }
-        while (!window.isEmpty() && now - window.get(0).time > WINDOW_NS) window.remove(0);
+        if (!visionValid) {
+            window.clear();
+            meanRange = stdRange = Double.NaN;
+            rangeStable = false;
+            return;
+        }
+        while (!window.isEmpty() && now - window.get(0).time > WINDOW_NS)
+            window.remove(0);
         if (window.isEmpty()) { rangeStable = false; return; }
         double sum = 0.0, squared = 0.0;
         for (RangeReading r : window) { sum += r.range; squared += r.range * r.range; }
@@ -400,7 +401,7 @@ public class LauncherDistanceTest extends OpMode {
         if (intake != null) intake.setPower(0.0);
         if (turret != null) turret.stop();
         if (ramp != null) ramp.setPosition(Intake.rAMPuP);
-        if (limelight != null) limelight.stop();
+        if (vision != null) vision.stop();
         if (csv != null) { csv.flush(); csv.close(); }
         if (settingsSaved) {
             Turret.ROTATE_POWER = originalTurretPower;

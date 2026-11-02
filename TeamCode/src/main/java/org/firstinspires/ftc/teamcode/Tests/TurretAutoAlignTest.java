@@ -3,8 +3,7 @@ package org.firstinspires.ftc.teamcode.Tests;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
+import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -15,13 +14,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@TeleOp(name = "Turret Auto Align")
 public class TurretAutoAlignTest extends OpMode {
-    private Limelight3A limelight;
+    private LimelightVision vision;
     private Turret turret;
     private Follower follower;
     private IMU imu;
-    private FtcDashboard dashboard;
     private double turnScale = 0.25;
     private double kP = 0.02, kD = 0;
     private boolean trackingEnabled = false;
@@ -29,14 +26,11 @@ public class TurretAutoAlignTest extends OpMode {
     private boolean haveLastHeading = false;
     private double lastHeadingRad = 0, yawRate = 0;
     private final ElapsedTime yawTimer = new ElapsedTime();
-    private final ElapsedTime opTimer = new ElapsedTime();
     private final ElapsedTime trialTimer = new ElapsedTime();
-    private double lastPacketTime = -1;
     private String yawSource = "Pedro";
     private String trialType = "IDLE";
     private boolean trialActive = false;
     private static final double TRIAL_DURATION_SEC = 3.0;
-    private static final double GRAPH_PERIOD_SEC = 0.10;
 
     private static final String[] NAMES = {
             "Vision kP", "Vision kD", "Static friction kS", "Max turret power",
@@ -127,12 +121,10 @@ public class TurretAutoAlignTest extends OpMode {
         }
     }
     @Override public void init() {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        vision = new LimelightVision(hardwareMap, 1);
         turret = new Turret(hardwareMap);
         follower = Constants.create(hardwareMap);
         try { imu = hardwareMap.get(IMU.class, "imu"); } catch (RuntimeException ignored) { imu = null; }
-        dashboard = FtcDashboard.getInstance();
-        limelight.pipelineSwitch(1);
         // Restore tuned values here; gamepad settings are temporary.
         Turret.ROT_MAX_POWER = 0.20;
         Turret.ROBOT_YAW_FF_GAIN = 0;
@@ -140,15 +132,14 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.update();
     }
     @Override public void start() {
-        limelight.start(); turret.mainPD.reset(); yawTimer.reset();
-        haveLastHeading = false; opTimer.reset(); lastPacketTime = -1;
+        vision.start(); turret.mainPD.reset(); yawTimer.reset();
+        haveLastHeading = false; 
     }
-    // Guided tests use Dashboard graphs only. No local files are written.
+    // Diagnostic trials show live values on the Driver Station.
     private void startTrial(String kind) {
         trialType = kind;
         trialActive = true;
         trialTimer.reset();
-        // Reset chart history by clearing series on Dashboard before each trial if desired.
     }
     private void stopTrial() {
         trialActive = false;
@@ -185,17 +176,17 @@ public class TurretAutoAlignTest extends OpMode {
             // Low-power jog for positioning only; global software limits are enforced.
             turret.mainPD.calibrationJog(gamepad2.left_stick_x * .12);
         }
-        LLResult result = limelight.getLatestResult();
+        vision.update();
         if (trackingEnabled) {
             turret.mainPD.calculateHybrid(kP,kD,Turret.ROT_KS,Turret.ROT_MAX_POWER,
-                    Turret.ROT_TOLERANCE_DEG,result,yawRate,follower.pose().heading(),turn);
+                    Turret.ROT_TOLERANCE_DEG,vision.getBestAimingTarget(),
+                    vision.getAimingTargetCount(),yawRate,follower.pose().heading(),turn);
         } else if (Math.abs(gamepad2.left_stick_x) < .05) turret.stopRotation();
         double angle = turret.getRotationDeg();
-        // Graph 'Vision target' is camera-derived and only meaningful while tag is visible.
+        // Telemetry 'Vision target' is camera-derived and only meaningful while tag is visible.
         double visionTarget = Double.isFinite(turret.mainPD.getTargetErrorDeg())
                 ? angle + Turret.VISION_TO_TURRET_SIGN * turret.mainPD.getTargetErrorDeg() : Double.NaN;
         double headingTarget = turret.mainPD.getHeadingHoldTargetDeg();
-        double now = opTimer.seconds();
         if (trialActive && trialTimer.seconds() >= TRIAL_DURATION_SEC) {
             // Vision trial stops automatically. Heading recording ends, tracking continues.
             if ("VISION_STEP".equals(trialType)) {
@@ -204,32 +195,11 @@ public class TurretAutoAlignTest extends OpMode {
             }
             stopTrial();
         }
-        if (dashboard != null && (lastPacketTime < 0 || now-lastPacketTime >= GRAPH_PERIOD_SEC)) {
-            lastPacketTime = now;
-            TelemetryPacket packet = new TelemetryPacket();
-            packet.put("Angle / actual (deg)", angle);
-            if (Double.isFinite(visionTarget)) packet.put("Angle / vision target (deg)", visionTarget);
-            if (Double.isFinite(headingTarget)) packet.put("Angle / heading target (deg)", headingTarget);
-            if (Double.isFinite(turret.mainPD.getTargetErrorDeg())) packet.put("Vision error (deg)", turret.mainPD.getTargetErrorDeg());
-            if (Double.isFinite(turret.mainPD.getHeadingHoldErrorDeg())) packet.put("Heading error (deg)", turret.mainPD.getHeadingHoldErrorDeg());
-            packet.put("Turret velocity (deg/s)", turret.getTurretAngularVelocityDegPerSec());
-            packet.put("Robot yaw (deg/s)", yawRate);
-            packet.put("Turret command power", turret.mainPD.getCommandedPower());
-            packet.put("Yaw FF power", turret.mainPD.getYawFeedforwardPower());
-            packet.put("Prediction power", turret.mainPD.getPredictivePower());
-            packet.put("Tag ID", turret.mainPD.getTrackedTagId());
-            packet.put("Mode", turret.mainPD.getTrackingMode());
-            packet.put("Trial", trialType + (trialActive ? " RUNNING" : " DONE"));
-            // Reference for vision error: zero degrees (perfect centering).
-            packet.put("Vision ideal error (deg)", 0.0);
-            // No universal ideal angle trajectory: actual/target are measured commands.
-            dashboard.sendTelemetryPacket(packet);
-        }
         telemetry.addData("Tracking", trackingEnabled ? "ENABLED" : "DISARMED");
         telemetry.addLine("G2 Dpad up/down select; left/right adjust; hold A fine");
         telemetry.addLine("G2 START toggle / B STOP / X-Y turn scale");
-        telemetry.addLine("DISARMED: G2 left stick jog; LB vision graph trial (3 sec)");
-        telemetry.addLine("TRACKING: G2 RB starts 3-sec heading graph trial");
+        telemetry.addLine("DISARMED: G2 left stick jog; LB vision diagnostic trial (3 sec)");
+        telemetry.addLine("TRACKING: G2 RB starts 3-sec heading diagnostic trial");
         telemetry.addData("Selected", "%d/%d %s",selectedParameter+1,NAMES.length,NAMES[selectedParameter]);
         telemetry.addData("Value", "%.5f", value(selectedParameter));
         telemetry.addData("Limits", "%.1f to %.1f", Turret.ROT_MIN_DEG, Turret.ROT_MAX_DEG);
@@ -239,10 +209,11 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.addData("Angle / target", "%.2f / %.2f",angle,headingTarget);
         telemetry.addData("Vision error",turret.mainPD.getTargetErrorDeg());
         telemetry.addData("Yaw source",yawSource);
-        telemetry.addData("Trial",trialType + (trialActive ? " (GRAPHING)" : ""));
+        telemetry.addData("Trial",trialType + (trialActive ? " (DIAGNOSTICS)" : ""));
+        vision.addTelemetry(telemetry);
         telemetry.update();
     }
     @Override public void stop() {
-        stopTrial(); turret.stopRotation(); limelight.stop();
+        stopTrial(); turret.stopRotation(); vision.stop();
     }
 }
