@@ -127,10 +127,9 @@ public class LauncherDistanceTest extends OpMode {
         boolean saveResult = gamepad2.yWasPressed();
 
         if (pending == null) {
-            turret.manualControl(gamepad2.dpad_left, gamepad2.dpad_right,
-                    gamepad2.dpad_up, gamepad2.dpad_down);
-            boolean movedTurret = gamepad2.dpad_left || gamepad2.dpad_right
-                    || gamepad2.dpad_up || gamepad2.dpad_down;
+            turret.manualControl(gamepad2.dpad_left, gamepad2.dpad_right
+                    );
+            boolean movedTurret = gamepad2.dpad_left || gamepad2.dpad_right;
             if (movedTurret) resetRange();
             if (nextTag && !launcher.isFlywheelsOn()) {
                 tagIndex = (tagIndex + 1) % TAG_IDS.length;
@@ -146,7 +145,7 @@ public class LauncherDistanceTest extends OpMode {
                 rampOpen = !rampOpen;
                 ramp.setPosition(rampOpen ? Intake.rAMPdOWN : Intake.rAMPuP);
             }
-        } else turret.manualControl(false, false, false, false);
+        } else turret.manualControl(false, false);
 
         vision.update();
         updateRange(now);
@@ -280,7 +279,6 @@ public class LauncherDistanceTest extends OpMode {
         t.id = nextTrialId++; t.tag = TAG_IDS[tagIndex]; t.startedMs = System.currentTimeMillis();
         t.frames = window.size(); t.range = meanRange; t.std = stdRange;
         t.x = cameraX; t.y = cameraY; t.z = cameraZ; t.tx = tx; t.area = tagArea;
-        t.pitch = turret.getPitchDeg(); t.yaw = turret.getRotationDeg();
         t.target = targetVelocity; t.actual = launcher.getMeasuredVelocity();
         t.minimumVelocity = t.actual; t.battery = launcher.getBatteryVoltage(); t.power = launcher.getMotorPower();
         t.ks = Launcher.KS; t.kv = Launcher.KV; t.kp = Launcher.KP;
@@ -316,8 +314,6 @@ public class LauncherDistanceTest extends OpMode {
         if (!rangeStable) return Double.NaN;
         double[] counts = new double[81], rangeSums = new double[81], speedSums = new double[81];
         for (Trial t : trials) {
-            if (!"HIT".equals(t.outcome) || t.tag != TAG_IDS[tagIndex]
-                    || Math.abs(t.pitch - turret.getPitchDeg()) > 0.25) continue;
             int bin = (int) Math.round(t.range / 0.15);
             if (bin >= 0 && bin < counts.length) {
                 counts[bin]++; rangeSums[bin] += t.range; speedSums[bin] += t.target;
@@ -366,8 +362,6 @@ public class LauncherDistanceTest extends OpMode {
         telemetry.addData("Distance", !visionValid ? "Tag " + TAG_IDS[tagIndex] + ": NO POSE"
                 : String.format(Locale.US, "Tag %d: %.2f m (%s)", TAG_IDS[tagIndex], meanRange,
                 rangeStable ? "STABLE" : "WAIT"));
-        telemetry.addData("Hood / ramp", String.format(Locale.US, "%.1f deg / %s",
-                turret.getPitchDeg(), rampOpen ? "OPEN" : "CLOSED"));
         if (pending != null && !feedingTrial) {
             telemetry.addData("Result", OUTCOMES[outcomeIndex] + " | G2 X changes, Y saves");
         }
@@ -384,7 +378,6 @@ public class LauncherDistanceTest extends OpMode {
         panels.addData("Range_m", Double.isFinite(meanRange) ? meanRange : 0.0);
         panels.addData("Range_Valid", rangeStable ? 1 : 0);
         panels.addData("Range_Std_m", Double.isFinite(stdRange) ? stdRange : 0.0);
-        panels.addData("Pitch_deg", turret.getPitchDeg());
         panels.addData("Motor_Power", launcher.getMotorPower());
         panels.addData("Battery_V", Double.isFinite(launcher.getBatteryVoltage()) ? launcher.getBatteryVoltage() : 0.0);
         panels.addData("Feeding", feedingTrial && launcher.isFiring() ? 1 : 0);

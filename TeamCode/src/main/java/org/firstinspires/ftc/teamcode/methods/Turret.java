@@ -12,18 +12,6 @@ import com.qualcomm.robotcore.util.Range;
 
 import java.util.List;
 
-/**
- * FTC BIOBUZZ turret controller: DC motor version.
- *
- * LimelightVision owns AprilTag selection; PD owns the vision/heading controller.
- * This class converts motor output-shaft encoder ticks to turret degrees and
- * uses RUN_WITHOUT_ENCODER for the power-based hybrid controller.
- *
- * IMPORTANT: zeroRotationAtForward() MUST be called only with the turret
- * physically facing robot-forward, after verifying wire clearance.
- * configureRotationLimits() MUST be called with MEASURED safe limits before
- * any powered movement is permitted. Both flags are per Turret instance.
- */
 public class Turret {
 
     /** Motor-output-shaft encoder ticks per revolution (goBILDA 5203 435 RPM). */
@@ -44,15 +32,7 @@ public class Turret {
     public static double ROT_MAX_DEG =  180.0;
     public static double VELOCITY_FILTER_ALPHA = 0.35;
 
-    public static double PITCH_MIN_DEG = 25;
-    public static double PITCH_MAX_DEG = 60;
-    public static double PITCH_POS_AT_MIN = 0.2644;
-    public static double PITCH_POS_AT_MAX = 0.009;
-    public static double PITCH_START_DEG = 25;
-    public static double PITCH_MANUAL_DEG_PER_SEC = 10;
-
     private final DcMotorEx rotation;
-    private final Servo pitch;
     private final ElapsedTime manualTimer = new ElapsedTime();
 
     // Instance state. Motor hardware objects must not be static across OpModes.
@@ -65,13 +45,11 @@ public class Turret {
     private double rotationDeg = 0;
     private double turretAngularVelocityDegPerSec = 0;
     private double rotationTargetDeg = 0;
-    private double pitchDeg = PITCH_START_DEG;
 
     public final PD mainPD = new PD();
 
     public Turret(HardwareMap hardwareMap) {
         rotation = hardwareMap.get(DcMotorEx.class, "rotation");
-        pitch = hardwareMap.get(Servo.class, "pitch");
 
         // Verify motor and encoder signs by a controlled, low-power test.
         rotation.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -79,7 +57,6 @@ public class Turret {
         rotation.setPower(0);
         rotation.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        setPitchDeg(PITCH_START_DEG);
         updatePosition();
         manualTimer.reset();
     }
@@ -179,32 +156,17 @@ public class Turret {
         stopRotation();
     }
 
-    public void setPitchDeg(double deg) {
-        pitchDeg = Range.clip(deg, PITCH_MIN_DEG, PITCH_MAX_DEG);
-        double fraction = (pitchDeg - PITCH_MIN_DEG) / (PITCH_MAX_DEG - PITCH_MIN_DEG);
-        double position = PITCH_POS_AT_MIN + fraction * (PITCH_POS_AT_MAX - PITCH_POS_AT_MIN);
-        pitch.setPosition(Range.clip(position, 0, 1));
-    }
-
-    public void nudgePitch(boolean up) {
-        setPitchDeg(pitchDeg + (up ? 5.0 : -5.0));
-    }
-
     /** D-pad manual control; uses the same soft limits as automatic tracking. */
-    public void manualControl(boolean left, boolean right, boolean up, boolean down) {
+    public void manualControl(boolean left, boolean right) {
         double power = left == right ? 0 : left ? -ROTATE_POWER : ROTATE_POWER;
         setRotationPower(power);
         double dt = Math.min(manualTimer.seconds(), 0.10);
         manualTimer.reset();
-        if (up != down) {
-            setPitchDeg(pitchDeg + (up ? 1 : -1) * PITCH_MANUAL_DEG_PER_SEC * dt);
-        }
         rotationTargetDeg = rotationDeg;
     }
 
-    public void goTo(double rotDeg, double pitchTargetDeg) {
+    public void goTo(double rotDeg) {
         rotateTo(rotDeg);
-        setPitchDeg(pitchTargetDeg);
     }
 
     /** Preset positioning ONLY; hybrid tracking instead uses setRotationPower(). */
@@ -247,7 +209,6 @@ public class Turret {
     public boolean isTurretAuto() { return turretAuto; }
     public double getRotationDeg() { updatePosition(); return rotationDeg; }
     public double getRotationTarget() { return rotationTargetDeg; }
-    public double getPitchDeg() { return pitchDeg; }
     public double getTurretVelocityDegPerSec() {
         updatePosition();
         return turretAngularVelocityDegPerSec;

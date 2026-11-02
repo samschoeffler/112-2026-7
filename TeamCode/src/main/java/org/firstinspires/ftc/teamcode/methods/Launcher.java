@@ -29,7 +29,7 @@ public class Launcher {
     public static double FEED_READY_TIMEOUT_SECONDS = 3.0;
 
     private final HardwareMap hardwareMap;
-    private final DcMotorEx launch0, launch1, launchMech;
+    private final DcMotorEx fWheel, launchMech;
     private boolean flywheelsOn = false;
     private boolean fireRequested = false, firing = false, ejecting = false;
     private boolean feedStarted = false;
@@ -37,14 +37,17 @@ public class Launcher {
     private double batteryVoltage = Double.NaN, requestedVolts = 0.0, motorPower = 0.0;
     private long readySince = 0, fireRequestedAt = 0, reverseSince = 0, stalledSince = 0;
     private String fault = "";
+    private boolean ballJustShot = false;
+    private boolean flywheelDropped = false;
+    // only count drops once the flywheel has been up to speed (ignores spin-up)
+    private boolean flywheelReady = false;
+    private double flywheelThreshold = 1200;
 
     public Launcher(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        launch0 = hardwareMap.get(DcMotorEx.class, "Launch0");
-        launch1 = hardwareMap.get(DcMotorEx.class, "Launch1");
+        fWheel = hardwareMap.get(DcMotorEx.class, "fWheel");
         launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
-        configureFlywheel(launch0);
-        configureFlywheel(launch1);
+        configureFlywheel(fWheel);
         launchMech.setPower(0.0);
         launchMech.setDirection(DcMotorSimple.Direction.FORWARD);
         launchMech.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -123,7 +126,7 @@ public class Launcher {
             stopAll();
             return;
         }
-        measuredVelocity = ENCODER_SIGN_0 * launch0.getVelocity();
+        measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
         batteryVoltage = readBatteryVoltage();
         if (!Double.isFinite(measuredVelocity) || !Double.isFinite(batteryVoltage)) {
             tripFault("Invalid encoder velocity or battery voltage");
@@ -158,8 +161,7 @@ public class Launcher {
         } else {
             readySince = reverseSince = stalledSince = 0;
         }
-        launch0.setPower(MOTOR0_POWER_SIGN * motorPower);
-        launch1.setPower(MOTOR1_POWER_SIGN * motorPower);
+        fWheel.setPower(MOTOR0_POWER_SIGN * motorPower);
 
         // Gate the START of a firing request on stable speed. Once feeding
         // starts, keep feeding through normal shot dips, matching the ball test.
@@ -172,6 +174,17 @@ public class Launcher {
         }
         firing = fireRequested && flywheelsOn && feedStarted && !ejecting;
         launchMech.setPower(ejecting ? -MECH_POWER : firing ? MECH_POWER : 0.0);
+
+        //ball just shot logic
+        if (getFlywheelVelo() >= flywheelThreshold) {
+            flywheelReady = true;
+            flywheelDropped = false;
+            ballJustShot = false;
+        } else if (flywheelReady && !flywheelDropped) {
+            flywheelDropped = true;
+            ballJustShot = true;
+        } else
+            ballJustShot = false;
     }
 
     private boolean validConfiguration() {
@@ -216,8 +229,7 @@ public class Launcher {
         flywheelsOn = fireRequested = firing = ejecting = feedStarted = false;
         targetVelocity = requestedVolts = motorPower = 0.0;
         readySince = fireRequestedAt = reverseSince = stalledSince = 0;
-        launch0.setPower(0.0);
-        launch1.setPower(0.0);
+        fWheel.setPower(0.0);
         launchMech.setPower(0.0);
     }
 
@@ -232,9 +244,10 @@ public class Launcher {
     public boolean isEjecting() { return ejecting; }
     public double getTargetVelocity() { return targetVelocity; }
     public double getTranferVelo() { return launchMech.getVelocity(); }
-    public double getFlywheelVelo() { return launch0.getVelocity(); }
+    public double getFlywheelVelo() { return fWheel.getVelocity(); }
     public double getMeasuredVelocity() { return measuredVelocity; }
     public double getMotorPower() { return motorPower; }
     public double getBatteryVoltage() { return batteryVoltage; }
+    public boolean ballWasShot() {return ballJustShot;}
     public String getFault() { return fault; }
 }

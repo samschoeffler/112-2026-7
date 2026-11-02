@@ -17,6 +17,8 @@ import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import org.firstinspires.ftc.teamcode.methods.LimelightVision;
+
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -76,11 +78,8 @@ public class MainTeleOp extends OpMode {
     private double lastHeadingRad = 0;
     private double robotYawRateDegPerSec = 0;
 
-    //uses Booleans to keep last for toggling
-    private boolean lastY2 = false;
-    private boolean lastLeftTrigger2 = false;
-    private boolean lastLeftBumper2 = false;
-    private boolean lastLB1 = false;
+    private boolean isRumbling = false;
+
     public String allegiance;
 
     private void updateRobotYawRate(double headingRad) {
@@ -221,9 +220,7 @@ public class MainTeleOp extends OpMode {
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
-                    gamepad2.dpad_right,
-                    gamepad2.dpad_up,
-                    gamepad2.dpad_down
+                    gamepad2.dpad_right
             );
         }
 
@@ -259,6 +256,20 @@ public class MainTeleOp extends OpMode {
         else
             led.setPosition(0.500);
 
+        //rumble update
+        if(launcher.flywheelAtSpeed()) {
+            gamepad2.rumble(1.0, 1.0, Gamepad.RUMBLE_DURATION_CONTINUOUS);
+            isRumbling = true;
+        } else if(launcher.ballWasShot()) {
+            gamepad2.rumble(0.5, 0.5, Gamepad.RUMBLE_DURATION_CONTINUOUS);
+            isRumbling = true;
+        } else {
+            if(isRumbling) {
+                gamepad2.stopRumble();
+                isRumbling = false;
+            }
+        }
+
         //telemetry updates
         telemetry.addData("Allegiance: ", allegiance);
         telemetry.addLine("==========================");
@@ -271,7 +282,6 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
-        telemetry.addData("Turret Pitch", turret.getPitchDeg());
         telemetry.addData("r trig thresh", gamepad2.right_trigger);
         telemetry.addLine("I <3 Femboys");
         telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
