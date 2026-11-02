@@ -1,53 +1,40 @@
 package org.firstinspires.ftc.teamcode.Tests;
 
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 
-import com.qualcomm.robotcore.hardware.IMU;
+@TeleOp(name = "Limelight Diagnostic")
 public class LimeLightTest extends LinearOpMode {
-    private Limelight3A limelight;
-    private IMU imu;
-
     @Override
-    public void runOpMode() throws InterruptedException
-    {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        imu = hardwareMap.get(IMU.class, "imu");
-
-        telemetry.setMsTransmissionInterval(11);
-
-        limelight.pipelineSwitch(0);
-
-        /*
-         * Starts polling for data.
-         */
-        limelight.start();
-
-        while (opModeIsActive()) {
-            LLResult result = limelight.getLatestResult();
-            if (result != null) {
-                if (result.isValid()) {
-                    Pose3D botpose = result.getBotpose();
-                    telemetry.addData("tx", result.getTx());
-                    telemetry.addData("ty", result.getTy());
-                    telemetry.addData("Botpose", botpose.toString());
-                }
+    public void runOpMode() throws InterruptedException {
+        LimelightVision vision = new LimelightVision(hardwareMap, 0);
+        IMU imu = hardwareMap.get(IMU.class, "imu");
+        telemetry.setMsTransmissionInterval(100);
+        telemetry.addLine("Ready: Limelight diagnostic, pipeline 0");
+        telemetry.update();
+        waitForStart();
+        if (isStopRequested()) return;
+        vision.start();
+        try {
+            while (opModeIsActive()) {
+                // MegaTag2 requires an updated robot yaw before the camera read.
+                vision.updateRobotOrientation(
+                        imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
+                vision.update();
+                vision.addTelemetry(telemetry);
+                Pose3D botpose = vision.getBotPose();
+                Pose3D mt2 = vision.getBotPoseMT2();
+                if (botpose != null) telemetry.addData("Botpose", botpose);
+                if (mt2 != null) telemetry.addData("Botpose MT2", mt2);
+                telemetry.update();
+                idle();
             }
-            YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
-            limelight.updateRobotOrientation(orientation.getYaw(AngleUnit.DEGREES));
-            result = limelight.getLatestResult();
-            if (result != null) {
-                if (result.isValid()) {
-                    Pose3D botpose = result.getBotpose_MT2();
-                    // Use botpose data
-                }
-            }
-
+        } finally {
+            vision.stop();
         }
     }
 }

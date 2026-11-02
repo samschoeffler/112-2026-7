@@ -4,8 +4,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.ivy.commands.Commands;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
+import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -26,7 +25,7 @@ import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Red1Tip")
+@Autonomous(name = "Red1Tip", group="Red")
 public class Red1Tip extends OpMode {
 
     private IMU imu;
@@ -38,7 +37,7 @@ public class Red1Tip extends OpMode {
 
     private Follower follower;
     private AutoCommands autoCommand;
-    private Limelight3A limelight;
+    private LimelightVision vision;
     private Turret turret;
     private Servo led;
 
@@ -90,7 +89,6 @@ public class Red1Tip extends OpMode {
         turret = new Turret(hardwareMap);
         led = hardwareMap.get(Servo.class, "led");
 
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
         try {
             imu = hardwareMap.get(IMU.class, "imu");
@@ -98,7 +96,7 @@ public class Red1Tip extends OpMode {
         } catch (RuntimeException ex) {
             imuAvailable = false; // Pedro heading-rate fallback
         }
-        limelight.pipelineSwitch(1);
+        vision = new LimelightVision(hardwareMap, 1);
         // Conservative starting limits; adjustable with gamepad2 during this OpMode.
 
         Turret.ROT_MAX_POWER = 0.2;
@@ -114,8 +112,8 @@ public class Red1Tip extends OpMode {
 
     @Override
     public void start() {
+        vision.start();
         schedule(autoRoutine());
-        limelight.start();
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
@@ -130,14 +128,15 @@ public class Red1Tip extends OpMode {
         visualizer.recordPose(follower.pose());
         visualizer.draw(follower.pose());
 
+        vision.update();
         Scheduler.execute();
 
         autoCommand.updateLauncher();
 
-        LLResult result = limelight.getLatestResult();
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                result, robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                vision.getBestAimingTarget(), vision.getAimingTargetCount(),
+                robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
 
         led.setPosition(Math.random());
 
@@ -159,13 +158,15 @@ public class Red1Tip extends OpMode {
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Follower Mode", follower.mode());
+        telemetry.addData("LL Tags", vision.getVisibleTagIds());
+        telemetry.addData("LL Frame Age (ms)", vision.getFrameAgeMs());
         telemetry.update();
     }
 
     @Override
     public void stop() {
         turret.stop();
-        limelight.stop();
+        vision.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
 

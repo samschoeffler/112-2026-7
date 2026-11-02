@@ -31,6 +31,23 @@ public class AutoCommands {
 
     public Command holdBalls = instant(() -> intake.holdBalls());
 
+    /** Start an observation window while Ivy follows a path. */
+    public Command startVisionScan(LimelightVision vision) {
+        return instant(vision::beginScan);
+    }
+
+    /** Freeze the accumulated IDs before branching. */
+    public Command stopVisionScan(LimelightVision vision) {
+        return instant(vision::endScan);
+    }
+
+    /** Evaluated by Ivy when the command begins. */
+    public Command ifSawTag(LimelightVision vision, int id,
+                            Command detected, Command fallback) {
+        return com.pedropathing.ivy.commands.Commands.conditional(
+                () -> vision.sawTagDuringScan(id), detected, fallback);
+    }
+
     public void updateLauncher() {
         launcher.update();
 
