@@ -165,10 +165,9 @@ public class MainTeleOp extends OpMode {
 
         //toggle launcher:
         // Toggle flywheel speed control.
-        if (gamepad2.y && !lastY2) {
+        if (gamepad2.yWasPressed()) {
             launcher.toggleOn();
         }
-        lastY2 = gamepad2.y;
 
 // Request shooting while the right trigger is held.
         if (gamepad2.a) {
@@ -197,16 +196,13 @@ public class MainTeleOp extends OpMode {
         }
 
         //ramp
-        boolean leftTrigger2 = gamepad2.left_trigger > TRIGGER_THRESHOLD;
-        if (leftTrigger2 && !lastLeftTrigger2) {
+        if (gamepad2.leftTriggerWasPressed()) {
             intake.toggleRamp();
         }
-        lastLeftTrigger2 = leftTrigger2;
 
-        if(gamepad2.left_bumper && !lastLeftBumper2) {
+        if(gamepad2.leftBumperWasPressed()) {
             intake.holdBalls();
         }
-        lastLeftBumper2 = gamepad2.left_bumper;
 
         //turret auto
         if (gamepad1.aWasPressed()) {
