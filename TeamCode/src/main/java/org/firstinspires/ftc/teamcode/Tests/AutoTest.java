@@ -19,7 +19,6 @@ import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "AutoTest")
 public class AutoTest extends OpMode {
 
     private Follower follower;

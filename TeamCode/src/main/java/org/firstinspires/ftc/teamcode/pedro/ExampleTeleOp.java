@@ -6,7 +6,6 @@ import com.pedropathing.follower.ManualDrive;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Example TeleOp")
 public class ExampleTeleOp extends OpMode {
 
     private Follower follower;

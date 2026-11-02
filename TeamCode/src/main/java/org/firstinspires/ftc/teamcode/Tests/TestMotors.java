@@ -7,7 +7,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@TeleOp(name = "Flywheel Motor Testing")
 public class TestMotors extends OpMode {
     DcMotorEx launch0, launch1, transfer0, transfer1;
     TelemetryManager panelsTelemetry;

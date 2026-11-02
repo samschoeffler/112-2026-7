@@ -19,7 +19,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Auto 1")
 public class Auto1 extends OpMode {
         private final PoseFactory poseFactory = PoseFactory.degrees();
 

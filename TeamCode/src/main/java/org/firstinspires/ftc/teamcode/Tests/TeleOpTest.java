@@ -18,7 +18,6 @@ import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
 
-@TeleOp(name = "TeleOpTest")
 public class TeleOpTest extends OpMode {
 
     private Follower follower;

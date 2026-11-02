@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import java.util.ArrayList;
 
-@TeleOp(name = "Launcher Tuning")
 public class LauncherTuning extends OpMode {
     private DcMotorEx launch0, launch1, transfer, intake;
     private final TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();

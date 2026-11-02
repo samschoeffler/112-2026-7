@@ -37,7 +37,6 @@ import java.util.function.Predicate;
  *     hands and loose game pieces away from them.
  *   - Everything stops when the OpMode stops.
  */
-@TeleOp(name = "General Test")
 public class GeneralTest extends OpMode {
 
     // ---------- TUNING ----------
