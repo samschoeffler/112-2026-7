@@ -28,7 +28,7 @@ public class Launcher {
     public static double READY_HOLD_SECONDS = 0.15;
     public static double FEED_READY_TIMEOUT_SECONDS = 3.0;
 
-    private final HardwareMap hardwareMap;
+    private final Iterable<VoltageSensor> voltageSensors;
     private final DcMotorEx launch0, launch1, launchMech;
     private boolean flywheelsOn = false;
     private boolean fireRequested = false, firing = false, ejecting = false;
@@ -39,10 +39,18 @@ public class Launcher {
     private String fault = "";
 
     public Launcher(HardwareMap hardwareMap) {
-        this.hardwareMap = hardwareMap;
-        launch0 = hardwareMap.get(DcMotorEx.class, "Launch0");
-        launch1 = hardwareMap.get(DcMotorEx.class, "Launch1");
-        launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
+        this(hardwareMap.get(DcMotorEx.class, "Launch0"),
+                hardwareMap.get(DcMotorEx.class, "Launch1"),
+                hardwareMap.get(DcMotorEx.class, "LaunchMech"), hardwareMap.voltageSensor);
+    }
+
+    // Hardware injection for desktop regression tests.
+    Launcher(DcMotorEx launch0, DcMotorEx launch1, DcMotorEx launchMech,
+             Iterable<VoltageSensor> voltageSensors) {
+        this.launch0 = launch0;
+        this.launch1 = launch1;
+        this.launchMech = launchMech;
+        this.voltageSensors = voltageSensors;
         configureFlywheel(launch0);
         configureFlywheel(launch1);
         launchMech.setPower(0.0);
@@ -59,7 +67,7 @@ public class Launcher {
     }
 
     public void toggleOn() {
-        if (!flywheelsOn) stopAll();
+        if (flywheelsOn) stopAll();
         else setTargetVelocity(SHOOTING_VELOCITY);
     }
 
@@ -84,17 +92,11 @@ public class Launcher {
         flywheelsOn = true;
     }
 
-    // Safe to call repeatedly from a held trigger; does not reset the timeout.
+    // Request only: update() owns all nonzero transfer output. Repeated holds keep the timeout.
     public void fire() {
-        if (!flywheelsOn || !fault.isEmpty()) return;
+        if (!flywheelsOn || !fault.isEmpty() || ejecting) return;
         if (!fireRequested) fireRequestedAt = System.nanoTime();
         fireRequested = true;
-        ejecting = false;
-        launchMech.setPower(1.0);
-    }
-
-    public void actFire() {
-        launchMech.setPower(1.0);
     }
 
 
@@ -188,7 +190,7 @@ public class Launcher {
 
     private double readBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;
-        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
+        for (VoltageSensor sensor : voltageSensors) {
             double voltage = sensor.getVoltage();
             if (Double.isFinite(voltage) && voltage >= 6.0 && voltage <= 16.8) {
                 result = Math.min(result, voltage);

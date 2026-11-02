@@ -12,6 +12,7 @@ import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.Turret;
+import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -40,6 +41,7 @@ public class LauncherDistanceTest extends OpMode {
 
     private Launcher launcher;
     private Turret turret;
+    private TurretCalibration turretCalibration;
     private LimelightVision vision;
     private DcMotorEx intake;
     private Servo ramp;
@@ -84,11 +86,12 @@ public class LauncherDistanceTest extends OpMode {
     public void init() {
         launcher = new Launcher(hardwareMap);
         turret = new Turret(hardwareMap);
+        turretCalibration = new TurretCalibration(turret);
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
         intake.setPower(0.0);
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         ramp = hardwareMap.get(Servo.class, "Ramp");
-        ramp.setPosition(Intake.rAMPuP);
+        ramp.setPosition(Intake.RAMP_UP);
         vision = new LimelightVision(hardwareMap, 1);
         originalTurretPower = Turret.ROTATE_POWER;
         originalTransferPower = Launcher.MECH_POWER;
@@ -107,10 +110,17 @@ public class LauncherDistanceTest extends OpMode {
     }
 
     @Override
+    public void init_loop() {
+        turretCalibration.update(gamepad2, telemetry);
+        telemetry.update();
+    }
+
+    @Override
     public void start() { vision.start(); }
 
     @Override
     public void loop() {
+        turret.update();
         long now = System.nanoTime();
         boolean spin = gamepad1.aWasPressed();
         boolean cancel = gamepad1.yWasPressed();
@@ -144,7 +154,7 @@ public class LauncherDistanceTest extends OpMode {
             }
             if (rampPressed) {
                 rampOpen = !rampOpen;
-                ramp.setPosition(rampOpen ? Intake.rAMPdOWN : Intake.rAMPuP);
+                ramp.setPosition(rampOpen ? Intake.RAMP_DOWN : Intake.RAMP_UP);
             }
         } else turret.manualControl(false, false, false, false);
 
@@ -376,6 +386,7 @@ public class LauncherDistanceTest extends OpMode {
         if (!"CSV logging active".equals(logStatus)) telemetry.addData("LOG WARNING", logStatus);
         telemetry.addLine("G1 A flywheel | up/down speed | B step | X tag (OFF) | Y cancel");
         telemetry.addLine("G2 hold A feed | B ramp | D-pad turret/hood");
+        turret.addTelemetry(telemetry);
         telemetry.update();
 
         // Full diagnostic series remain available in Panels without cluttering the Driver Station.
@@ -400,7 +411,7 @@ public class LauncherDistanceTest extends OpMode {
         if (launcher != null) launcher.stopAll();
         if (intake != null) intake.setPower(0.0);
         if (turret != null) turret.stop();
-        if (ramp != null) ramp.setPosition(Intake.rAMPuP);
+        if (ramp != null) ramp.setPosition(Intake.RAMP_UP);
         if (vision != null) vision.stop();
         if (csv != null) { csv.flush(); csv.close(); }
         if (settingsSaved) {

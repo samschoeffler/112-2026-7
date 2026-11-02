@@ -4,20 +4,18 @@ import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
 
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
+import org.firstinspires.ftc.teamcode.methods.LauncherIntakeControls;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
+import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import org.firstinspires.ftc.teamcode.methods.LimelightVision;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -26,15 +24,16 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *
  * ===== GAMEPAD 1 (driver) =====
  *   Sticks      -> field-centric drive
- *   Left Bumper -> toggle TurretAuto on/off (starts off)
+ *   A           -> toggle TurretAuto on/off (starts on)
  *
  * ===== GAMEPAD 2 (operator) =====
  *   Y              -> toggle launcher flywheels on/off
  *   X (hold)       -> intake
  *   B (hold)       -> outtake
- *   Right Trigger  -> shoot (hold to keep firing; intake runs while firing)
+ *   A (hold)       -> shoot after ready; intake runs while firing
  *   Right Bumper   -> eject balls from transfer (intake reverses while ejecting)
- *   Left Trigger   -> toggle ramp
+ *   Back (hold)    -> stop launcher and intake; Back+X clears a latched fault
+ *   Left Trigger   -> toggle ramp (UP <-> DOWN; HOLD/DOWNER -> UP)
  *   Left Bumper    -> hold balls
  *   D-pad          -> turret control while TurretAuto is off
  *                       left/right = rotate, up/down = pitch
@@ -43,20 +42,15 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @TeleOp(name = "MainTeleOp")
 public class MainTeleOp extends OpMode {
 
-    // How far a trigger must be pressed to count as "pressed"
-    private static final double TRIGGER_THRESHOLD = 0.2;
-
     //Methods
     private Follower follower;
     private Launcher launcher;
     private Intake intake;
+    private LauncherIntakeControls launcherControls;
     private Turret turret;
+    private TurretCalibration turretCalibration;
     private LimelightVision vision;
     private Servo led;
-
-    private String yawSource = "Pedro";
-    private IMU imu;
-    private boolean imuAvailable = false;
 
     //turret stuff
     private double kP = 0.02;
@@ -76,17 +70,12 @@ public class MainTeleOp extends OpMode {
     private double lastHeadingRad = 0;
     private double robotYawRateDegPerSec = 0;
 
-    //uses Booleans to keep last for toggling
-    private boolean lastY2 = false;
-    private boolean lastLeftTrigger2 = false;
-    private boolean lastLeftBumper2 = false;
-    private boolean lastLB1 = false;
     public String allegiance;
 
     private void updateRobotYawRate(double headingRad) {
         double dt = yawTimer.seconds();
         yawTimer.reset();
-        robotYawRateDegPerSec = 0;
+        robotYawRateDegPerSec = Double.NaN;
         if (haveLastHeading && Double.isFinite(headingRad) && dt >= 0.005 && dt <= 0.25) {
             double delta = headingRad - lastHeadingRad;
             delta = Math.atan2(Math.sin(delta), Math.cos(delta));
@@ -103,7 +92,9 @@ public class MainTeleOp extends OpMode {
         led = hardwareMap.get(Servo.class, "led");
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
+        launcherControls = new LauncherIntakeControls(launcher, intake);
         turret      = new Turret(hardwareMap);
+        turretCalibration = new TurretCalibration(turret);
 
         //setting up follower from autos
         follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
@@ -122,17 +113,15 @@ public class MainTeleOp extends OpMode {
 
         telemetry.setMsTransmissionInterval(100);
 
-        //setting up Lime Light
-        try {
-            imu = hardwareMap.get(IMU.class, "imu");
-            imuAvailable = true;
-        } catch (RuntimeException ex) {
-            imuAvailable = false; // Pedro heading-rate fallback
-        }
-
         //setting up turret auto stuff
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
+    }
+
+    @Override
+    public void init_loop() {
+        turretCalibration.update(gamepad2, telemetry);
+        telemetry.update();
     }
 
     @Override
@@ -147,6 +136,7 @@ public class MainTeleOp extends OpMode {
 
     @Override
     public void loop() {
+        turret.update();
 
         //drive code
         if (gamepad1.options && !lastOptions1) {
@@ -164,39 +154,10 @@ public class MainTeleOp extends OpMode {
         ManualDrive.driveOrHold(follower, powers);
         follower.update();
 
+        updateRobotYawRate(follower.pose().heading());
         vision.update();
 
-        //toggle launcher:
-        // Toggle flywheel speed control.
-        if (gamepad2.yWasPressed()) {
-            launcher.toggleOn();
-        }
-
-// Request shooting while the right trigger is held.
-        if (gamepad2.a) {
-            launcher.fire();
-            launcher.actFire();
-        } else {
-            launcher.stopFire();
-        }
-
-// Request reverse transfer operation.
-        launcher.eject(gamepad2.right_bumper);
-
-// REQUIRED: calculate flywheel power and update the transfer every loop.
-        launcher.update();
-
-// Intake follows the launcher's updated firing/ejecting state.
-// Stop it if the launcher reports a fault.
-        if (!launcher.getFault().isEmpty()) {
-            intake.stop();
-        } else if (gamepad2.x || launcher.isFiring()) {
-            intake.intake();
-        } else if (gamepad2.b || launcher.isEjecting()) {
-            intake.outtake();
-        } else {
-            intake.stop();
-        }
+        launcherControls.update(gamepad2);
 
         //ramp
         if (gamepad2.leftTriggerWasPressed()) {
@@ -217,7 +178,8 @@ public class MainTeleOp extends OpMode {
         if (turret.isTurretAuto()) {
             turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                     Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                    vision.getBestAimingTarget(), vision.getAimingTargetCount(),
+                    robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
@@ -225,30 +187,6 @@ public class MainTeleOp extends OpMode {
                     gamepad2.dpad_up,
                     gamepad2.dpad_down
             );
-        }
-
-        //adjust ramp
-        intake.adjustRamp(
-                gamepad2.dpad_up,
-                gamepad2.dpad_down);
-
-
-
-
-
-        //turret auto sight loss correction
-        updateRobotYawRate(follower.pose().heading());
-        yawSource = "Pedro fallback";
-        if (imuAvailable) {
-            try {
-                AngularVelocity av = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
-                if (av != null && Double.isFinite(av.zRotationRate)) {
-                    robotYawRateDegPerSec = av.zRotationRate;
-                    yawSource = "Hub IMU";
-                }
-            } catch (RuntimeException ex) {
-                yawSource = "Pedro fallback";
-            }
         }
 
         //led updates
@@ -267,14 +205,17 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Launcher On", launcher.isFlywheelsOn());
         telemetry.addData("Firing", launcher.isFiring());
-        telemetry.addData("Ramp Down", !intake.isRampUp());
+        telemetry.addData("Ramp State", intake.getRampState());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
-        telemetry.addData("r trig thresh", gamepad2.right_trigger);
+        telemetry.addData("Launcher Ready", launcher.flywheelAtSpeed());
+        telemetry.addData("Launcher Fault", launcher.getFault().isEmpty() ? "NONE" : launcher.getFault());
+        telemetry.addLine("G2 A: shoot; RB: eject; BACK: stop; BACK+X: clear fault");
         telemetry.addLine("I <3 Femboys");
         telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
+        turret.addTelemetry(telemetry);
         telemetry.update();
     }
 
