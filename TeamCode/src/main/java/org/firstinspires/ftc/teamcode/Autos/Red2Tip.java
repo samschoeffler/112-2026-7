@@ -75,9 +75,7 @@ public class Red2Tip extends OpMode {
                 autoCommand.intakeTogg,
                 autoCommand.stopShooter,
                 follow(follower, AutoPaths.Red2Tip.path2()),
-                autoCommand.flowerCollectClose,
-                Commands.waitMs(3000),
-                autoCommand.holdBalls,
+                autoCommand.flowerCollectClose(follower),
                 follow(
                         follower, AutoPaths.Red2Tip.path3()
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
@@ -85,14 +83,10 @@ public class Red2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 Commands.waitMs(3500),
                 follow(follower, AutoPaths.Red2Tip.path4()),
-                autoCommand.rampTogg,
-                Commands.waitMs(500),
-                follow(follower, AutoPaths.Red2Tip.path5()),
-                Commands.waitMs(4500),
-                follow(follower, AutoPaths.Red2Tip.path6()),
+                autoCommand.flowerCollectFar(follower),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
-                follow(follower, AutoPaths.Red2Tip.path7()),
+                follow(follower, AutoPaths.Red2Tip.path5()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
                 );
@@ -124,11 +118,13 @@ public class Red2Tip extends OpMode {
         /*visualizer = new PathVisualizer(
                 AutoPaths.Red2Tip.path1(),
                 AutoPaths.Red2Tip.path2(),
+                AutoPaths.GeneralPaths.flowerCloseTo(),
+                AutoPaths.GeneralPaths.flowerCloseFro(),
                 AutoPaths.Red2Tip.path3(),
                 AutoPaths.Red2Tip.path4(),
-                AutoPaths.Red2Tip.path5(),
-                AutoPaths.Red2Tip.path6(),
-                AutoPaths.Red2Tip.path7()
+                AutoPaths.GeneralPaths.flowerFarTo(),
+                AutoPaths.GeneralPaths.flowerFarFro(),
+                AutoPaths.Red2Tip.path5()
         );*/
 
         //visualizer.drawNow(follower.pose());
@@ -156,6 +152,7 @@ public class Red2Tip extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

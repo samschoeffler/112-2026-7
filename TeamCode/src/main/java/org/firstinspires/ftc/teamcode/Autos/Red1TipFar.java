@@ -74,12 +74,8 @@ public class Red1TipFar extends OpMode {
                 follow(follower, AutoPaths.Red2Opp.path2()),
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Red2Opp.path3()),
-                autoCommand.rampTogg,
-                Commands.waitMs(500),
+                autoCommand.flowerCollectFar(follower),
                 follow(follower, AutoPaths.Red2Opp.path4()),
-                Commands.waitMs(6000),
-                follow(follower, AutoPaths.Red2Opp.path5()),
-                follow(follower, AutoPaths.Red2Opp.path6()),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
                 autoCommand.fWheelTogg,
@@ -128,6 +124,7 @@ public class Red1TipFar extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

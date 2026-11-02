@@ -132,6 +132,7 @@ public class Red1Tip extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

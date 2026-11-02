@@ -96,7 +96,7 @@ public class Blue1TipPark extends OpMode {
         } catch (RuntimeException ex) {
             imuAvailable = false; // Pedro heading-rate fallback
         }
-        vision = new LimelightVision(hardwareMap, 2);
+        vision = new LimelightVision(hardwareMap, 4);
         // Conservative starting limits; adjustable with gamepad2 during this OpMode.
 
         Turret.ROT_MAX_POWER = 0.2;
@@ -132,6 +132,7 @@ public class Blue1TipPark extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

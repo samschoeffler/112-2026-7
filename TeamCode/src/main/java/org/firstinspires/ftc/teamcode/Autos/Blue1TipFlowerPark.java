@@ -73,12 +73,9 @@ public class Blue1TipFlowerPark extends OpMode {
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 autoCommand.stopShooter,
-                autoCommand.rampTogg,
                 follow(follower, AutoPaths.Blue2FlowerUp.path2()),
-                Commands.waitMs(3000),
-                autoCommand.holdBalls,
+                autoCommand.flowerCollectClose(follower),
                 follow(follower, AutoPaths.Blue2FlowerUp.path3()),
-                follow(follower, AutoPaths.Blue2FlowerUp.path4()),
                 autoCommand.stopIntake,
                 autoCommand.fWheelTogg
         );
@@ -110,8 +107,9 @@ public class Blue1TipFlowerPark extends OpMode {
         visualizer = new PathVisualizer(
                 AutoPaths.Blue2FlowerUp.path1(),
                 AutoPaths.Blue2FlowerUp.path2(),
-                AutoPaths.Blue2FlowerUp.path3(),
-                AutoPaths.Blue2FlowerUp.path4()
+                AutoPaths.GeneralPaths.flowerCloseTo(),
+                AutoPaths.GeneralPaths.flowerCloseFro(),
+                AutoPaths.Blue2FlowerUp.path3()
         );
 
         visualizer.drawNow(follower.pose());
@@ -139,6 +137,7 @@ public class Blue1TipFlowerPark extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

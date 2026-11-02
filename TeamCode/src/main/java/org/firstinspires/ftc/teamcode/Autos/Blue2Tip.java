@@ -30,7 +30,7 @@ public class Blue2Tip extends OpMode {
 
     private IMU imu;
 
-    private PathVisualizer visualizer;
+    //private PathVisualizer visualizer;
 
     private boolean imuAvailable = false;
     private String yawSource = "Pedro";
@@ -72,11 +72,10 @@ public class Blue2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(3500),
+                autoCommand.intakeTogg,
                 autoCommand.stopShooter,
-                autoCommand.rampTogg,
                 follow(follower, AutoPaths.Blue2Tip.path2()),
-                Commands.waitMs(3000),
-                autoCommand.holdBalls,
+                autoCommand.flowerCollectClose(follower),
                 follow(
                         follower, AutoPaths.Blue2Tip.path3()
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
@@ -84,17 +83,13 @@ public class Blue2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 Commands.waitMs(3500),
                 follow(follower, AutoPaths.Blue2Tip.path4()),
-                autoCommand.rampTogg,
-                Commands.waitMs(500),
-                follow(follower, AutoPaths.Blue2Tip.path5()),
-                Commands.waitMs(4500),
-                follow(follower, AutoPaths.Blue2Tip.path6()),
+                autoCommand.flowerCollectFar(follower),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
-                follow(follower, AutoPaths.Blue2Tip.path7()),
+                follow(follower, AutoPaths.Blue2Tip.path5()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
-        );
+                );
     }
 
     @Override
@@ -120,17 +115,19 @@ public class Blue2Tip extends OpMode {
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
-        visualizer = new PathVisualizer(
+        /*visualizer = new PathVisualizer(
                 AutoPaths.Blue2Tip.path1(),
                 AutoPaths.Blue2Tip.path2(),
+                AutoPaths.GeneralPaths.flowerCloseTo(),
+                AutoPaths.GeneralPaths.flowerCloseFro(),
                 AutoPaths.Blue2Tip.path3(),
                 AutoPaths.Blue2Tip.path4(),
-                AutoPaths.Blue2Tip.path5(),
-                AutoPaths.Blue2Tip.path6(),
-                AutoPaths.Blue2Tip.path7()
-        );
+                AutoPaths.GeneralPaths.flowerFarTo(),
+                AutoPaths.GeneralPaths.flowerFarFro(),
+                AutoPaths.Blue2Tip.path5()
+        );*/
 
-        visualizer.drawNow(follower.pose());
+        //visualizer.drawNow(follower.pose());
     }
 
     @Override
@@ -141,20 +138,21 @@ public class Blue2Tip extends OpMode {
         haveLastHeading = false;
         yawTimer.reset();
 
-        visualizer.startRecording(follower.pose());
+        //visualizer.startRecording(follower.pose());
     }
 
     @Override
     public void loop() {
         follower.update();
 
-        visualizer.recordPose(follower.pose());
-        visualizer.draw(follower.pose());
+        //visualizer.recordPose(follower.pose());
+        //visualizer.draw(follower.pose());
 
         vision.update();
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
@@ -176,6 +174,8 @@ public class Blue2Tip extends OpMode {
                 yawSource = "Pedro fallback";
             }
         }
+
+
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());

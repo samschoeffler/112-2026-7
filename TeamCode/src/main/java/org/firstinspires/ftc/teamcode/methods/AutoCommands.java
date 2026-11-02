@@ -7,7 +7,6 @@ import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
-import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
@@ -17,7 +16,6 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 public class AutoCommands {
     private Launcher launcher;
     private Intake intake;
-    private Follower follower;
 
     private double transferVelo;
     private double flywheelVelo;
@@ -27,21 +25,23 @@ public class AutoCommands {
     public AutoCommands(HardwareMap hardwareMap) {
         launcher = new Launcher(hardwareMap);
         intake = new Intake(hardwareMap);
-        follower = Constants.create(hardwareMap);
     }
 
     private int ballsInBot = 4;
     private boolean flywheelDropped = false;
+    // only count drops once the flywheel has been up to speed (ignores spin-up)
+    private boolean flywheelReady = false;
     private double flowerWaitTimeMs = 3000;
     public void updateVelo() {
         flywheelVelo = launcher.getFlywheelVelo();
 
         // flywheel
-        if (flywheelVelo < flywheelThreshold && !flywheelDropped) {
-            flywheelDropped = true;
-            ballsInBot --;
-        } else if (flywheelVelo >= flywheelThreshold) {
+        if (flywheelVelo >= flywheelThreshold) {
+            flywheelReady = true;
             flywheelDropped = false;
+        } else if (flywheelReady && !flywheelDropped) {
+            flywheelDropped = true;
+            if (ballsInBot > 0) ballsInBot --;
         }
 
         if(ballsInBot == 0)
@@ -74,39 +74,44 @@ public class AutoCommands {
 
     public Command ballRefill = instant(() -> ballsInBot = 4);
 
-    public Command flowerCollectClose = conditional(
-            () -> flowerWaitTimeMs != 0,
-            sequential(
-                    intakeTogg,
-                    rampTogg,
-                    follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
-                    Commands.waitMs(flowerWaitTimeMs),
-                    ballRefill,
-                    follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
-                    holdBalls,
-                    intakeTogg
-                    ),
-            sequential(
-                    holdBalls
-            )
-    );
+    // takes the OpMode's follower (the one that gets update()d every loop)
+    public Command flowerCollectClose(Follower follower) {
+        return conditional(
+                () -> flowerWaitTimeMs != 0,
+                sequential(
+                        intakeTogg,
+                        rampTogg,
+                        follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
+                        Commands.lazy(() -> Commands.waitMs(flowerWaitTimeMs)),
+                        ballRefill,
+                        follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
+                        holdBalls,
+                        intakeTogg
+                ),
+                sequential(
+                        holdBalls
+                )
+        );
+    }
 
-    public Command flowerCollectFar = conditional(
-            () -> flowerWaitTimeMs != 0,
-            sequential(
-                    intakeTogg,
-                    rampTogg,
-                    follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
-                    Commands.waitMs(flowerWaitTimeMs),
-                    ballRefill,
-                    follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
-                    holdBalls,
-                    intakeTogg
-            ),
-            sequential(
-                    holdBalls
-            )
-    );
+    public Command flowerCollectFar(Follower follower) {
+        return conditional(
+                () -> flowerWaitTimeMs != 0,
+                sequential(
+                        intakeTogg,
+                        rampTogg,
+                        follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
+                        Commands.lazy(() -> Commands.waitMs(flowerWaitTimeMs)),
+                        ballRefill,
+                        follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
+                        holdBalls,
+                        intakeTogg
+                ),
+                sequential(
+                        holdBalls
+                )
+        );
+    }
 
 
 
