@@ -9,6 +9,64 @@ public final class AutoPaths {
     private AutoPaths() {}
     private static final PoseFactory poseFactory = PoseFactory.degrees();
 
+    // GENERAL PATHS
+    public static final class GeneralPaths {
+
+        private GeneralPaths() {}
+
+        // ---------- POSES ----------
+
+        public static final Pose shooterStart =
+                poseFactory.of(56, 12, 90);
+
+        public static final Pose shooterControl1 =
+                poseFactory.of(24, 39.5, 0);
+
+        public static final Pose shooterControl2 =
+                poseFactory.of(34.5, 50, 0);
+        public static final Pose flowerWaitClose =
+                poseFactory.of(23, 46.5, 180);
+
+        public static final Pose flowerWaitFar =
+                poseFactory.of(47, 110, 60);
+
+        public static final Pose flowerClose =
+                poseFactory.of(10, 48.5, 180);
+
+        public static final Pose flowerFar =
+                poseFactory.of(48, 128.75, 90);
+
+        // ---------- PATHS ----------
+
+        public static Path flowerCloseTo() {
+            return Paths.line(flowerWaitClose, flowerClose)
+                    .linear(flowerWaitClose, flowerClose);
+        }
+
+        public static Path shooter2WaitClose() {
+            return Paths.curve(
+                    shooterStart,
+                    shooterControl1,
+                    shooterControl2,
+                    flowerWaitClose
+            ).linear(shooterStart, flowerWaitClose);
+        }
+        public static Path flowerCloseFro() {
+            return Paths.line(flowerClose, flowerWaitClose)
+                    .linear(flowerClose, flowerWaitClose);
+        }
+
+        public static Path flowerFarTo() {
+            return Paths.line(flowerWaitFar, flowerFar)
+                    .linear(flowerWaitFar, flowerFar);
+        }
+
+        public static Path flowerFarFro() {
+            return Paths.line(flowerFar, flowerWaitFar)
+                    .linear(flowerFar, flowerWaitFar);
+        }
+    }
+
     // RED2TIP
     public static final class Red2Tip {
 

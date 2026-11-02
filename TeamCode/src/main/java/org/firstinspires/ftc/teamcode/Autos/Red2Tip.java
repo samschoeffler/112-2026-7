@@ -73,9 +73,10 @@ public class Red2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(3500),
+                autoCommand.intakeTogg,
                 autoCommand.stopShooter,
-                autoCommand.rampTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
+                autoCommand.flowerCollectClose,
                 Commands.waitMs(3000),
                 autoCommand.holdBalls,
                 follow(
@@ -177,6 +178,8 @@ public class Red2Tip extends OpMode {
                 yawSource = "Pedro fallback";
             }
         }
+
+
 
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());

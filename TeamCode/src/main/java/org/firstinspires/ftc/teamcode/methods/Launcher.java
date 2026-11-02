@@ -231,6 +231,8 @@ public class Launcher {
     public boolean isFiring() { return firing; }
     public boolean isEjecting() { return ejecting; }
     public double getTargetVelocity() { return targetVelocity; }
+    public double getTranferVelo() { return launchMech.getVelocity(); }
+    public double getFlywheelVelo() { return launch0.getVelocity(); }
     public double getMeasuredVelocity() { return measuredVelocity; }
     public double getMotorPower() { return motorPower; }
     public double getBatteryVoltage() { return batteryVoltage; }

@@ -81,5 +81,6 @@ public class Intake {
     public boolean isRampUp() { return rampUp; }
     public boolean isHoldingBalls() { return holdBalls; }
     public double rampthingy() { return ramp.getPosition(); }
+    public double getIntakeVelo() { return intake.getVelocity(); }
     public boolean isIntakeOn() { return intakeOn; }
 }
