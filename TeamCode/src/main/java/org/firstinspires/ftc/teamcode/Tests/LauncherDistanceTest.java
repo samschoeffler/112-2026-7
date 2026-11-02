@@ -31,7 +31,6 @@ import java.util.Locale;
  * Distance is camera-to-SELECTED-TAG 3D slant range, NOT goal-center range.
  * No drivetrain control, vision steering, or ballistic assumptions.
  */
-@TeleOp(name = "Launcher Distance Test", group = "Tests")
 public class LauncherDistanceTest extends OpMode {
     private static final int[] TAG_IDS = {34, 35, 36, 37};
     private static final double MIN_VELOCITY = 100.0;

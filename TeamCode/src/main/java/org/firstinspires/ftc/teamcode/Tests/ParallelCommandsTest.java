@@ -22,7 +22,6 @@ import com.pedropathing.paths.Path;
 
 
 
-@Autonomous(name = "Parallel Commands Test")
 public class ParallelCommandsTest extends OpMode {
 
     private Follower follower;

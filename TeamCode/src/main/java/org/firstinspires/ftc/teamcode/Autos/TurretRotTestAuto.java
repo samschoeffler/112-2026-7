@@ -21,7 +21,6 @@ import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "TurretRotTestAuto")
 public class TurretRotTestAuto extends OpMode {
 
     private Follower follower;

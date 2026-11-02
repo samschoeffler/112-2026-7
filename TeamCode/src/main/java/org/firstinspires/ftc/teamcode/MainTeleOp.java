@@ -69,7 +69,6 @@ public class MainTeleOp extends OpMode {
     //teleop swithcing sides variables
     private static final double RED_FORWARD_DEG  = 180;
 
-    //six seven i love Sophia Lapter
     private static final double BLUE_FORWARD_DEG = 180;
 
     private double driverOffsetRad = 0;

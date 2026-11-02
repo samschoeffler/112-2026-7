@@ -47,7 +47,6 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
  * starting-angle errors. The Panels field is therefore a diagnostic coordinate
  * frame, NOT necessarily the robot's true absolute FTC-field coordinates.
  */
-@Autonomous(name = "Pedro Adjustable Circle", group = "Testing")
 public class PedroCircleTest extends OpMode {
 
     private final PoseFactory poseFactory = PoseFactory.degrees();

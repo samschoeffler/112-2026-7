@@ -6,7 +6,6 @@ import com.pedropathing.follower.Follower;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Pedro Panels Test", group = "Pedro Pathing")
 public class PedroPanelsTest extends OpMode {
 
     private Follower follower;
