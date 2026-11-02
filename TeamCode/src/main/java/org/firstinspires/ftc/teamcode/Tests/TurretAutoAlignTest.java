@@ -6,19 +6,18 @@ import com.pedropathing.follower.ManualDrive;
 import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.Turret;
+import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
+@TeleOp(name = "Turret Auto Align Test", group = "Diagnostics")
 public class TurretAutoAlignTest extends OpMode {
     private LimelightVision vision;
     private Turret turret;
+    private TurretCalibration turretCalibration;
     private Follower follower;
-    private IMU imu;
     private double turnScale = 0.25;
     private double kP = 0.02, kD = 0;
     private boolean trackingEnabled = false;
@@ -37,17 +36,16 @@ public class TurretAutoAlignTest extends OpMode {
             "Vision tolerance deg", "Target smoothing", "Yaw FF gain", "Yaw FF max power",
             "Yaw FF deadband", "Velocity filter", "Tag-loss hold seconds",
             "Heading hold kP", "Heading hold kD", "Joystick prediction gain",
-            "Prediction max power", "Fast turn threshold", "Hold tolerance deg",
-            "Global MIN deg (disarmed)", "Global MAX deg (disarmed)"
+            "Prediction max power", "Fast turn threshold", "Hold tolerance deg"
     };
     private static final double[] STEPS = {
-            .01,.001,.01,.05,.25,.1,.001,.05,1,.1,.1,.01,.001,.01,.05,.05,.25,5,5
+            .01,.001,.01,.05,.25,.1,.001,.05,1,.1,.1,.01,.001,.01,.05,.05,.25
     };
     private static final double[] MINS = {
-            0,0,0,.05,0,.01,-.02,0,0,.01,0,0,0,-1,0,.05,.25,-360,5
+            0,0,0,.05,0,.01,-.02,0,0,.01,0,0,0,-1,0,.05,.25
     };
     private static final double[] MAXS = {
-            .5,.1,.3,1,10,1,.02,1,180,1,5,.5,.1,1,1,1,15,-5,360
+            .5,.1,.3,1,10,1,.02,1,180,1,5,.5,.1,1,1,1,15
     };
     private double value(int i) {
         switch (i) {
@@ -68,8 +66,6 @@ public class TurretAutoAlignTest extends OpMode {
             case 14: return Turret.JOYSTICK_PREDICT_MAX_POWER;
             case 15: return Turret.FAST_TURN_STICK_THRESHOLD;
             case 16: return Turret.HOLD_SETTLE_TOLERANCE_DEG;
-            case 17: return Turret.ROT_MIN_DEG;
-            case 18: return Turret.ROT_MAX_DEG;
             default: return 0;
         }
     }
@@ -93,17 +89,11 @@ public class TurretAutoAlignTest extends OpMode {
             case 14: Turret.JOYSTICK_PREDICT_MAX_POWER = v; break;
             case 15: Turret.FAST_TURN_STICK_THRESHOLD = v; break;
             case 16: Turret.HOLD_SETTLE_TOLERANCE_DEG = v; break;
-            case 17: case 18:
-                if (!trackingEnabled && !trialActive) {
-                    turret.configureRotationLimits(i == 17 ? v : Turret.ROT_MIN_DEG,
-                            i == 18 ? v : Turret.ROT_MAX_DEG);
-                }
-                break;
         }
     }
     private void readYaw(double heading) {
         double dt = yawTimer.seconds(); yawTimer.reset();
-        yawRate = 0;
+        yawRate = Double.NaN;
         if (haveLastHeading && Double.isFinite(heading) && dt >= .005 && dt <= .25) {
             double d = Math.atan2(Math.sin(heading-lastHeadingRad), Math.cos(heading-lastHeadingRad));
             yawRate = Math.toDegrees(d/dt);
@@ -111,26 +101,24 @@ public class TurretAutoAlignTest extends OpMode {
         lastHeadingRad = heading;
         haveLastHeading = Double.isFinite(heading);
         yawSource = "Pedro";
-        if (imu != null) {
-            try {
-                AngularVelocity av = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
-                if (av != null && Double.isFinite(av.zRotationRate)) {
-                    yawRate = av.zRotationRate; yawSource = "IMU";
-                }
-            } catch (RuntimeException ignored) { }
-        }
     }
     @Override public void init() {
         vision = new LimelightVision(hardwareMap, 1);
         turret = new Turret(hardwareMap);
+        turretCalibration = new TurretCalibration(turret);
         follower = Constants.create(hardwareMap);
-        try { imu = hardwareMap.get(IMU.class, "imu"); } catch (RuntimeException ignored) { imu = null; }
         // Restore tuned values here; gamepad settings are temporary.
         Turret.ROT_MAX_POWER = 0.20;
         Turret.ROBOT_YAW_FF_GAIN = 0;
         telemetry.addLine("Disarmed. G2 START: track; G2 LB: guided vision trial.");
         telemetry.update();
     }
+    @Override
+    public void init_loop() {
+        turretCalibration.update(gamepad2, telemetry);
+        telemetry.update();
+    }
+
     @Override public void start() {
         vision.start(); turret.mainPD.reset(); yawTimer.reset();
         haveLastHeading = false; 
@@ -145,6 +133,7 @@ public class TurretAutoAlignTest extends OpMode {
         trialActive = false;
     }
     @Override public void loop() {
+        turret.update();
         double turn = -gamepad1.right_stick_x * turnScale;
         DrivePowers powers = ManualDrive.fieldCentric(-gamepad1.left_stick_y,
                 -gamepad1.left_stick_x, turn, follower.pose().heading());
@@ -202,7 +191,7 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.addLine("TRACKING: G2 RB starts 3-sec heading diagnostic trial");
         telemetry.addData("Selected", "%d/%d %s",selectedParameter+1,NAMES.length,NAMES[selectedParameter]);
         telemetry.addData("Value", "%.5f", value(selectedParameter));
-        telemetry.addData("Limits", "%.1f to %.1f", Turret.ROT_MIN_DEG, Turret.ROT_MAX_DEG);
+        telemetry.addData("Limits", "%.1f to %.1f", turret.getRotationMinDeg(), turret.getRotationMaxDeg());
         telemetry.addData("Turn scale", turnScale);
         telemetry.addData("Mode", turret.mainPD.getTrackingMode());
         telemetry.addData("Tag ID",turret.mainPD.getTrackedTagId());
@@ -211,9 +200,10 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.addData("Yaw source",yawSource);
         telemetry.addData("Trial",trialType + (trialActive ? " (DIAGNOSTICS)" : ""));
         vision.addTelemetry(telemetry);
+        turret.addTelemetry(telemetry);
         telemetry.update();
     }
     @Override public void stop() {
-        stopTrial(); turret.stopRotation(); vision.stop();
+        stopTrial(); turret.stop(); vision.stop();
     }
 }

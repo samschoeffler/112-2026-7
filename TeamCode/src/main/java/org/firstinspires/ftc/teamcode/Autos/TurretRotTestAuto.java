@@ -19,6 +19,7 @@ import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
+import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 public class TurretRotTestAuto extends OpMode {
@@ -28,6 +29,7 @@ public class TurretRotTestAuto extends OpMode {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
+    private TurretCalibration turretCalibration;
 
     private Command autoRoutine() {
         return sequential(
@@ -48,7 +50,14 @@ public class TurretRotTestAuto extends OpMode {
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
+        turretCalibration = new TurretCalibration(turret);
 
+    }
+
+    @Override
+    public void init_loop() {
+        turretCalibration.update(gamepad2, telemetry);
+        telemetry.update();
     }
 
     @Override
@@ -58,6 +67,7 @@ public class TurretRotTestAuto extends OpMode {
 
     @Override
     public void loop() {
+        turret.update();
 
         follower.update();
         Scheduler.execute();
@@ -67,12 +77,14 @@ public class TurretRotTestAuto extends OpMode {
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("Turret Pitch", turret.getPitchDeg());
         telemetry.addLine("I <3 Femboys");
+        turret.addTelemetry(telemetry);
         telemetry.update();
 
     }
 
     @Override
     public void stop() {
+        turret.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
     }
