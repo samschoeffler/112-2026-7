@@ -49,7 +49,7 @@ public class Turret {
     public final PD mainPD = new PD();
 
     public Turret(HardwareMap hardwareMap) {
-        rotation = hardwareMap.get(DcMotorEx.class, "rotation");
+        rotation = hardwareMap.get(DcMotorEx.class, "TurretRot");
 
         // Verify motor and encoder signs by a controlled, low-power test.
         rotation.setDirection(DcMotorSimple.Direction.FORWARD);

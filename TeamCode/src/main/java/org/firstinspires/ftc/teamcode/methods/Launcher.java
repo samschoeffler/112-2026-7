@@ -109,6 +109,14 @@ public class Launcher {
         launchMech.setPower(0.0);
     }
 
+    public void actStopWheel() {
+        fWheel.setPower(0);
+    }
+
+    public void actStopFire() {
+        launchMech.setPower(0.0);
+    }
+
     public void eject(boolean requested) {
         ejecting = requested && fault.isEmpty();
         if (ejecting) {

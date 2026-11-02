@@ -53,7 +53,7 @@ public class MainTeleOp extends OpMode {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
-    private LimelightVision vision;
+    //private LimelightVision vision;
     private Servo led;
 
     private String yawSource = "Pedro";
@@ -117,7 +117,7 @@ public class MainTeleOp extends OpMode {
 
         int pipeline = "BLUE".equals(allegiance) ? 2 : 1;
 
-        vision = new LimelightVision(hardwareMap, pipeline);
+        //vision = new LimelightVision(hardwareMap, pipeline);
 
         telemetry.setMsTransmissionInterval(100);
 
@@ -138,7 +138,7 @@ public class MainTeleOp extends OpMode {
     public void start() {
         follower.manual();
         follower.update();
-        vision.start();
+        //vision.start();
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
@@ -163,19 +163,21 @@ public class MainTeleOp extends OpMode {
         ManualDrive.driveOrHold(follower, powers);
         follower.update();
 
-        vision.update();
+        //vision.update();
 
-        //toggle launcher:
         // Toggle flywheel speed control.
-        if (gamepad2.yWasPressed()) {
+        if (gamepad2.y) {
             launcher.toggleOn();
+        } else {
+            launcher.actStopWheel();
         }
 
 // Request shooting while the right trigger is held.
         if (gamepad2.a) {
             launcher.fire();
-            launcher.actFire();
+            //launcher.actFire();
         } else {
+            //launcher.actStopFire();
             launcher.stopFire();
         }
 
@@ -214,9 +216,9 @@ public class MainTeleOp extends OpMode {
 
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
-            turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
+            /*turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                     Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);*/
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
@@ -224,11 +226,12 @@ public class MainTeleOp extends OpMode {
             );
         }
 
+        /*
         //adjust ramp
         intake.adjustRamp(
                 gamepad2.dpad_up,
                 gamepad2.dpad_down);
-
+*/
 
 
 
@@ -249,7 +252,7 @@ public class MainTeleOp extends OpMode {
         }
 
         //led updates
-        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed() && vision.hasAimingTarget())
+        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed() /*&& vision.hasAimingTarget()*/)
             led.setPosition(0.611);
         else if(!turret.isTurretAuto())
             led.setPosition(0.333);
@@ -284,8 +287,8 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("r trig thresh", gamepad2.right_trigger);
         telemetry.addLine("I <3 Femboys");
-        telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
-        telemetry.update();
+        //telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
+        //telemetry.update();
     }
 
     @Override
@@ -294,6 +297,6 @@ public class MainTeleOp extends OpMode {
         launcher.stopAll();
         intake.stop();
         turret.stop();
-        vision.stop();
+        //vision.stop();
     }
 }

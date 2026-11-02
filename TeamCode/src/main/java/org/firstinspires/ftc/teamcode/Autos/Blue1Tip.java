@@ -20,7 +20,7 @@ import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
 import org.firstinspires.ftc.teamcode.methods.Turret;
-import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
+//import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Blue1Tip", group="Blue")
@@ -32,7 +32,7 @@ public class Blue1Tip extends OpMode {
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
-    private TurretCalibration turretCalibration;
+    //private TurretCalibration turretCalibration;
     private Servo led;
 
     private double kP = 0.02;
@@ -80,7 +80,7 @@ public class Blue1Tip extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
-        turretCalibration = new TurretCalibration(turret);
+        //turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 
         vision = new LimelightVision(hardwareMap, 2);
@@ -98,7 +98,7 @@ public class Blue1Tip extends OpMode {
 
     @Override
     public void init_loop() {
-        turretCalibration.update(gamepad2, telemetry);
+        //turretCalibration.update(gamepad2, telemetry);
         telemetry.update();
     }
 
@@ -115,7 +115,7 @@ public class Blue1Tip extends OpMode {
 
     @Override
     public void loop() {
-        turret.update();
+        //turret.update();
         follower.update();
 
         visualizer.recordPose(follower.pose());
@@ -141,7 +141,7 @@ public class Blue1Tip extends OpMode {
         telemetry.addData("Follower Mode", follower.mode());
         telemetry.addData("LL Tags", vision.getVisibleTagIds());
         telemetry.addData("LL Frame Age (ms)", vision.getFrameAgeMs());
-        turret.addTelemetry(telemetry);
+        //turret.addTelemetry(telemetry);
         telemetry.update();
     }
 

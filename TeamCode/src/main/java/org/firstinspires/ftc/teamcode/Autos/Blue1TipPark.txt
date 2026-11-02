@@ -32,7 +32,7 @@ public class Blue1TipPark extends OpMode {
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
-    private TurretCalibration turretCalibration;
+    //private TurretCalibration turretCalibration;
     private Servo led;
 
     private double kP = 0.02;
@@ -80,7 +80,7 @@ public class Blue1TipPark extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
-        turretCalibration = new TurretCalibration(turret);
+        //turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 
         vision = new LimelightVision(hardwareMap, 2);
@@ -98,7 +98,7 @@ public class Blue1TipPark extends OpMode {
 
     @Override
     public void init_loop() {
-        turretCalibration.update(gamepad2, telemetry);
+        //turretCalibration.update(gamepad2, telemetry);
         telemetry.update();
     }
 
