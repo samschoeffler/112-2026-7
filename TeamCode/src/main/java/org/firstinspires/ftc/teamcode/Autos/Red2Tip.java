@@ -23,16 +23,16 @@ import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Blue1Tip + Park", group="Blue")
-public class Blue1TipPark extends OpMode {
+@Autonomous(name = "Red2Tip", group="Red")
+public class Red2Tip extends OpMode {
 
-    private PathVisualizer visualizer;
+    //private PathVisualizer visualizer;
 
     private Follower follower;
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
-    //private TurretCalibration turretCalibration;
+    private TurretCalibration turretCalibration;
     private Servo led;
 
     private double kP = 0.02;
@@ -60,45 +60,65 @@ public class Blue1TipPark extends OpMode {
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Blue2CornerUp.path1()),
-                Commands.waitMs(2000),
+                follow(follower, AutoPaths.Red2Tip.path1()),
+                Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(4000),
+                Commands.waitMs(3500),
+                autoCommand.intakeTogg,
+                autoCommand.stopShooter,
+                follow(follower, AutoPaths.Red2Tip.path2()),
+                autoCommand.flowerCollectClose(follower),
+                follow(
+                        follower, AutoPaths.Red2Tip.path3()
+                                .with(Constants.foresightConfig.brakeAggression.at(0.5))
+                ),
+                autoCommand.shooterTogg,
+                Commands.waitMs(3500),
+                follow(follower, AutoPaths.Red2Tip.path4()),
+                autoCommand.flowerCollectFar(follower),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
+                follow(follower, AutoPaths.Red2Tip.path5()),
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Blue2CornerUp.path2())
-        );
+                autoCommand.rampTogg
+                );
     }
 
     @Override
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
-        follower.setPose(AutoPaths.Blue2CornerUp.start);
+        follower.setPose(AutoPaths.Red2Tip.start);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
-        //turretCalibration = new TurretCalibration(turret);
+        turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 
-        vision = new LimelightVision(hardwareMap, 2);
+        vision = new LimelightVision(hardwareMap, 3);
 
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
-        visualizer = new PathVisualizer(
-                AutoPaths.Blue2CornerUp.path1(),
-                AutoPaths.Blue2CornerUp.path2()
-        );
+        /*visualizer = new PathVisualizer(
+                AutoPaths.Red2Tip.path1(),
+                AutoPaths.Red2Tip.path2(),
+                AutoPaths.GeneralPaths.flowerCloseTo(),
+                AutoPaths.GeneralPaths.flowerCloseFro(),
+                AutoPaths.Red2Tip.path3(),
+                AutoPaths.Red2Tip.path4(),
+                AutoPaths.GeneralPaths.flowerFarTo(),
+                AutoPaths.GeneralPaths.flowerFarFro(),
+                AutoPaths.Red2Tip.path5()
+        );*/
 
-        visualizer.drawNow(follower.pose());
+        //visualizer.drawNow(follower.pose());
     }
 
     @Override
     public void init_loop() {
-        //turretCalibration.update(gamepad2, telemetry);
+        turretCalibration.update(gamepad2, telemetry);
         telemetry.update();
     }
 
@@ -110,7 +130,7 @@ public class Blue1TipPark extends OpMode {
         haveLastHeading = false;
         yawTimer.reset();
 
-        visualizer.startRecording(follower.pose());
+        //visualizer.startRecording(follower.pose());
     }
 
     @Override
@@ -118,14 +138,15 @@ public class Blue1TipPark extends OpMode {
         turret.update();
         follower.update();
 
-        visualizer.recordPose(follower.pose());
-        visualizer.draw(follower.pose());
+        //visualizer.recordPose(follower.pose());
+        //visualizer.draw(follower.pose());
 
         updateRobotYawRate(follower.pose().heading());
         vision.update();
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
@@ -149,7 +170,7 @@ public class Blue1TipPark extends OpMode {
         turret.stop();
         vision.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
-        OpModeStorage.LastAllegiance = "BLUE";
+        OpModeStorage.LastAllegiance = "RED";
 
         autoCommand.stopAll();
     }

@@ -23,8 +23,8 @@ import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Red2Tip", group="Red")
-public class Red2Tip extends OpMode {
+@Autonomous(name = "Blue2Tip", group="Blue")
+public class Blue2Tip extends OpMode {
 
     //private PathVisualizer visualizer;
 
@@ -60,31 +60,26 @@ public class Red2Tip extends OpMode {
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Red2Tip.path1()),
+                follow(follower, AutoPaths.Blue2Tip.path1()),
                 Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(3500),
+                autoCommand.intakeTogg,
                 autoCommand.stopShooter,
-                autoCommand.rampTogg,
-                follow(follower, AutoPaths.Red2Tip.path2()),
-                Commands.waitMs(3000),
-                autoCommand.holdBalls,
+                follow(follower, AutoPaths.Blue2Tip.path2()),
+                autoCommand.flowerCollectClose(follower),
                 follow(
-                        follower, AutoPaths.Red2Tip.path3()
+                        follower, AutoPaths.Blue2Tip.path3()
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
                 autoCommand.shooterTogg,
                 Commands.waitMs(3500),
-                follow(follower, AutoPaths.Red2Tip.path4()),
-                autoCommand.rampTogg,
-                Commands.waitMs(500),
-                follow(follower, AutoPaths.Red2Tip.path5()),
-                Commands.waitMs(4500),
-                follow(follower, AutoPaths.Red2Tip.path6()),
+                follow(follower, AutoPaths.Blue2Tip.path4()),
+                autoCommand.flowerCollectFar(follower),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
-                follow(follower, AutoPaths.Red2Tip.path7()),
+                follow(follower, AutoPaths.Blue2Tip.path5()),
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
                 );
@@ -94,26 +89,28 @@ public class Red2Tip extends OpMode {
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
-        follower.setPose(AutoPaths.Red2Tip.start);
+        follower.setPose(AutoPaths.Blue2Tip.start);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
         turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 
-        vision = new LimelightVision(hardwareMap, 3);
+        vision = new LimelightVision(hardwareMap, 4);
 
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
         /*visualizer = new PathVisualizer(
-                AutoPaths.Red2Tip.path1(),
-                AutoPaths.Red2Tip.path2(),
-                AutoPaths.Red2Tip.path3(),
-                AutoPaths.Red2Tip.path4(),
-                AutoPaths.Red2Tip.path5(),
-                AutoPaths.Red2Tip.path6(),
-                AutoPaths.Red2Tip.path7()
+                AutoPaths.Blue2Tip.path1(),
+                AutoPaths.Blue2Tip.path2(),
+                AutoPaths.GeneralPaths.flowerCloseTo(),
+                AutoPaths.GeneralPaths.flowerCloseFro(),
+                AutoPaths.Blue2Tip.path3(),
+                AutoPaths.Blue2Tip.path4(),
+                AutoPaths.GeneralPaths.flowerFarTo(),
+                AutoPaths.GeneralPaths.flowerFarFro(),
+                AutoPaths.Blue2Tip.path5()
         );*/
 
         //visualizer.drawNow(follower.pose());
@@ -149,6 +146,7 @@ public class Red2Tip extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
@@ -172,7 +170,7 @@ public class Red2Tip extends OpMode {
         turret.stop();
         vision.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
-        OpModeStorage.LastAllegiance = "RED";
+        OpModeStorage.LastAllegiance = "BLUE";
 
         autoCommand.stopAll();
     }

@@ -23,8 +23,8 @@ import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
-@Autonomous(name = "Blue2Tip", group="Blue")
-public class Blue2Tip extends OpMode {
+@Autonomous(name = "Blue1Tip + Park", group="Blue")
+public class Blue1TipPark extends OpMode {
 
     private PathVisualizer visualizer;
 
@@ -60,33 +60,15 @@ public class Blue2Tip extends OpMode {
     private Command autoRoutine() {
         return sequential(
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Blue2Tip.path1()),
-                Commands.waitMs(750),
+                follow(follower, AutoPaths.Blue2CornerUp.path1()),
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(3500),
-                autoCommand.stopShooter,
-                autoCommand.rampTogg,
-                follow(follower, AutoPaths.Blue2Tip.path2()),
-                Commands.waitMs(3000),
-                autoCommand.holdBalls,
-                follow(
-                        follower, AutoPaths.Blue2Tip.path3()
-                                .with(Constants.foresightConfig.brakeAggression.at(0.5))
-                ),
-                autoCommand.shooterTogg,
-                Commands.waitMs(3500),
-                follow(follower, AutoPaths.Blue2Tip.path4()),
-                autoCommand.rampTogg,
-                Commands.waitMs(500),
-                follow(follower, AutoPaths.Blue2Tip.path5()),
-                Commands.waitMs(4500),
-                follow(follower, AutoPaths.Blue2Tip.path6()),
+                Commands.waitMs(4000),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
-                follow(follower, AutoPaths.Blue2Tip.path7()),
                 autoCommand.fWheelTogg,
-                autoCommand.rampTogg
+                follow(follower, AutoPaths.Blue2CornerUp.path2())
         );
     }
 
@@ -94,7 +76,7 @@ public class Blue2Tip extends OpMode {
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
-        follower.setPose(AutoPaths.Blue2Tip.start);
+        follower.setPose(AutoPaths.Blue2CornerUp.start);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
@@ -107,13 +89,8 @@ public class Blue2Tip extends OpMode {
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
         visualizer = new PathVisualizer(
-                AutoPaths.Blue2Tip.path1(),
-                AutoPaths.Blue2Tip.path2(),
-                AutoPaths.Blue2Tip.path3(),
-                AutoPaths.Blue2Tip.path4(),
-                AutoPaths.Blue2Tip.path5(),
-                AutoPaths.Blue2Tip.path6(),
-                AutoPaths.Blue2Tip.path7()
+                AutoPaths.Blue2CornerUp.path1(),
+                AutoPaths.Blue2CornerUp.path2()
         );
 
         visualizer.drawNow(follower.pose());
@@ -149,6 +126,7 @@ public class Blue2Tip extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

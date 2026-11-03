@@ -166,10 +166,8 @@ public class MainTeleOp extends OpMode {
         //vision.update();
 
         // Toggle flywheel speed control.
-        if (gamepad2.y) {
+        if (gamepad2.yWasPressed()) {
             launcher.toggleOn();
-        } else {
-            launcher.actStopWheel();
         }
 
 // Request shooting while the right trigger is held.
@@ -279,7 +277,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
-        telemetry.addData("Launcher On", launcher.isFlywheelsOn());
+        telemetry.addData("fWheel On", launcher.isFlywheelsOn());
         telemetry.addData("Firing", launcher.isFiring());
         telemetry.addData("Ramp Down", !intake.isRampUp());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
@@ -288,7 +286,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("r trig thresh", gamepad2.right_trigger);
         telemetry.addLine("I <3 Femboys");
         //telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
-        //telemetry.update();
+        telemetry.update();
     }
 
     @Override

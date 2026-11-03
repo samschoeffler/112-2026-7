@@ -19,19 +19,17 @@ import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
 import org.firstinspires.ftc.teamcode.methods.Turret;
-//import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
+import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Blue1TipFar", group="Blue")
 public class Blue1TipFar extends OpMode {
 
-    private PathVisualizer visualizer;
-
     private Follower follower;
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
-    //private TurretCalibration turretCalibration;
+    private TurretCalibration turretCalibration;
     private Servo led;
 
     private double kP = 0.02;
@@ -58,24 +56,19 @@ public class Blue1TipFar extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Blue2Opp.path1()),
-                Commands.waitMs(12000),
+                Commands.waitMs(10000),
+                autoCommand.fWheelTogg,
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
                 autoCommand.stopShooter,
-                autoCommand.rampTogg,
                 follow(follower, AutoPaths.Blue2Opp.path2()),
                 autoCommand.shooterTogg,
-                // ---- copied from end of Blue2Tip ----
                 follow(follower, AutoPaths.Blue2Opp.path3()),
-                autoCommand.rampTogg,
-                Commands.waitMs(500),
+                autoCommand.flowerCollectFar(follower),
                 follow(follower, AutoPaths.Blue2Opp.path4()),
-                Commands.waitMs(6000),
-                //follow(follower, AutoPaths.Blue2Opp.path5()),
-                //follow(follower, AutoPaths.Blue2Opp.path6()),
                 autoCommand.stopShooter,
                 autoCommand.stopIntake,
                 autoCommand.fWheelTogg,
@@ -91,7 +84,7 @@ public class Blue1TipFar extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
-        //turretCalibration = new TurretCalibration(turret);
+        turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 
         vision = new LimelightVision(hardwareMap, 2);
@@ -99,21 +92,11 @@ public class Blue1TipFar extends OpMode {
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
-        visualizer = new PathVisualizer(
-                AutoPaths.Blue2Opp.path1(),
-                AutoPaths.Blue2Opp.path2(),
-                AutoPaths.Blue2Opp.path3(),
-                AutoPaths.Blue2Opp.path4()
-                //AutoPaths.Blue2Opp.path5(),
-                //AutoPaths.Blue2Opp.path6()
-        );
-
-        visualizer.drawNow(follower.pose());
     }
 
     @Override
     public void init_loop() {
-        //turretCalibration.update(gamepad2, telemetry);
+        turretCalibration.update(gamepad2, telemetry);
         telemetry.update();
     }
 
@@ -125,22 +108,19 @@ public class Blue1TipFar extends OpMode {
         haveLastHeading = false;
         yawTimer.reset();
 
-        visualizer.startRecording(follower.pose());
     }
 
     @Override
     public void loop() {
-        //turret.update();
+        turret.update();
         follower.update();
-
-        visualizer.recordPose(follower.pose());
-        visualizer.draw(follower.pose());
 
         updateRobotYawRate(follower.pose().heading());
         vision.update();
         Scheduler.execute();
 
         autoCommand.updateLauncher();
+        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
@@ -155,7 +135,7 @@ public class Blue1TipFar extends OpMode {
         telemetry.addData("Follower Mode", follower.mode());
         telemetry.addData("LL Tags", vision.getVisibleTagIds());
         telemetry.addData("LL Frame Age (ms)", vision.getFrameAgeMs());
-        //turret.addTelemetry(telemetry);
+        turret.addTelemetry(telemetry);
         telemetry.update();
     }
 
