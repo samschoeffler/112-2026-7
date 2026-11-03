@@ -19,7 +19,8 @@ public class Launcher {
     // ENCODER_SIGN_0 must match its learned "Encoder signs M0" value.
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
-    public static double ENCODER_SIGN_0 = 1.0;
+    // fWheel's encoder counts negative when driven forward, so flip it.
+    public static double ENCODER_SIGN_0 = -1.0;
 
     // Transfer power is now a -1..1 duty-cycle setting, not ticks/second.
     public static double MECH_POWER = 0.75;
@@ -62,8 +63,14 @@ public class Launcher {
     }
 
     public void toggleOn() {
-        if (!flywheelsOn) stopAll();
-        else setTargetVelocity(SHOOTING_VELOCITY);
+        if (flywheelsOn) {
+            stopAll();
+        } else {
+            // Turning on from off also clears a latched fault so Y can retry.
+            stopAll();
+            clearFault();
+            setTargetVelocity(SHOOTING_VELOCITY);
+        }
     }
 
     public void setTargetVelocity(double ticksPerSecond) {
@@ -184,7 +191,7 @@ public class Launcher {
         launchMech.setPower(ejecting ? -MECH_POWER : firing ? MECH_POWER : 0.0);
 
         //ball just shot logic
-        if (getFlywheelVelo() >= flywheelThreshold) {
+        if (measuredVelocity >= flywheelThreshold) {
             flywheelReady = true;
             flywheelDropped = false;
             ballJustShot = false;

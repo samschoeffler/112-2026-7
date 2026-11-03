@@ -64,8 +64,7 @@ public class MainTeleOp extends OpMode {
     private double kP = 0.02;
     private double kD = 0.0;
 
-    private final ElapsedTime yawTimer = new ElapsedTime();
-    private boolean haveLastHeading = false;
+    private final ElapsedTime yawTimer = new ElapsedTime();    private boolean haveLastHeading = false;
 
     //teleop swithcing sides variables
     private static final double RED_FORWARD_DEG  = 180;
@@ -186,10 +185,7 @@ public class MainTeleOp extends OpMode {
         launcher.update();
 
 // Intake follows the launcher's updated firing/ejecting state.
-// Stop it if the launcher reports a fault.
-        if (!launcher.getFault().isEmpty()) {
-            intake.stop();
-        } else if (gamepad2.x || launcher.isFiring()) {
+        if (gamepad2.x || launcher.isFiring()) {
             intake.intake();
         } else if (gamepad2.b || launcher.isEjecting()) {
             intake.outtake();
@@ -283,8 +279,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
-        telemetry.addData("r trig thresh", gamepad2.right_trigger);
-        telemetry.addLine("I <3 Femboys");
+        telemetry.addData("r trig thresh", gamepad2.right_trigger);        telemetry.addLine("I <3 Femboys");
         //telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
         telemetry.update();
     }
