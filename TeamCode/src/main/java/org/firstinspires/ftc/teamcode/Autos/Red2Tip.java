@@ -93,6 +93,8 @@ public class Red2Tip extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
+        // Turret must face forward at INIT: zero + limits happen only here, in auto.
+        turret.zeroForAuto();
         turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 

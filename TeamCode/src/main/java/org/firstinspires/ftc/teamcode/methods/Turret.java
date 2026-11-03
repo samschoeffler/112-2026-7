@@ -18,7 +18,16 @@ public class Turret {
     /** Motor-output-shaft encoder ticks per revolution (goBILDA 5203 435 RPM). */
     public static final double TPR = 384.5;
     /** External drive: 15T on motor, 40T on turret -> 40/15 motor turns/turret turn. */
-    public static final double GearRatio = 40.0 / 15.0;
+    // Measured: a real 90 deg turn read 130 deg with 40/15, so scale by 130/90.
+    public static final double GearRatio = (40.0 / 15.0) * (130.0 / 90.0);
+    /**
+     * The turret encoder counts opposite to positive motor power. -1 flips the
+     * reading so positive power increases the angle. Check: d-pad right must
+     * make "Turret Rot" go UP. If it goes down, change this back to 1.0.
+     */
+    public static double ENCODER_SIGN = -1.0;
+    /** Software run-to-position gain (power per degree of error). */
+    public static double RUN_TO_KP = 0.02;
 
     // Conservative starting margins; verify stopping distance on the mechanism.
     public static final double LIMIT_RESERVE_DEG = 5.0;
@@ -35,21 +44,12 @@ public class Turret {
     private final DcMotorEx rotation;
     private final ElapsedTime manualTimer = new ElapsedTime();
 
-    // No static hardware references. A stopped OpMode may offer one calibration
-    // handoff, accepted only for the same connection and unchanged encoder count.
-    // This cannot detect every hub reset (e.g. reset while already at zero).
-    private static CalibrationHandoff pendingHandoff;
-    private static final class CalibrationHandoff {
-        final String connection;
-        final int ticks;
-        final double min, max;
-        CalibrationHandoff(String connection, int ticks, double min, double max) {
-            this.connection = connection;
-            this.ticks = ticks;
-            this.min = min;
-            this.max = max;
-        }
-    }
+    // Calibration saved by the auto's zeroForAuto(). It survives Auto -> TeleOp
+    // because the encoder count persists between OpModes. Cleared when the
+    // robot app restarts. A hub power cycle without an app restart resets the
+    // encoder but NOT this flag, so re-run an auto after any power cycle.
+    private static boolean savedCalibration = false;
+    private static double savedMinDeg, savedMaxDeg;
     private boolean zeroVerified = false;
     private boolean limitsVerified = false;
     private double rotationMinDeg = Double.NaN, rotationMaxDeg = Double.NaN;
@@ -60,6 +60,8 @@ public class Turret {
     private double rotationDeg = 0;
     private double turretAngularVelocityDegPerSec = 0;
     private double rotationTargetDeg = 0;
+    // True while a rotateTo() preset is being driven by update().
+    private boolean presetActive = false;
 
     public final PD mainPD = new PD();
 
@@ -78,13 +80,9 @@ public class Turret {
         rotation.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rotation.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        CalibrationHandoff handoff = pendingHandoff;
-        pendingHandoff = null;
-        if (handoff != null && previousMode != DcMotor.RunMode.STOP_AND_RESET_ENCODER
-                && handoff.connection.equals(rotation.getConnectionInfo())
-                && handoff.ticks == rotation.getCurrentPosition()) {
+        if (savedCalibration && previousMode != DcMotor.RunMode.STOP_AND_RESET_ENCODER) {
             zeroVerified = true;
-            configureRotationLimits(handoff.min, handoff.max);
+            configureRotationLimits(savedMinDeg, savedMaxDeg);
         }
         update();
         manualTimer.reset();
@@ -107,11 +105,16 @@ public class Turret {
         }
         if (!isRotationCalibrated() || !Double.isFinite(measuredVelocity)) {
             stopRotation();
-        } else if (rotation.getMode() == DcMotor.RunMode.RUN_TO_POSITION) {
+        } else if (presetActive) {
+            // Software run-to-position. The hub's RUN_TO_POSITION can't be used
+            // because the encoder counts opposite to the motor (ENCODER_SIGN).
             double error = rotationTargetDeg - rotationDeg;
-            appliedPower = Math.abs(limitPower(Math.signum(error)
-                    * Range.clip(Math.abs(ROTATE_POWER), 0, 1)));
-            rotation.setPower(appliedPower);
+            if (Math.abs(error) <= Math.max(ROT_TOLERANCE_DEG, 0.5)) {
+                stopRotation();
+            } else {
+                double max = Range.clip(Math.abs(ROTATE_POWER), 0, 1);
+                applyPower(Range.clip(RUN_TO_KP * error, -max, max));
+            }
         }
     }
 
@@ -126,16 +129,16 @@ public class Turret {
             rawVelocityDegPerSec = turretAngularVelocityDegPerSec = Double.NaN;
             return;
         }
-        rotationDeg = rotation.getCurrentPosition() / ticksPerDegree;
+        rotationDeg = ENCODER_SIGN * rotation.getCurrentPosition() / ticksPerDegree;
         // FTC's no-argument getVelocity() reports encoder ticks per second.
-        rawVelocityDegPerSec = rotation.getVelocity() / ticksPerDegree;
+        rawVelocityDegPerSec = ENCODER_SIGN * rotation.getVelocity() / ticksPerDegree;
     }
 
     public void invalidateCalibration() {
         stopRotation();
         zeroVerified = limitsVerified = false;
         rotationMinDeg = rotationMaxDeg = Double.NaN;
-        pendingHandoff = null;
+        savedCalibration = false;
         mainPD.reset();
     }
 
@@ -162,6 +165,19 @@ public class Turret {
         return true;
     }
 
+    /** Wire-safe rotation limits from forward, in degrees. */
+    public static final double AUTO_MIN_DEG = -200.0;
+    public static final double AUTO_MAX_DEG = 200.0;
+
+    /**
+     * Call ONLY from an Autonomous init(), with the turret physically facing
+     * forward. Zeros the encoder there and applies the fixed limits. TeleOp
+     * picks this up through the stop() handoff and never re-zeros.
+     */
+    public boolean zeroForAuto() {
+        return zeroRotationAtForward() && configureRotationLimits(AUTO_MIN_DEG, AUTO_MAX_DEG);
+    }
+
     /**
      * Accept conservative, independently measured wire-safe limits (degrees
      * relative to forward zero). NOT a limit-finding motor routine.
@@ -176,13 +192,16 @@ public class Turret {
         rotationMinDeg = minDeg;
         rotationMaxDeg = maxDeg;
         limitsVerified = true;
+        savedCalibration = true;
+        savedMinDeg = minDeg;
+        savedMaxDeg = maxDeg;
         return true;
     }
 
     public void clearRotationLimits() {
         stopRotation();
         limitsVerified = false;
-        pendingHandoff = null;
+        savedCalibration = false;
         mainPD.reset();
     }
 
@@ -202,6 +221,12 @@ public class Turret {
             stopRotation();
             return;
         }
+        presetActive = false; // Direct power commands cancel any rotateTo() preset.
+        applyPower(power);
+    }
+
+    /** Clip, apply soft limits, and send power. Position must be fresh. */
+    private void applyPower(double power) {
         power = Range.clip(power, -1.0, 1.0);
         power = limitPower(power);
         if (rotation.getMode() != DcMotor.RunMode.RUN_WITHOUT_ENCODER) {
@@ -226,6 +251,7 @@ public class Turret {
     }
 
     public void stopRotation() {
+        presetActive = false;
         rotation.setPower(0);
         // A later update() must not restart a cancelled preset.
         if (rotation.getMode() == DcMotor.RunMode.RUN_TO_POSITION) {
@@ -235,14 +261,9 @@ public class Turret {
         limitActive = false;
     }
 
-    /** Stop and offer a one-use encoder-reference handoff to the next OpMode. */
+    /** Stop the turret. The saved calibration carries over to the next OpMode. */
     public void stop() {
         stopRotation();
-        readPositionAndVelocity();
-        pendingHandoff = isRotationCalibrated() && Double.isFinite(rawVelocityDegPerSec)
-                && Math.abs(rawVelocityDegPerSec) < 2.0
-                ? new CalibrationHandoff(rotation.getConnectionInfo(), rotation.getCurrentPosition(),
-                        rotationMinDeg, rotationMaxDeg) : null;
     }
 
     public boolean isForwardZeroVerified() { return zeroVerified; }
@@ -253,10 +274,12 @@ public class Turret {
 
     /** D-pad manual control; uses the same soft limits as automatic tracking. */
     public void manualControl(boolean left, boolean right) {
-        double power = left == right ? 0 : left ? -ROTATE_POWER : ROTATE_POWER;
-        setRotationPower(power);
-        double dt = Math.min(manualTimer.seconds(), 0.10);
         manualTimer.reset();
+        boolean pressed = left != right;
+        // With no d-pad input, let an active rotateTo() preset finish instead
+        // of cancelling it with zero power every loop. D-pad input overrides it.
+        if (!pressed && presetActive) return;
+        setRotationPower(!pressed ? 0 : left ? -ROTATE_POWER : ROTATE_POWER);
         rotationTargetDeg = rotationDeg;
     }
 
@@ -289,17 +312,13 @@ public class Turret {
         if (!Double.isFinite(best)) {
             best = Range.clip(target, minTarget, maxTarget);
         }
-        double ticksPerDegree = ticksPerTurretDegree();
-        int ticks = (int) Range.clip(Math.round(best * ticksPerDegree),
-                Math.ceil(minTarget * ticksPerDegree), Math.floor(maxTarget * ticksPerDegree));
-        rotationTargetDeg = ticks / ticksPerDegree;
+        // update() drives toward this target every loop until within tolerance.
         stopRotation();
-        rotation.setTargetPosition(ticks);
-        rotation.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        appliedPower = Math.abs(limitPower(Math.signum(rotationTargetDeg - rotationDeg)
-                * Range.clip(Math.abs(ROTATE_POWER), 0.0, 1.0)));
-        rotation.setPower(appliedPower);
+        rotationTargetDeg = Range.clip(best, minTarget, maxTarget);
+        presetActive = true;
     }
+
+    public boolean isPresetActive() { return presetActive; }
 
     public void toggleTurretAuto() {
         turretAuto = !turretAuto;

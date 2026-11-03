@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.methods;
 
+import org.firstinspires.ftc.teamcode.MainTeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -12,7 +13,7 @@ public class Launcher {
     public static double KS = 1.0931;
     public static double KV = 0.0052;
     public static double KP = 0.0071;
-    public static double SHOOTING_VELOCITY = 1400.0;
+    public double SHOOTING_VELOCITY = 1400.0;
 
     // Copy the confirmed settings from the tuner. With both motors configured
     // FORWARD as below, the POWER_SIGN values must match the tuning OpMode.
@@ -29,6 +30,7 @@ public class Launcher {
     public static double READY_HOLD_SECONDS = 0.15;
     public static double FEED_READY_TIMEOUT_SECONDS = 3.0;
 
+    private MainTeleOp mainTeleOp;
     private final HardwareMap hardwareMap;
     private final DcMotorEx fWheel, launchMech;
     private boolean flywheelsOn = false;
@@ -43,11 +45,14 @@ public class Launcher {
     // only count drops once the flywheel has been up to speed (ignores spin-up)
     private boolean flywheelReady = false;
     private double flywheelThreshold = 1200;
+    private double distanceFromHive1 = 0;
+    private double distanceFromHive2 = 0;
 
     public Launcher(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         fWheel = hardwareMap.get(DcMotorEx.class, "fWheel");
         launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
+        mainTeleOp      = new MainTeleOp();
         configureFlywheel(fWheel);
         launchMech.setPower(0.0);
         launchMech.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -200,6 +205,26 @@ public class Launcher {
             ballJustShot = true;
         } else
             ballJustShot = false;
+
+        //distance to shooter by pose
+        distanceFromHive1 = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ));
+        distanceFromHive2 = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ));
+
+        //calculating velocity to shoot with
+        if(distanceFromHive1 >= 50 && distanceFromHive2 >= 50)
+            SHOOTING_VELOCITY = 1650;
+        else if(distanceFromHive1 >= 40 && distanceFromHive2 >= 40)
+            SHOOTING_VELOCITY = 1550;
+        else if(distanceFromHive1 >= 30 && distanceFromHive2 >= 30)
+            SHOOTING_VELOCITY = 1450;
+        else if(distanceFromHive1 >= 20 && distanceFromHive2 >= 20)
+            SHOOTING_VELOCITY = 1350;
+        else
+            SHOOTING_VELOCITY = 1250;
+
+        //updating the speed
+        if(flywheelsOn)
+            setTargetVelocity(SHOOTING_VELOCITY);
     }
 
     private boolean validConfiguration() {
@@ -265,4 +290,7 @@ public class Launcher {
     public double getBatteryVoltage() { return batteryVoltage; }
     public boolean ballWasShot() {return ballJustShot;}
     public String getFault() { return fault; }
+    public double getProjectedSpeed() { return SHOOTING_VELOCITY; }
+    public String getDistanceFromHive() { return distanceFromHive1 + " , " + distanceFromHive2; }
+
 }

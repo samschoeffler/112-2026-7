@@ -49,7 +49,7 @@ public class MainTeleOp extends OpMode {
     private static final double TRIGGER_THRESHOLD = 0.2;
 
     //Methods
-    private Follower follower;
+    private static Follower follower;
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
@@ -208,6 +208,9 @@ public class MainTeleOp extends OpMode {
             turret.mainPD.reset();
         }
 
+        // Read the turret encoder and drive any active rotateTo() preset.
+        turret.update();
+
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
             /*turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
@@ -279,10 +282,17 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
-        telemetry.addData("r trig thresh", gamepad2.right_trigger);        telemetry.addLine("I <3 Femboys");
+        telemetry.addData("Distance from hive)", launcher.getDistanceFromHive());
+        telemetry.addData("velocity", launcher.getFlywheelVelo());
+        telemetry.addData("proj velocity", launcher.getProjectedSpeed());
+        telemetry.addLine("I <3 Femboys");
         //telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
         telemetry.update();
     }
+
+    //give pose to launcher
+    public  double poseX() {return follower.pose().x();}
+    public double poseY() {return follower.pose().y();}
 
     @Override
     public void stop() {

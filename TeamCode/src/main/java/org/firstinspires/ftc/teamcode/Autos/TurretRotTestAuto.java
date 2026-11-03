@@ -50,6 +50,8 @@ public class TurretRotTestAuto extends OpMode {
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
+        // Turret must face forward at INIT: zero + limits happen only here, in auto.
+        turret.zeroForAuto();
         turretCalibration = new TurretCalibration(turret);
 
     }
