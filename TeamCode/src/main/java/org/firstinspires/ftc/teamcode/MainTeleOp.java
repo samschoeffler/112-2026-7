@@ -177,8 +177,12 @@ public class MainTeleOp extends OpMode {
 // Request shooting while the right trigger is held.
         if (gamepad2.aWasPressed()) {
             launcher.fire();
-            transfer.toggleOn();
+            //transfer.toggleOn();
             //launcher.actFire();
+        }
+
+        if (gamepad2.bWasPressed()) {
+            transfer.toggleOn();
         }
 
 // Request reverse transfer operation.

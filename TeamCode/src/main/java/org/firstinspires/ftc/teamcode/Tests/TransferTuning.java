@@ -24,14 +24,14 @@ public class TransferTuning extends OpMode {
     private static final double MOTOR0_POWER_SIGN = 1.0;
     private static final double CHECK_POWER = 0.25;
     private static final long PANELS_INTERVAL_NS = 100_000_000L;
-    private static final double HIGH_VELOCITY = 1400.0;
-    private static final double LOW_VELOCITY = 300.0;
+    private static final double HIGH_VELOCITY = 1460.0;
+    private static final double LOW_VELOCITY = 1140.0;
 
     // These are voltage-model gains, NOT the Hub's old P/F coefficients.
     // kS: volts; kV and kP: volts per (encoder tick/second).
     // One controller for the linked flywheel. Launch0 is the feedback encoder;
     // Launch1 is monitored, but never runs a competing velocity controller.
-    private final double kS = 0.438, kV = 0.0043, kP = 0.0031;
+    private double kS = 0.1696, kV = 0.004476, kP = 0;
     private double target = HIGH_VELOCITY;
     private double intakePower = 0.0;
     private boolean ballTest = false;
@@ -46,7 +46,7 @@ public class TransferTuning extends OpMode {
     private int earlyCount, lateCount;
     private final ArrayList<double[]> samples = new ArrayList<>();
     private String sampleStatus = "No samples";
-    private double fitR2 = 0.0, fitRmsVolts = 0.0;
+    private double fitR2 = 0.9697, fitRmsVolts = 0.096;
     private int selectedGain = 0; // 0 = kS, 1 = kV, 2 = kP
     private int stepIndex = 1;
     private final String[] gainNames = {"kS (V)", "kV (V per tick/s)", "kP (V per tick/s)"};
@@ -401,13 +401,16 @@ public class TransferTuning extends OpMode {
                     fittedS, fittedV, fitR2, fitRmsVolts);
             return;
         }
+        kS = fittedS;
+        kV = fittedV;
+        kP = 0.0;
         sampleStatus = String.format("Applied kS=%.4f kV=%.6f; kP=0. RB switches to velocity mode.", kS, kV);
     }
 
     private void changeGain(double delta) {
-        /*if (selectedGain == 0) kS = clip(kS + delta, 0.0, 12.0);
+        if (selectedGain == 0) kS = clip(kS + delta, 0.0, 12.0);
         else if (selectedGain == 1) kV = clip(kV + delta, 0.0, 0.1);
-        else kP = clip(kP + delta, 0.0, 0.1);*/
+        else kP = clip(kP + delta, 0.0, 0.1);
     }
 
     private double readBatteryVoltage() {
