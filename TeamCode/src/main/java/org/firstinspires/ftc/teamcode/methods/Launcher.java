@@ -47,6 +47,7 @@ public class Launcher {
     private double flywheelThreshold = 1200;
     private double distanceFromHive1 = 0;
     private double distanceFromHive2 = 0;
+    private double distanceFromHive = 0;
 
     public Launcher(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
@@ -207,20 +208,14 @@ public class Launcher {
             ballJustShot = false;
 
         //distance to shooter by pose
-        distanceFromHive1 = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ));
-        distanceFromHive2 = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ));
-
-        //calculating velocity to shoot with
-        if(distanceFromHive1 >= 50 && distanceFromHive2 >= 50)
-            SHOOTING_VELOCITY = 1650;
-        else if(distanceFromHive1 >= 40 && distanceFromHive2 >= 40)
-            SHOOTING_VELOCITY = 1550;
-        else if(distanceFromHive1 >= 30 && distanceFromHive2 >= 30)
-            SHOOTING_VELOCITY = 1450;
-        else if(distanceFromHive1 >= 20 && distanceFromHive2 >= 20)
-            SHOOTING_VELOCITY = 1350;
+        if(Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ) > Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ))
+            distanceFromHive = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ));
         else
-            SHOOTING_VELOCITY = 1250;
+            distanceFromHive = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ));
+
+        //SHOOTING_VELOCITY = 8 * distanceFromHive + 1200;
+        //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 1.3);
+        SHOOTING_VELOCITY = Math.pow(distanceFromHive + 100, 1.2) + 1100;
 
         //updating the speed
         if(flywheelsOn)
