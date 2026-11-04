@@ -54,7 +54,7 @@ public class MainTeleOp extends OpMode {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
-    //private LimelightVision vision;
+    private LimelightVision vision;
     private Servo led;
 
     private Transfer transfer;
@@ -121,7 +121,7 @@ public class MainTeleOp extends OpMode {
 
         int pipeline = "BLUE".equals(allegiance) ? 2 : 1;
 
-        //vision = new LimelightVision(hardwareMap, pipeline);
+        vision = new LimelightVision(hardwareMap, pipeline);
 
         telemetry.setMsTransmissionInterval(100);
 
@@ -142,7 +142,7 @@ public class MainTeleOp extends OpMode {
     public void start() {
         follower.manual();
         follower.update();
-        //vision.start();
+        vision.start();
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
@@ -167,7 +167,7 @@ public class MainTeleOp extends OpMode {
         ManualDrive.driveOrHold(follower, powers);
         follower.update();
 
-        //vision.update();
+        vision.update();
 
         // Toggle flywheel speed control.
         if (gamepad2.yWasPressed()) {
@@ -227,9 +227,9 @@ public class MainTeleOp extends OpMode {
 
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
-            /*turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
+            turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                     Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);*/
+                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
@@ -303,7 +303,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Error", launcher.getError());
         telemetry.addData("Transfer Velo", transfer.getFlywheelVelo());
         telemetry.addData("Target Transfer Velo", transfer.getTargetVelocity());
-        //telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
+        telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
         telemetry.update();
     }
 
@@ -313,6 +313,6 @@ public class MainTeleOp extends OpMode {
         launcher.stopAll();
         intake.stop();
         turret.stop();
-        //vision.stop();
+        vision.stop();
     }
 }
