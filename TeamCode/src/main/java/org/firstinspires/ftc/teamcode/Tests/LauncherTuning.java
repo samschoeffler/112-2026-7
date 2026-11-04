@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 @TeleOp(name="PID Tuning | Flywheel", group="Diagnostics")
 public class LauncherTuning extends OpMode {
-    private DcMotorEx launch0, launch1, transfer, intake;
+    private DcMotorEx launch0, transfer, intake;
     private final TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
 
     // Both positive motor commands match the submitted code. Change an entry
@@ -29,7 +29,10 @@ public class LauncherTuning extends OpMode {
     // kS: volts; kV and kP: volts per (encoder tick/second).
     // One controller for the linked flywheel. Launch0 is the feedback encoder;
     // Launch1 is monitored, but never runs a competing velocity controller.
-    private double kS = 1.0931, kV = 0.0052, kP = 0.0071;
+    private final double kS = 1.1527, kV = 0.005047;
+
+    private double kP = 0.0352;
+
     private double target = HIGH_VELOCITY;
     private double intakePower = 0.0;
     private boolean ballTest = false;
@@ -64,12 +67,10 @@ public class LauncherTuning extends OpMode {
 
     @Override
     public void init() {
-        launch0 = hardwareMap.get(DcMotorEx.class, "Launch0");
-        launch1 = hardwareMap.get(DcMotorEx.class, "Launch1");
+        launch0 = hardwareMap.get(DcMotorEx.class, "fWheel");
         transfer = hardwareMap.get(DcMotorEx.class, "LaunchMech");
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
         configure(launch0);
-        configure(launch1);
         transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         transfer.setPower(0.0);
@@ -89,7 +90,6 @@ public class LauncherTuning extends OpMode {
     public void loop() {
         long now = System.nanoTime();
         double raw0 = launch0.getVelocity();
-        double raw1 = launch1.getVelocity();
         double battery = readBatteryVoltage();
 
         boolean modeButton = gamepad1.right_bumper;
@@ -139,7 +139,7 @@ public class LauncherTuning extends OpMode {
         if (checking && !wasChecking) {
             enabled = false;
             calibrated = false;
-            checkAccepted = Math.abs(raw0) < 30.0 && Math.abs(raw1) < 30.0;
+            checkAccepted = Math.abs(raw0) < 30.0;
             signStableSince = 0;
             reverseSince = stalledSince = 0;
             candidateSign0 = candidateSign1 = 0.0;
@@ -151,7 +151,7 @@ public class LauncherTuning extends OpMode {
         double requested0 = 0.0, requested1 = 0.0;
         if (!Double.isFinite(battery)) {
             fault("No valid battery voltage: all outputs off");
-        } else if (!Double.isFinite(raw0) || !Double.isFinite(raw1)) {
+        } else if (!Double.isFinite(raw0)) {
             fault("Invalid encoder velocity: all outputs off");
         } else if (checking) {
             enabled = false;
@@ -159,17 +159,15 @@ public class LauncherTuning extends OpMode {
                 status = "Wait for wheels to stop; release and hold LB again";
             } else {
                 power0 = power1 = CHECK_POWER;
-                if (Math.abs(raw0) >= 30.0 && Math.abs(raw1) >= 30.0) {
-                    double s0 = Math.signum(raw0), s1 = Math.signum(raw1);
-                    if (s0 != candidateSign0 || s1 != candidateSign1 || signStableSince == 0) {
+                if (Math.abs(raw0) >= 30.0) {
+                    double s0 = Math.signum(raw0);
+                    if (s0 != candidateSign0 || signStableSince == 0) {
                         candidateSign0 = s0;
-                        candidateSign1 = s1;
                         signStableSince = now;
                         calibrated = false;
                     }
                     if (now - signStableSince >= 500_000_000L) {
                         encoderSign0 = s0;
-                        encoderSign1 = s1;
                         calibrated = true;
                     }
                 } else {
@@ -197,7 +195,6 @@ public class LauncherTuning extends OpMode {
             }
             if (enabled && (voltageMode ? testVolts > 0.0 : target > 0.0)) {
                 double velocity0 = encoderSign0 * raw0;
-                double velocity1 = encoderSign1 * raw1;
                 double feedforward = kS + kV * target;
                 requested0 = voltageMode ? testVolts : feedforward + kP * (target - velocity0);
                 requested1 = requested0;
@@ -205,10 +202,9 @@ public class LauncherTuning extends OpMode {
                 power0 = clip(requested0 / battery, 0.0, 1.0);
                 power1 = power0;
 
-                boolean reversed = velocity0 < -50.0 || velocity1 < -50.0;
+                boolean reversed = velocity0 < -50.0;
                 reverseSince = reversed ? (reverseSince == 0 ? now : reverseSince) : 0;
-                boolean stalled = (power0 >= 0.25 && Math.abs(raw0) < 15.0)
-                        || (power1 >= 0.25 && Math.abs(raw1) < 15.0);
+                boolean stalled = (power0 >= 0.25 && Math.abs(raw0) < 15.0);
                 stalledSince = stalled ? (stalledSince == 0 ? now : stalledSince) : 0;
                 if (reverseSince != 0 && now - reverseSince >= 200_000_000L) {
                     fault("Encoder direction changed: redo direction check");
@@ -223,7 +219,6 @@ public class LauncherTuning extends OpMode {
         wasChecking = checking;
 
         launch0.setPower(MOTOR0_POWER_SIGN * power0);
-        launch1.setPower(MOTOR1_POWER_SIGN * power1);
         boolean canFeed = enabled && !checking && !voltageMode && target > 0.0;
         if (!canFeed) {
             ballTest = false;
@@ -237,7 +232,7 @@ public class LauncherTuning extends OpMode {
         transfer.setPower(transferPower);
         intake.setPower(actualIntakePower);
 
-        double v0 = encoderSign0 * raw0, v1 = encoderSign1 * raw1;
+        double v0 = encoderSign0 * raw0;
         boolean canCapture = voltageMode && enabled && !checking && testVolts > 0.0
                 && Double.isFinite(battery) && power0 > 0.0 && power0 < 0.98 && v0 >= 30.0;
         if (record && voltageMode) {
@@ -306,8 +301,8 @@ public class LauncherTuning extends OpMode {
         telemetry.addData("kV (V per tick/s)", kV);
         telemetry.addData("kP (V per tick/s)", kP);
         telemetry.addData("Target (ticks/s)", target);
-        telemetry.addData("M0 / M1 velocity", v0 + " / " + v1);
-        telemetry.addData("Raw M0 / M1 velocity", raw0 + " / " + raw1);
+        telemetry.addData("M0 velocity", v0);
+        telemetry.addData("Raw M0 velocity", raw0);
         telemetry.addData("Encoder signs M0 / M1", encoderSign0 + " / " + encoderSign1);
         telemetry.addData("Battery (V)", battery);
         telemetry.addData("M0 / M1 power", power0 + " / " + power1);
@@ -334,10 +329,8 @@ public class LauncherTuning extends OpMode {
             panels.addData("Fit_RMS_V", fitRmsVolts);
             panels.addData("Applied_V", power0 * (Double.isFinite(battery) ? battery : 0.0));
             panels.addData("M0_Velocity", v0);
-            panels.addData("M1_Velocity", v1);
             // Encoder units/gear ratios may differ. Never average them for control.
             panels.addData("M0_Error", target - v0);
-            panels.addData("M1_Error", target - v1);
             panels.addData("kS_V", kS);
             panels.addData("kV", kV);
             panels.addData("kP", kP);
@@ -409,16 +402,14 @@ public class LauncherTuning extends OpMode {
                     fittedS, fittedV, fitR2, fitRmsVolts);
             return;
         }
-        kS = 1.0931;
-        kV = 0.0052;
-        kP = 0.0071;
+        /*kS = fittedS;
+        kV = fittedV;
+        kP = 0;*/
         sampleStatus = String.format("Applied kS=%.4f kV=%.6f; kP=0. RB switches to velocity mode.", kS, kV);
     }
 
     private void changeGain(double delta) {
-        if (selectedGain == 0) kS = clip(kS + delta, 0.0, 12.0);
-        else if (selectedGain == 1) kV = clip(kV + delta, 0.0, 0.1);
-        else kP = clip(kP + delta, 0.0, 0.1);
+        kP = clip(kP + delta, 0.0, 0.1);
     }
 
     private double readBatteryVoltage() {
@@ -451,7 +442,6 @@ public class LauncherTuning extends OpMode {
         enabled = false;
         ballTest = false;
         if (launch0 != null) launch0.setPower(0.0);
-        if (launch1 != null) launch1.setPower(0.0);
         if (transfer != null) transfer.setPower(0.0);
         if (intake != null) intake.setPower(0.0);
     }

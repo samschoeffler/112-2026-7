@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.methods;
 
-import org.firstinspires.ftc.teamcode.MainTeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -10,29 +9,26 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 public class Launcher {
     // Copy the final VOLTAGE-MODEL gains from LauncherTuning here.
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
-    public static double KS = 1.0931;
-    public static double KV = 0.0052;
-    public static double KP = 0.0071;
-    public double SHOOTING_VELOCITY = 1400.0;
+    public static double KS = 1.1527, KV = 0.005047;
+    public static double KP = 0.0352;
+    public static double SHOOTING_VELOCITY = 1450;
 
     // Copy the confirmed settings from the tuner. With both motors configured
     // FORWARD as below, the POWER_SIGN values must match the tuning OpMode.
     // ENCODER_SIGN_0 must match its learned "Encoder signs M0" value.
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
-    // fWheel's encoder counts negative when driven forward, so flip it.
     public static double ENCODER_SIGN_0 = -1.0;
 
     // Transfer power is now a -1..1 duty-cycle setting, not ticks/second.
-    public static double MECH_POWER = 0.75;
+    public static double MECH_POWER = 1.0;
     // Starting examples: verify readiness settings on the robot.
     public static double VELOCITY_TOLERANCE = 40.0;
     public static double READY_HOLD_SECONDS = 0.15;
     public static double FEED_READY_TIMEOUT_SECONDS = 3.0;
 
-    private MainTeleOp mainTeleOp;
     private final HardwareMap hardwareMap;
-    private final DcMotorEx fWheel, launchMech;
+    private final DcMotorEx fWheel;
     private boolean flywheelsOn = false;
     private boolean fireRequested = false, firing = false, ejecting = false;
     private boolean feedStarted = false;
@@ -45,19 +41,13 @@ public class Launcher {
     // only count drops once the flywheel has been up to speed (ignores spin-up)
     private boolean flywheelReady = false;
     private double flywheelThreshold = 1200;
-    private double distanceFromHive1 = 0;
-    private double distanceFromHive2 = 0;
+
 
     public Launcher(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         fWheel = hardwareMap.get(DcMotorEx.class, "fWheel");
-        launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
-        mainTeleOp      = new MainTeleOp();
         configureFlywheel(fWheel);
-        launchMech.setPower(0.0);
-        launchMech.setDirection(DcMotorSimple.Direction.FORWARD);
-        launchMech.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        stopAll();
+        //stopAll();
     }
 
     private void configureFlywheel(DcMotorEx motor) {
@@ -68,14 +58,7 @@ public class Launcher {
     }
 
     public void toggleOn() {
-        if (flywheelsOn) {
-            stopAll();
-        } else {
-            // Turning on from off also clears a latched fault so Y can retry.
-            stopAll();
-            clearFault();
-            setTargetVelocity(SHOOTING_VELOCITY);
-        }
+        setTargetVelocity(SHOOTING_VELOCITY);
     }
 
     public void setTargetVelocity(double ticksPerSecond) {
@@ -83,16 +66,12 @@ public class Launcher {
             tripFault("Invalid target velocity");
             return;
         }
-        if (ticksPerSecond == 0.0) {
-            stopAll();
-            return;
-        }
         if (!fault.isEmpty()) return;
         if (targetVelocity != ticksPerSecond || !flywheelsOn) {
             readySince = 0;
             feedStarted = false;
             firing = false;
-            launchMech.setPower(0.0);
+            //launchMech.setPower(0.0);
             if (fireRequested) fireRequestedAt = System.nanoTime();
         }
         targetVelocity = ticksPerSecond;
@@ -101,15 +80,10 @@ public class Launcher {
 
     // Safe to call repeatedly from a held trigger; does not reset the timeout.
     public void fire() {
-        if (!flywheelsOn || !fault.isEmpty()) return;
+        //if (!flywheelsOn || !fault.isEmpty()) return;
         if (!fireRequested) fireRequestedAt = System.nanoTime();
         fireRequested = true;
         ejecting = false;
-        launchMech.setPower(1.0);
-    }
-
-    public void actFire() {
-        launchMech.setPower(1.0);
     }
 
 
@@ -118,16 +92,12 @@ public class Launcher {
         firing = false;
         feedStarted = false;
         fireRequestedAt = 0;
-        launchMech.setPower(0.0);
     }
 
     public void actStopWheel() {
         fWheel.setPower(0);
     }
 
-    public void actStopFire() {
-        launchMech.setPower(0.0);
-    }
 
     public void eject(boolean requested) {
         ejecting = requested && fault.isEmpty();
@@ -142,10 +112,6 @@ public class Launcher {
     // Call once every OpMode loop, AFTER updating command/trigger requests.
     public void update() {
         long now = System.nanoTime();
-        if (!fault.isEmpty()) {
-            stopAll();
-            return;
-        }
         measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
         batteryVoltage = readBatteryVoltage();
         if (!Double.isFinite(measuredVelocity) || !Double.isFinite(batteryVoltage)) {
@@ -193,10 +159,9 @@ public class Launcher {
             }
         }
         firing = fireRequested && flywheelsOn && feedStarted && !ejecting;
-        launchMech.setPower(ejecting ? -MECH_POWER : firing ? MECH_POWER : 0.0);
 
         //ball just shot logic
-        if (measuredVelocity >= flywheelThreshold) {
+        if (getFlywheelVelo() >= flywheelThreshold) {
             flywheelReady = true;
             flywheelDropped = false;
             ballJustShot = false;
@@ -205,26 +170,6 @@ public class Launcher {
             ballJustShot = true;
         } else
             ballJustShot = false;
-
-        //distance to shooter by pose
-        distanceFromHive1 = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ));
-        distanceFromHive2 = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ));
-
-        //calculating velocity to shoot with
-        if(distanceFromHive1 >= 50 && distanceFromHive2 >= 50)
-            SHOOTING_VELOCITY = 1650;
-        else if(distanceFromHive1 >= 40 && distanceFromHive2 >= 40)
-            SHOOTING_VELOCITY = 1550;
-        else if(distanceFromHive1 >= 30 && distanceFromHive2 >= 30)
-            SHOOTING_VELOCITY = 1450;
-        else if(distanceFromHive1 >= 20 && distanceFromHive2 >= 20)
-            SHOOTING_VELOCITY = 1350;
-        else
-            SHOOTING_VELOCITY = 1250;
-
-        //updating the speed
-        if(flywheelsOn)
-            setTargetVelocity(SHOOTING_VELOCITY);
     }
 
     private boolean validConfiguration() {
@@ -256,7 +201,6 @@ public class Launcher {
 
     private void tripFault(String reason) {
         fault = reason;
-        stopAll();
     }
 
     // Faults stay latched until explicitly cleared while stopped, or a new
@@ -270,7 +214,6 @@ public class Launcher {
         targetVelocity = requestedVolts = motorPower = 0.0;
         readySince = fireRequestedAt = reverseSince = stalledSince = 0;
         fWheel.setPower(0.0);
-        launchMech.setPower(0.0);
     }
 
     public boolean flywheelAtSpeed() {
@@ -283,14 +226,11 @@ public class Launcher {
     public boolean isFiring() { return firing; }
     public boolean isEjecting() { return ejecting; }
     public double getTargetVelocity() { return targetVelocity; }
-    public double getTranferVelo() { return launchMech.getVelocity(); }
+    public double getError() { return targetVelocity - measuredVelocity; }
     public double getFlywheelVelo() { return fWheel.getVelocity(); }
     public double getMeasuredVelocity() { return measuredVelocity; }
     public double getMotorPower() { return motorPower; }
     public double getBatteryVoltage() { return batteryVoltage; }
     public boolean ballWasShot() {return ballJustShot;}
     public String getFault() { return fault; }
-    public double getProjectedSpeed() { return SHOOTING_VELOCITY; }
-    public String getDistanceFromHive() { return distanceFromHive1 + " , " + distanceFromHive2; }
-
 }

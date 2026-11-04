@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
+import org.firstinspires.ftc.teamcode.methods.Transfer;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
@@ -49,12 +50,14 @@ public class MainTeleOp extends OpMode {
     private static final double TRIGGER_THRESHOLD = 0.2;
 
     //Methods
-    private static Follower follower;
+    private Follower follower;
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
     //private LimelightVision vision;
     private Servo led;
+
+    private Transfer transfer;
 
     private String yawSource = "Pedro";
     private IMU imu;
@@ -64,7 +67,8 @@ public class MainTeleOp extends OpMode {
     private double kP = 0.02;
     private double kD = 0.0;
 
-    private final ElapsedTime yawTimer = new ElapsedTime();    private boolean haveLastHeading = false;
+    private final ElapsedTime yawTimer = new ElapsedTime();
+    private boolean haveLastHeading = false;
 
     //teleop swithcing sides variables
     private static final double RED_FORWARD_DEG  = 180;
@@ -100,6 +104,7 @@ public class MainTeleOp extends OpMode {
         follower = Constants.create(hardwareMap);
         led = hardwareMap.get(Servo.class, "led");
         launcher    = new Launcher(hardwareMap);
+        transfer = new Transfer(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
 
@@ -170,12 +175,10 @@ public class MainTeleOp extends OpMode {
         }
 
 // Request shooting while the right trigger is held.
-        if (gamepad2.a) {
+        if (gamepad2.aWasPressed()) {
             launcher.fire();
+            transfer.toggleOn();
             //launcher.actFire();
-        } else {
-            //launcher.actStopFire();
-            launcher.stopFire();
         }
 
 // Request reverse transfer operation.
@@ -183,15 +186,17 @@ public class MainTeleOp extends OpMode {
 
 // REQUIRED: calculate flywheel power and update the transfer every loop.
         launcher.update();
+        transfer.update();
 
 // Intake follows the launcher's updated firing/ejecting state.
+// Stop it if the launcher reports a fault.
         if (gamepad2.x || launcher.isFiring()) {
             intake.intake();
-        } else if (gamepad2.b || launcher.isEjecting()) {
+        } /*else if (gamepad2.b || launcher.isEjecting()) {
             intake.outtake();
         } else {
             intake.stop();
-        }
+        }*/
 
         //ramp
         if (gamepad2.leftTriggerWasPressed()) {
@@ -208,8 +213,13 @@ public class MainTeleOp extends OpMode {
             turret.mainPD.reset();
         }
 
-        // Read the turret encoder and drive any active rotateTo() preset.
-        turret.update();
+        if (gamepad1.bWasPressed()) {
+            launcher.stopFire();
+        }
+
+        if (gamepad1.xWasPressed()) {
+
+        }
 
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
@@ -276,23 +286,22 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("X", follower.pose().x());
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
-        telemetry.addData("fWheel On", launcher.isFlywheelsOn());
+        telemetry.addData("Launcher On", launcher.isFlywheelsOn());
         telemetry.addData("Firing", launcher.isFiring());
         telemetry.addData("Ramp Down", !intake.isRampUp());
         telemetry.addData("TurretAuto", turret.isTurretAuto());
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
-        telemetry.addData("Distance from hive)", launcher.getDistanceFromHive());
-        telemetry.addData("velocity", launcher.getFlywheelVelo());
-        telemetry.addData("proj velocity", launcher.getProjectedSpeed());
+        telemetry.addData("r trig thresh", gamepad2.right_trigger);
         telemetry.addLine("I <3 Femboys");
+        telemetry.addData("Current Velo", launcher.getFlywheelVelo());
+        telemetry.addData("Target Velo", launcher.getTargetVelocity());
+        telemetry.addData("Error", launcher.getError());
+        telemetry.addData("Transfer Velo", transfer.getFlywheelVelo());
+        telemetry.addData("Target Transfer Velo", transfer.getTargetVelocity());
         //telemetry.addData("Is Targeting?",  vision.hasAimingTarget());
         telemetry.update();
     }
-
-    //give pose to launcher
-    public  double poseX() {return follower.pose().x();}
-    public double poseY() {return follower.pose().y();}
 
     @Override
     public void stop() {
