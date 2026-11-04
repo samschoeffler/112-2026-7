@@ -19,7 +19,6 @@ import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
 import org.firstinspires.ftc.teamcode.methods.Turret;
-import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Blue1TipFar", group="Blue")
@@ -29,7 +28,6 @@ public class Blue1TipFar extends OpMode {
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
-    private TurretCalibration turretCalibration;
     private Servo led;
 
     private double kP = 0.02;
@@ -84,9 +82,6 @@ public class Blue1TipFar extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
-        // Turret must face forward at INIT: zero + limits happen only here, in auto.
-        turret.zeroForAuto();
-        turretCalibration = new TurretCalibration(turret);
         led = hardwareMap.get(Servo.class, "led");
 
         vision = new LimelightVision(hardwareMap, 2);
@@ -95,14 +90,7 @@ public class Blue1TipFar extends OpMode {
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
 
     }
-
-    @Override
-    public void init_loop() {
-        turretCalibration.update(gamepad2, telemetry);
-        telemetry.update();
-    }
-
-    @Override
+@Override
     public void start() {
         vision.start();
         schedule(autoRoutine());

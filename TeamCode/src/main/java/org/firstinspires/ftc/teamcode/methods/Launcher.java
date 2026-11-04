@@ -10,21 +10,19 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 public class Launcher {
     // Copy the final VOLTAGE-MODEL gains from LauncherTuning here.
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
-    public static double KS = 1.0931;
-    public static double KV = 0.0052;
-    public static double KP = 0.0071;
-    public double SHOOTING_VELOCITY = 1400.0;
+    public static double KS = 1.1527, KV = 0.005047;
+    public static double KP = 0.0352;
+    public static double SHOOTING_VELOCITY = 1450;
 
     // Copy the confirmed settings from the tuner. With both motors configured
     // FORWARD as below, the POWER_SIGN values must match the tuning OpMode.
     // ENCODER_SIGN_0 must match its learned "Encoder signs M0" value.
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
-    // fWheel's encoder counts negative when driven forward, so flip it.
     public static double ENCODER_SIGN_0 = -1.0;
 
     // Transfer power is now a -1..1 duty-cycle setting, not ticks/second.
-    public static double MECH_POWER = 0.75;
+    public static double MECH_POWER = 1.0;
     // Starting examples: verify readiness settings on the robot.
     public static double VELOCITY_TOLERANCE = 40.0;
     public static double READY_HOLD_SECONDS = 0.15;
@@ -84,16 +82,12 @@ public class Launcher {
             tripFault("Invalid target velocity");
             return;
         }
-        if (ticksPerSecond == 0.0) {
-            stopAll();
-            return;
-        }
         if (!fault.isEmpty()) return;
         if (targetVelocity != ticksPerSecond || !flywheelsOn) {
             readySince = 0;
             feedStarted = false;
             firing = false;
-            launchMech.setPower(0.0);
+            //launchMech.setPower(0.0);
             if (fireRequested) fireRequestedAt = System.nanoTime();
         }
         targetVelocity = ticksPerSecond;
@@ -102,15 +96,10 @@ public class Launcher {
 
     // Safe to call repeatedly from a held trigger; does not reset the timeout.
     public void fire() {
-        if (!flywheelsOn || !fault.isEmpty()) return;
+        //if (!flywheelsOn || !fault.isEmpty()) return;
         if (!fireRequested) fireRequestedAt = System.nanoTime();
         fireRequested = true;
         ejecting = false;
-        launchMech.setPower(1.0);
-    }
-
-    public void actFire() {
-        launchMech.setPower(1.0);
     }
 
 
@@ -119,16 +108,12 @@ public class Launcher {
         firing = false;
         feedStarted = false;
         fireRequestedAt = 0;
-        launchMech.setPower(0.0);
     }
 
     public void actStopWheel() {
         fWheel.setPower(0);
     }
 
-    public void actStopFire() {
-        launchMech.setPower(0.0);
-    }
 
     public void eject(boolean requested) {
         ejecting = requested && fault.isEmpty();
@@ -143,10 +128,6 @@ public class Launcher {
     // Call once every OpMode loop, AFTER updating command/trigger requests.
     public void update() {
         long now = System.nanoTime();
-        if (!fault.isEmpty()) {
-            stopAll();
-            return;
-        }
         measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
         batteryVoltage = readBatteryVoltage();
         if (!Double.isFinite(measuredVelocity) || !Double.isFinite(batteryVoltage)) {
@@ -194,10 +175,9 @@ public class Launcher {
             }
         }
         firing = fireRequested && flywheelsOn && feedStarted && !ejecting;
-        launchMech.setPower(ejecting ? -MECH_POWER : firing ? MECH_POWER : 0.0);
 
         //ball just shot logic
-        if (measuredVelocity >= flywheelThreshold) {
+        if (getFlywheelVelo() >= flywheelThreshold) {
             flywheelReady = true;
             flywheelDropped = false;
             ballJustShot = false;
@@ -265,7 +245,6 @@ public class Launcher {
         targetVelocity = requestedVolts = motorPower = 0.0;
         readySince = fireRequestedAt = reverseSince = stalledSince = 0;
         fWheel.setPower(0.0);
-        launchMech.setPower(0.0);
     }
 
     public boolean flywheelAtSpeed() {
@@ -278,14 +257,11 @@ public class Launcher {
     public boolean isFiring() { return firing; }
     public boolean isEjecting() { return ejecting; }
     public double getTargetVelocity() { return targetVelocity; }
-    public double getTranferVelo() { return launchMech.getVelocity(); }
+    public double getError() { return targetVelocity - measuredVelocity; }
     public double getFlywheelVelo() { return fWheel.getVelocity(); }
     public double getMeasuredVelocity() { return measuredVelocity; }
     public double getMotorPower() { return motorPower; }
     public double getBatteryVoltage() { return batteryVoltage; }
     public boolean ballWasShot() {return ballJustShot;}
     public String getFault() { return fault; }
-    public double getProjectedSpeed() { return SHOOTING_VELOCITY; }
-    public String getDistanceFromHive() { return distanceFromHive1 + " , " + distanceFromHive2; }
-
 }

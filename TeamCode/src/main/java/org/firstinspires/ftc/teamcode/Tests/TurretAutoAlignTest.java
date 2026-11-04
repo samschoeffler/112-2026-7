@@ -9,14 +9,12 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.methods.Turret;
-import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @TeleOp(name = "Turret Auto Align Test", group = "Diagnostics")
 public class TurretAutoAlignTest extends OpMode {
     private LimelightVision vision;
     private Turret turret;
-    private TurretCalibration turretCalibration;
     private Follower follower;
     private double turnScale = 0.25;
     private double kP = 0.02, kD = 0;
@@ -105,7 +103,6 @@ public class TurretAutoAlignTest extends OpMode {
     @Override public void init() {
         vision = new LimelightVision(hardwareMap, 1);
         turret = new Turret(hardwareMap);
-        turretCalibration = new TurretCalibration(turret);
         follower = Constants.create(hardwareMap);
         // Restore tuned values here; gamepad settings are temporary.
         Turret.ROT_MAX_POWER = 0.20;
@@ -113,13 +110,7 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.addLine("Disarmed. G2 START: track; G2 LB: guided vision trial.");
         telemetry.update();
     }
-    @Override
-    public void init_loop() {
-        turretCalibration.update(gamepad2, telemetry);
-        telemetry.update();
-    }
-
-    @Override public void start() {
+@Override public void start() {
         vision.start(); turret.mainPD.reset(); yawTimer.reset();
         haveLastHeading = false; 
     }
@@ -191,7 +182,7 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.addLine("TRACKING: G2 RB starts 3-sec heading diagnostic trial");
         telemetry.addData("Selected", "%d/%d %s",selectedParameter+1,NAMES.length,NAMES[selectedParameter]);
         telemetry.addData("Value", "%.5f", value(selectedParameter));
-        telemetry.addData("Limits", "%.1f to %.1f", turret.getRotationMinDeg(), turret.getRotationMaxDeg());
+        telemetry.addLine("Rotation limits: DISABLED (continuous rotation)");
         telemetry.addData("Turn scale", turnScale);
         telemetry.addData("Mode", turret.mainPD.getTrackingMode());
         telemetry.addData("Tag ID",turret.mainPD.getTrackedTagId());

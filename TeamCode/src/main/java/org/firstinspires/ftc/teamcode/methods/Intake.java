@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 public class Intake {
-    public static double INTAKE_POWER = 0.75;
+    public static double INTAKE_POWER = 1.0;
 
     // Verify on the robot using Ramp Tuning, then copy the measured values here.
     public static final double RAMP_DOWN = 0.25;

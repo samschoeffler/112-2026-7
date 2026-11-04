@@ -19,7 +19,6 @@ import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Turret;
-import org.firstinspires.ftc.teamcode.methods.TurretCalibration;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 public class TurretRotTestAuto extends OpMode {
@@ -29,7 +28,6 @@ public class TurretRotTestAuto extends OpMode {
     private Launcher launcher;
     private Intake intake;
     private Turret turret;
-    private TurretCalibration turretCalibration;
 
     private Command autoRoutine() {
         return sequential(
@@ -50,19 +48,9 @@ public class TurretRotTestAuto extends OpMode {
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
-        // Turret must face forward at INIT: zero + limits happen only here, in auto.
-        turret.zeroForAuto();
-        turretCalibration = new TurretCalibration(turret);
 
     }
-
-    @Override
-    public void init_loop() {
-        turretCalibration.update(gamepad2, telemetry);
-        telemetry.update();
-    }
-
-    @Override
+@Override
     public void start() {
         schedule(autoRoutine());
     }
