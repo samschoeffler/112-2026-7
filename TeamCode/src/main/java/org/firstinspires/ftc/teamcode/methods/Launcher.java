@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.methods;
 
-import org.firstinspires.ftc.teamcode.MainTeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -12,7 +11,7 @@ public class Launcher {
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
     public static double KS = 1.1527, KV = 0.005047;
     public static double KP = 0.0352;
-    public static double SHOOTING_VELOCITY = 1450;
+    public double SHOOTING_VELOCITY = 1450;
 
     // Copy the confirmed settings from the tuner. With both motors configured
     // FORWARD as below, the POWER_SIGN values must match the tuning OpMode.
@@ -28,7 +27,6 @@ public class Launcher {
     public static double READY_HOLD_SECONDS = 0.15;
     public static double FEED_READY_TIMEOUT_SECONDS = 3.0;
 
-    private MainTeleOp mainTeleOp;
     private final HardwareMap hardwareMap;
     private final DcMotorEx fWheel, launchMech;
     private boolean flywheelsOn = false;
@@ -43,15 +41,12 @@ public class Launcher {
     // only count drops once the flywheel has been up to speed (ignores spin-up)
     private boolean flywheelReady = false;
     private double flywheelThreshold = 1200;
-    private double distanceFromHive1 = 0;
-    private double distanceFromHive2 = 0;
     private double distanceFromHive = 0;
 
     public Launcher(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         fWheel = hardwareMap.get(DcMotorEx.class, "fWheel");
         launchMech = hardwareMap.get(DcMotorEx.class, "LaunchMech");
-        mainTeleOp      = new MainTeleOp();
         configureFlywheel(fWheel);
         launchMech.setPower(0.0);
         launchMech.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -126,6 +121,27 @@ public class Launcher {
     }
 
     // Call once every OpMode loop, AFTER updating command/trigger requests.
+    // robotX/robotY: current robot pose from the follower, used for distance-based velocity.
+    public void update(double robotX, double robotY) {
+        //distance to the closer hive target by pose
+        double d1 = Math.hypot(robotX - 58, robotY - 50);
+        double d2 = Math.hypot(robotX - 58, robotY - 90);
+        distanceFromHive = Math.min(d1, d2);
+
+        //SHOOTING_VELOCITY = 8 * distanceFromHive + 1200;
+        //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 1.3);
+        //SHOOTING_VELOCITY = Math.pow(distanceFromHive + 100, 1.2) + 1100;
+        SHOOTING_VELOCITY = Math.pow(distanceFromHive, 0.333) * 120 + 1050;
+
+
+        //updating the speed
+        if (flywheelsOn)
+            setTargetVelocity(SHOOTING_VELOCITY);
+
+        update();
+    }
+
+    // Same as above but without pose: keeps the current target velocity.
     public void update() {
         long now = System.nanoTime();
         measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
@@ -186,20 +202,6 @@ public class Launcher {
             ballJustShot = true;
         } else
             ballJustShot = false;
-
-        //distance to shooter by pose
-        if(Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ) > Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ))
-            distanceFromHive = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 90), 2 ));
-        else
-            distanceFromHive = Math.sqrt( Math.pow((mainTeleOp.poseX() - 58), 2 ) + Math.pow((mainTeleOp.poseY() - 50), 2 ));
-
-        //SHOOTING_VELOCITY = 8 * distanceFromHive + 1200;
-        //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 1.3);
-        SHOOTING_VELOCITY = Math.pow(distanceFromHive + 100, 1.2) + 1100;
-
-        //updating the speed
-        if(flywheelsOn)
-            setTargetVelocity(SHOOTING_VELOCITY);
     }
 
     private boolean validConfiguration() {
@@ -264,4 +266,5 @@ public class Launcher {
     public double getBatteryVoltage() { return batteryVoltage; }
     public boolean ballWasShot() {return ballJustShot;}
     public String getFault() { return fault; }
+    public double getDistanceFromHive() { return distanceFromHive; }
 }

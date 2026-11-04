@@ -87,13 +87,13 @@ public class Red2Tip extends OpMode {
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
-        follower.setPose(AutoPaths.Red2Tip.start);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
         led = hardwareMap.get(Servo.class, "led");
 
         vision = new LimelightVision(hardwareMap, 3);
+        follower.setPose(AutoPaths.Red2Tip.start);
 
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;

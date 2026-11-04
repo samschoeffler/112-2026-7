@@ -189,7 +189,7 @@ public class MainTeleOp extends OpMode {
         launcher.eject(gamepad2.right_bumper);
 
 // REQUIRED: calculate flywheel power and update the transfer every loop.
-        launcher.update();
+        launcher.update(follower.pose().x(), follower.pose().y());
         transfer.update();
 
 // Intake follows the launcher's updated firing/ejecting state.
