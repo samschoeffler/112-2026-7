@@ -52,8 +52,8 @@ public class TransferTuning extends OpMode {
     private final String[] gainNames = {"kS (V)", "kV (V per tick/s)", "kP (V per tick/s)"};
     private final double[][] steps = {
             {0.1, 0.01, 0.001},
-            {0.001, 0.0001, 0.00001},
-            {0.001, 0.0001, 0.00001}
+            {0.1, 0.001, 0.0001, 0.00001},
+            {0.1, 0.001, 0.0001, 0.00001}
     };
 
     private boolean enabled = false, calibrated = false, wasChecking = false;
@@ -409,8 +409,8 @@ public class TransferTuning extends OpMode {
 
     private void changeGain(double delta) {
         if (selectedGain == 0) kS = clip(kS + delta, 0.0, 12.0);
-        else if (selectedGain == 1) kV = clip(kV + delta, 0.0, 0.1);
-        else kP = clip(kP + delta, 0.0, 0.1);
+        else if (selectedGain == 1) kV = clip(kV + delta, 0.0, 5);
+        else kP = clip(kP + delta, 0.0, 5);
     }
 
     private double readBatteryVoltage() {

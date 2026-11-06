@@ -176,7 +176,7 @@ public class MainTeleOp extends OpMode {
 
 // Request shooting while the right trigger is held.
         if (gamepad2.aWasPressed()) {
-            launcher.fire();
+            intake.intake();
             //transfer.toggleOn();
             //launcher.actFire();
         }
@@ -186,16 +186,17 @@ public class MainTeleOp extends OpMode {
         }
 
 // Request reverse transfer operation.
-        launcher.eject(gamepad2.right_bumper);
+        //launcher.eject(gamepad2.right_bumper);
 
 // REQUIRED: calculate flywheel power and update the transfer every loop.
-        launcher.update(follower.pose().x(), follower.pose().y());
+        //launcher.update(follower.pose().x(), follower.pose().y());
+        launcher.update();
         transfer.update();
 
 // Intake follows the launcher's updated firing/ejecting state.
 // Stop it if the launcher reports a fault.
         if (gamepad2.x || launcher.isFiring()) {
-            intake.intake();
+            //intake.intake();
         } /*else if (gamepad2.b || launcher.isEjecting()) {
             intake.outtake();
         } else {

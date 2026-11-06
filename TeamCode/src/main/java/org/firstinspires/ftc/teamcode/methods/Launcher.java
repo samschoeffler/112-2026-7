@@ -11,14 +11,19 @@ public class Launcher {
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
     public static double KS = 1.0396, KV = 0.005145;
     public static double KP = 0.0662;
-    public double SHOOTING_VELOCITY = 1520;
+    public double SHOOTING_VELOCITY = 1480;
 
+    /**
+     * I am Maskin
+     * Bow down to daddy
+     * :P
+     */
     // Copy the confirmed settings from the tuner. With both motors configured
     // FORWARD as below, the POWER_SIGN values must match the tuning OpMode.
     // ENCODER_SIGN_0 must match its learned "Encoder signs M0" value.
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
-    public static double ENCODER_SIGN_0 = 1.0;
+    public static double ENCODER_SIGN_0 = -1.0;
 
     // Transfer power is now a -1..1 duty-cycle setting, not ticks/second.
     public static double MECH_POWER = 1.0;
@@ -51,7 +56,7 @@ public class Launcher {
         launchMech.setPower(0.0);
         launchMech.setDirection(DcMotorSimple.Direction.FORWARD);
         launchMech.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        stopAll();
+        //stopAll();
     }
 
     private void configureFlywheel(DcMotorEx motor) {
@@ -62,14 +67,11 @@ public class Launcher {
     }
 
     public void toggleOn() {
-        if (flywheelsOn) {
-            stopAll();
-        } else {
             // Turning on from off also clears a latched fault so Y can retry.
-            stopAll();
-            clearFault();
+            //stopAll();
+            //clearFault();
             setTargetVelocity(SHOOTING_VELOCITY);
-        }
+
     }
 
     public void setTargetVelocity(double ticksPerSecond) {
@@ -122,7 +124,7 @@ public class Launcher {
 
     // Call once every OpMode loop, AFTER updating command/trigger requests.
     // robotX/robotY: current robot pose from the follower, used for distance-based velocity.
-    public void update(double robotX, double robotY) {
+    /*public void update(double robotX, double robotY) {
         //distance to the closer hive target by pose
         double d1 = Math.hypot(robotX - 58, robotY - 50);
         double d2 = Math.hypot(robotX - 58, robotY - 90);
@@ -139,7 +141,7 @@ public class Launcher {
             setTargetVelocity(SHOOTING_VELOCITY);
 
         update();
-    }
+    }*/
 
     // Same as above but without pose: keeps the current target velocity.
     public void update() {
@@ -156,7 +158,7 @@ public class Launcher {
         }
 
         requestedVolts = motorPower = 0.0;
-        if (flywheelsOn && targetVelocity > 0.0) {
+        if (flywheelsOn) {
             double error = targetVelocity - measuredVelocity;
             requestedVolts = KS + KV * targetVelocity + KP * error;
             motorPower = clip(requestedVolts / batteryVoltage, 0.0, 1.0);
@@ -232,8 +234,6 @@ public class Launcher {
     }
 
     private void tripFault(String reason) {
-        fault = reason;
-        stopAll();
     }
 
     // Faults stay latched until explicitly cleared while stopped, or a new
