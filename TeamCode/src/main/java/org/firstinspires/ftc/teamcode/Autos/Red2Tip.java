@@ -73,9 +73,9 @@ public class Red2Tip extends OpMode {
                 ),
                 autoCommand.shooterTogg,
                 Commands.waitMs(3500),
+                autoCommand.stopShooter,
                 follow(follower, AutoPaths.Red2Tip.path4()),
                 autoCommand.flowerCollectFar(follower),
-                autoCommand.stopShooter,
                 autoCommand.stopIntake,
                 follow(follower, AutoPaths.Red2Tip.path5()),
                 autoCommand.fWheelTogg,
@@ -136,7 +136,6 @@ public class Red2Tip extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
-        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

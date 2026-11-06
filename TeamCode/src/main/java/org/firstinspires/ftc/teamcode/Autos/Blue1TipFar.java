@@ -64,10 +64,11 @@ public class Blue1TipFar extends OpMode {
                 autoCommand.stopShooter,
                 follow(follower, AutoPaths.Blue2Opp.path2()),
                 autoCommand.shooterTogg,
+                Commands.waitMs(3500),
+                autoCommand.stopShooter,
                 follow(follower, AutoPaths.Blue2Opp.path3()),
                 autoCommand.flowerCollectFar(follower),
                 follow(follower, AutoPaths.Blue2Opp.path4()),
-                autoCommand.stopShooter,
                 autoCommand.stopIntake,
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
@@ -110,7 +111,6 @@ public class Blue1TipFar extends OpMode {
         Scheduler.execute();
 
         autoCommand.updateLauncher();
-        autoCommand.updateVelo();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,

@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.methods;
 
-import static com.pedropathing.ivy.commands.Commands.conditional;
 import static com.pedropathing.ivy.commands.Commands.instant;
 import static com.pedropathing.ivy.commands.Commands.waitMs;
 import static com.pedropathing.ivy.groups.Groups.sequential;
@@ -17,43 +16,12 @@ public class AutoCommands {
     private Launcher launcher;
     private Intake intake;
 
-    private double transferVelo;
-    private double flywheelVelo;
-
-    private double flywheelThreshold = 1200;
+    // how long to sit at the flower collecting balls
+    public static long FLOWER_WAIT_MS = 2500;
 
     public AutoCommands(HardwareMap hardwareMap) {
         launcher = new Launcher(hardwareMap);
         intake = new Intake(hardwareMap);
-    }
-
-    private int ballsInBot = 4;
-    private boolean flywheelDropped = false;
-    // only count drops once the flywheel has been up to speed (ignores spin-up)
-    private boolean flywheelReady = false;
-    private double flowerWaitTimeMs = 3000;
-    public void updateVelo() {
-        flywheelVelo = launcher.getFlywheelVelo();
-
-        // flywheel
-        if (flywheelVelo >= flywheelThreshold) {
-            flywheelReady = true;
-            flywheelDropped = false;
-        } else if (flywheelReady && !flywheelDropped) {
-            flywheelDropped = true;
-            if (ballsInBot > 0) ballsInBot --;
-        }
-
-        if(ballsInBot == 0)
-            flowerWaitTimeMs = 2500;
-        else if(ballsInBot ==1)
-            flowerWaitTimeMs = 1500;
-        else if(ballsInBot == 2)
-            flowerWaitTimeMs = 1000;
-        else if(ballsInBot == 3)
-            flowerWaitTimeMs = 500;
-        else
-            flowerWaitTimeMs = 0;
     }
 
     public Command shooterTogg = instant(() -> launcher.fire());
@@ -72,44 +40,28 @@ public class AutoCommands {
 
     public Command holdBalls = instant(() -> intake.holdBalls());
 
-    public Command ballRefill = instant(() -> ballsInBot = 4);
-
     // takes the OpMode's follower (the one that gets update()d every loop)
     public Command flowerCollectClose(Follower follower) {
-        return conditional(
-                () -> flowerWaitTimeMs != 0,
-                sequential(
-                        intakeTogg,
-                        rampTogg,
-                        follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
-                        Commands.lazy(() -> Commands.waitMs(flowerWaitTimeMs)),
-                        ballRefill,
-                        follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
-                        holdBalls,
-                        intakeTogg
-                ),
-                sequential(
-                        holdBalls
-                )
+        return sequential(
+                intakeTogg,
+                rampTogg,
+                follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
+                Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
+                follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
+                holdBalls,
+                intakeTogg
         );
     }
 
     public Command flowerCollectFar(Follower follower) {
-        return conditional(
-                () -> flowerWaitTimeMs != 0,
-                sequential(
-                        intakeTogg,
-                        rampTogg,
-                        follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
-                        Commands.lazy(() -> Commands.waitMs(flowerWaitTimeMs)),
-                        ballRefill,
-                        follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
-                        holdBalls,
-                        intakeTogg
-                ),
-                sequential(
-                        holdBalls
-                )
+        return sequential(
+                intakeTogg,
+                rampTogg,
+                follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
+                Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
+                follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
+                holdBalls,
+                intakeTogg
         );
     }
 
