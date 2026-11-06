@@ -1,33 +1,67 @@
 package org.firstinspires.ftc.teamcode.Tests;
 
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
-import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
+/**
+ * Turret alignment tuner with FTC Panels graphs and timed diagnostic trials.
+ *
+ * GAMEPAD 1: left stick drive, right stick chassis turn.
+ * GAMEPAD 2:
+ *   START       toggle tracking
+ *   B           disarm/stop tracking and the current trial
+ *   Left stick  jog turret while disarmed (maximum 0.12 power)
+ *   LB          start a 3-second vision step trial while disarmed
+ *   RB          start a 3-second manual heading trial while tracking
+ *   Dpad up/down    select one of 17 parameters
+ *   Dpad left/right decrease/increase the selected parameter
+ *   Hold A      fine adjustment (1/10 normal step)
+ *   X / Y       decrease / increase chassis turning scale
+ *
+ * Panels sends data about 10 times per second, matching TransferTuning.
+ * The controller and driver controls still run every OpMode loop.
+ *
+ * NOTE: Turret.java currently allows continuous rotation. Check physical
+ * clearance and wiring before jogging/tracking; G2 B disarms tracking.
+ */
 @TeleOp(name = "Turret Auto Align Test", group = "Diagnostics")
 public class TurretAutoAlignTest extends OpMode {
+
     private LimelightVision vision;
     private Turret turret;
     private Follower follower;
-    private double turnScale = 0.25;
-    private double kP = 0.02, kD = 0;
+    private TelemetryManager panelsTelemetry;
+
+    private double turnScale = 1;
+    private double kP = 0.02;
+    private double kD = 0.0;
     private boolean trackingEnabled = false;
     private int selectedParameter = 0;
+
     private boolean haveLastHeading = false;
-    private double lastHeadingRad = 0, yawRate = 0;
+    private double lastHeadingRad = 0.0;
+    private double yawRateDegPerSec = Double.NaN;
     private final ElapsedTime yawTimer = new ElapsedTime();
+    private final ElapsedTime graphTimer = new ElapsedTime();
     private final ElapsedTime trialTimer = new ElapsedTime();
-    private String yawSource = "Pedro";
+
+    private static final double GRAPH_PERIOD_SEC = 0.10; // 10 Hz, same as TransferTuning
+    private static final double TRIAL_DURATION_SEC = 3.0;
     private String trialType = "IDLE";
     private boolean trialActive = false;
-    private static final double TRIAL_DURATION_SEC = 3.0;
+    private String lastTrialResult = "No completed trial";
+    private final TrialStats trialStats = new TrialStats();
 
     private static final String[] NAMES = {
             "Vision kP", "Vision kD", "Static friction kS", "Max turret power",
@@ -36,15 +70,20 @@ public class TurretAutoAlignTest extends OpMode {
             "Heading hold kP", "Heading hold kD", "Joystick prediction gain",
             "Prediction max power", "Fast turn threshold", "Hold tolerance deg"
     };
+
     private static final double[] STEPS = {
-            .01,.001,.01,.05,.25,.1,.001,.05,1,.1,.1,.01,.001,.01,.05,.05,.25
+            .01, .001, .01, .05, .25, .1, .001, .05, 1, .1, .1,
+            .01, .001, .01, .05, .05, .25
     };
     private static final double[] MINS = {
-            0,0,0,.05,0,.01,-.02,0,0,.01,0,0,0,-1,0,.05,.25
+            0, 0, 0, .05, 0, .01, -.02, 0, 0, .01, 0,
+            0, 0, -1, 0, .05, .25
     };
     private static final double[] MAXS = {
-            .5,.1,.3,1,10,1,.02,1,180,1,5,.5,.1,1,1,1,15
+            .5, .1, .3, 1, 10, 1, .02, 1, 180, 1, 5,
+            .5, .1, 1, 1, 1, 15
     };
+
     private double value(int i) {
         switch (i) {
             case 0: return kP;
@@ -67,6 +106,7 @@ public class TurretAutoAlignTest extends OpMode {
             default: return 0;
         }
     }
+
     private void setValue(int i, double raw) {
         double v = Range.clip(raw, MINS[i], MAXS[i]);
         switch (i) {
@@ -89,112 +129,284 @@ public class TurretAutoAlignTest extends OpMode {
             case 16: Turret.HOLD_SETTLE_TOLERANCE_DEG = v; break;
         }
     }
-    private void readYaw(double heading) {
-        double dt = yawTimer.seconds(); yawTimer.reset();
-        yawRate = Double.NaN;
-        if (haveLastHeading && Double.isFinite(heading) && dt >= .005 && dt <= .25) {
-            double d = Math.atan2(Math.sin(heading-lastHeadingRad), Math.cos(heading-lastHeadingRad));
-            yawRate = Math.toDegrees(d/dt);
+
+    /** Wrapped heading difference prevents false spikes at +/-180 degrees. */
+    private void readYaw(double headingRad) {
+        double dt = yawTimer.seconds();
+        yawTimer.reset();
+        yawRateDegPerSec = Double.NaN;
+        if (haveLastHeading && Double.isFinite(headingRad)
+                && dt >= 0.005 && dt <= 0.25) {
+            double delta = Math.atan2(
+                    Math.sin(headingRad - lastHeadingRad),
+                    Math.cos(headingRad - lastHeadingRad));
+            yawRateDegPerSec = Math.toDegrees(delta / dt);
         }
-        lastHeadingRad = heading;
-        haveLastHeading = Double.isFinite(heading);
-        yawSource = "Pedro";
+        lastHeadingRad = headingRad;
+        haveLastHeading = Double.isFinite(headingRad);
     }
-    @Override public void init() {
+
+    @Override
+    public void init() {
         vision = new LimelightVision(hardwareMap, 1);
         turret = new Turret(hardwareMap);
         follower = Constants.create(hardwareMap);
-        // Restore tuned values here; gamepad settings are temporary.
+        panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
+
+        // Safe, reproducible starting point. All other static constants remain
+        // at their current Turret.java defaults unless changed on G2.
         Turret.ROT_MAX_POWER = 0.20;
-        Turret.ROBOT_YAW_FF_GAIN = 0;
-        telemetry.addLine("Disarmed. G2 START: track; G2 LB: guided vision trial.");
+        Turret.ROBOT_YAW_FF_GAIN = 0.0;
+        Turret.JOYSTICK_PREDICT_GAIN = 0.0;
+        trackingEnabled = false;
+        turret.stopRotation();
+        telemetry.addLine("DISARMED. G2 START = track, G2 LB = 3-sec vision test.");
+        telemetry.addLine("Open Panels > Graph to select live traces.");
         telemetry.update();
     }
-@Override public void start() {
-        vision.start(); turret.mainPD.reset(); yawTimer.reset();
-        haveLastHeading = false; 
+
+    @Override
+    public void start() {
+        vision.start();
+        turret.mainPD.reset();
+        yawTimer.reset();
+        graphTimer.reset();
+        trialActive = false;
+        trialType = "IDLE";
+        haveLastHeading = false;
     }
-    // Diagnostic trials show live values on the Driver Station.
+
     private void startTrial(String kind) {
         trialType = kind;
         trialActive = true;
+        trialStats.reset();
         trialTimer.reset();
     }
-    private void stopTrial() {
+
+    private void cancelTrial() {
         trialActive = false;
+        trialType = "IDLE";
     }
-    @Override public void loop() {
+
+    private void finishTrial() {
+        lastTrialResult = trialStats.summary(trialType, TRIAL_DURATION_SEC);
+        trialActive = false;
+        // Vision step trials auto-disarm; heading trials keep tracking enabled.
+        if ("VISION_STEP".equals(trialType)) {
+            trackingEnabled = false;
+            turret.mainPD.reset();
+        }
+    }
+
+    /** One RMS/error-crossing/settling summary per 3-second trial. */
+    private static class TrialStats {
+        private int samples, crossings, previousSign;
+        private double sumSquared, maxAbs, settleStart;
+
+        void reset() {
+            samples = 0;
+            crossings = 0;
+            previousSign = 0;
+            sumSquared = 0;
+            maxAbs = 0;
+            settleStart = Double.NaN;
+        }
+
+        void sample(double error, double elapsedSec, double toleranceDeg) {
+            if (!Double.isFinite(error)) return;
+            samples++;
+            sumSquared += error * error;
+            maxAbs = Math.max(maxAbs, Math.abs(error));
+            // Ignore minor zero crossings caused by measurement noise.
+            int sign = error > 0.5 ? 1 : error < -0.5 ? -1 : 0;
+            if (sign != 0) {
+                if (previousSign != 0 && sign != previousSign) crossings++;
+                previousSign = sign;
+            }
+            if (Math.abs(error) <= toleranceDeg) {
+                if (!Double.isFinite(settleStart)) settleStart = elapsedSec;
+            } else {
+                settleStart = Double.NaN;
+            }
+        }
+
+        String summary(String kind, double durationSec) {
+            if (samples == 0) return kind + ": no valid error samples";
+            double rms = Math.sqrt(sumSquared / samples);
+            // A settled value must stay within tolerance for the final 0.25 sec.
+            String settle = Double.isFinite(settleStart)
+                    && durationSec - settleStart >= 0.25
+                    ? String.format("%.2fs", settleStart)
+                    : "not settled";
+            return String.format("%s: RMS %.2fdeg | peak %.1fdeg | flips %d | settle %s",
+                    kind, rms, maxAbs, crossings, settle);
+        }
+    }
+
+    /** Panels Graph View plots numeric keys published using addData(). */
+    private void sendPanelsData(int tagCount, double angleDeg) {
+        if (panelsTelemetry == null || graphTimer.seconds() < GRAPH_PERIOD_SEC) return;
+        graphTimer.reset();
+
+        double rawError = turret.mainPD.getRawErrorDeg();
+        double filteredError = turret.mainPD.getTargetErrorDeg();
+        double holdError = turret.mainPD.getHeadingHoldErrorDeg();
+        double holdTarget = turret.mainPD.getHeadingHoldTargetDeg();
+
+        // Distinguish raw image error from the filtered error used by the PD loop.
+        if (trackingEnabled && tagCount > 0) {
+            addPanelsFinite("01 Vision raw error (deg)", rawError);
+            addPanelsFinite("02 Vision filtered error (deg)", filteredError);
+            if (Double.isFinite(angleDeg) && Double.isFinite(filteredError)) {
+                addPanelsFinite("04 Vision target (deg)", angleDeg
+                        + Turret.VISION_TO_TURRET_SIGN * filteredError);
+            }
+        }
+
+        addPanelsFinite("03 Turret angle (deg)", angleDeg);
+        if (trackingEnabled) {
+            addPanelsFinite("05 Hold target (deg)", holdTarget);
+            addPanelsFinite("11 Hold error (deg)", holdError);
+        }
+        addPanelsFinite("06 Turret velocity (deg/s)", turret.getTurretVelocityDegPerSec());
+        addPanelsFinite("07 Robot yaw rate (deg/s)", yawRateDegPerSec);
+        addPanelsFinite("08 Applied motor power", turret.getAppliedPower());
+        addPanelsFinite("09 Yaw feedforward power", turret.mainPD.getYawFeedforwardPower());
+        addPanelsFinite("10 Prediction power", turret.mainPD.getPredictivePower());
+        panelsTelemetry.addData("12 Visible aiming tags", tagCount);
+        panelsTelemetry.addData("13 Tracking enabled", trackingEnabled ? 1 : 0);
+        panelsTelemetry.addData("14 Trial active", trialActive ? 1 : 0);
+        panelsTelemetry.addData("15 Tracking mode code", trackingModeCode());
+        panelsTelemetry.update();
+    }
+
+    private void addPanelsFinite(String name, double value) {
+        if (Double.isFinite(value)) panelsTelemetry.addData(name, value);
+    }
+
+    private int trackingModeCode() {
+        String mode = turret.mainPD.getTrackingMode();
+        if ("VISION".equals(mode)) return 1;
+        if ("VISION + HOLD".equals(mode)) return 2;
+        if ("HEADING HOLD".equals(mode)) return 3;
+        return 0; // NO TARGET or reset/disarmed
+    }
+
+    @Override
+    public void loop() {
         turret.update();
+
+        // Preserve existing Gamepad 1 field-centric drive and yaw estimation.
         double turn = -gamepad1.right_stick_x * turnScale;
-        DrivePowers powers = ManualDrive.fieldCentric(-gamepad1.left_stick_y,
-                -gamepad1.left_stick_x, turn, follower.pose().heading());
-        follower.manual(powers); follower.update();
+        DrivePowers powers = ManualDrive.fieldCentric(
+                -gamepad1.left_stick_y,
+                -gamepad1.left_stick_x,
+                turn,
+                follower.pose().heading());
+        follower.manual(powers);
+        follower.update();
         readYaw(follower.pose().heading());
+
+        // Preserve existing gamepad-based tuning controls.
         if (gamepad2.yWasPressed()) turnScale = Range.clip(turnScale + .25, 0, 1);
         if (gamepad2.xWasPressed()) turnScale = Range.clip(turnScale - .25, 0, 1);
-        if (gamepad2.dpadUpWasPressed()) selectedParameter = (selectedParameter+NAMES.length-1)%NAMES.length;
-        if (gamepad2.dpadDownWasPressed()) selectedParameter = (selectedParameter+1)%NAMES.length;
-        double step = STEPS[selectedParameter] * (gamepad2.a ? .1 : 1);
-        if (gamepad2.dpadRightWasPressed()) setValue(selectedParameter, value(selectedParameter)+step);
-        if (gamepad2.dpadLeftWasPressed()) setValue(selectedParameter, value(selectedParameter)-step);
-        if (gamepad2.bWasPressed()) { trackingEnabled = false; turret.mainPD.reset(); stopTrial(); }
-        else if (gamepad2.startWasPressed()) {
+        if (gamepad2.dpadUpWasPressed())
+            selectedParameter = (selectedParameter + NAMES.length - 1) % NAMES.length;
+        if (gamepad2.dpadDownWasPressed())
+            selectedParameter = (selectedParameter + 1) % NAMES.length;
+        double step = STEPS[selectedParameter] * (gamepad2.a ? 0.1 : 1.0);
+        if (gamepad2.dpadRightWasPressed())
+            setValue(selectedParameter, value(selectedParameter) + step);
+        if (gamepad2.dpadLeftWasPressed())
+            setValue(selectedParameter, value(selectedParameter) - step);
+
+        boolean stopPressed = gamepad2.bWasPressed();
+        if (stopPressed) {
+            trackingEnabled = false;
+            turret.mainPD.reset();
+            turret.stopRotation();
+            cancelTrial();
+        } else if (gamepad2.startWasPressed()) {
             trackingEnabled = !trackingEnabled;
             turret.mainPD.reset();
-            stopTrial();
+            if (!trackingEnabled) turret.stopRotation();
+            cancelTrial();
         } else if (gamepad2.leftBumperWasPressed() && !trackingEnabled) {
-            // Guided vision reacquisition: manually offset while disarmed, then press LB.
-            // Requires a visible tag; no automatic pre-positioning movement.
+            // Manually jog to a small offset first; do not auto-sweep the turret.
             trackingEnabled = true;
             turret.mainPD.reset();
             startTrial("VISION_STEP");
         } else if (gamepad2.rightBumperWasPressed() && trackingEnabled) {
-            // Record a manual chassis rotation/recovery trial; driver controls the turn.
+            // Driver supplies the chassis rotation, not the test routine.
             startTrial("HEADING_MANUAL");
         }
+
         if (!trackingEnabled) {
-            // Low-power jog for positioning only; global software limits are enforced.
-            turret.mainPD.calibrationJog(gamepad2.left_stick_x * .12);
+            if (!stopPressed) {
+                turret.mainPD.calibrationJog(gamepad2.left_stick_x * 0.4);
+                if (Math.abs(gamepad2.left_stick_x) < 0.05) turret.stopRotation();
+            }
         }
+
         vision.update();
         if (trackingEnabled) {
-            turret.mainPD.calculateHybrid(kP,kD,Turret.ROT_KS,Turret.ROT_MAX_POWER,
-                    Turret.ROT_TOLERANCE_DEG,vision.getBestAimingTarget(),
-                    vision.getAimingTargetCount(),yawRate,follower.pose().heading(),turn);
-        } else if (Math.abs(gamepad2.left_stick_x) < .05) turret.stopRotation();
-        double angle = turret.getRotationDeg();
-        // Telemetry 'Vision target' is camera-derived and only meaningful while tag is visible.
-        double visionTarget = Double.isFinite(turret.mainPD.getTargetErrorDeg())
-                ? angle + Turret.VISION_TO_TURRET_SIGN * turret.mainPD.getTargetErrorDeg() : Double.NaN;
-        double headingTarget = turret.mainPD.getHeadingHoldTargetDeg();
-        if (trialActive && trialTimer.seconds() >= TRIAL_DURATION_SEC) {
-            // Vision trial stops automatically. Heading recording ends, tracking continues.
-            if ("VISION_STEP".equals(trialType)) {
-                trackingEnabled = false;
-                turret.mainPD.reset();
-            }
-            stopTrial();
+            turret.mainPD.calculateHybrid(
+                    kP, kD, Turret.ROT_KS, Turret.ROT_MAX_POWER,
+                    Turret.ROT_TOLERANCE_DEG,
+                    vision.getBestAimingTarget(), vision.getAimingTargetCount(),
+                    yawRateDegPerSec, follower.pose().heading(), turn);
         }
+
+        double angle = turret.getRotationDeg();
+        double rawError = turret.mainPD.getRawErrorDeg();
+        double holdError = turret.mainPD.getHeadingHoldErrorDeg();
+
+        if (trialActive) {
+            boolean visionTrial = "VISION_STEP".equals(trialType);
+            trialStats.sample(
+                    visionTrial ? rawError : holdError,
+                    trialTimer.seconds(),
+                    visionTrial ? Turret.ROT_TOLERANCE_DEG
+                            : Turret.HOLD_SETTLE_TOLERANCE_DEG);
+            if (trialTimer.seconds() >= TRIAL_DURATION_SEC) finishTrial();
+        }
+
+        sendPanelsData(vision.getAimingTargetCount(), angle);
+
+        // Keep normal Driver Station telemetry; Panels graphs use their own channel.
         telemetry.addData("Tracking", trackingEnabled ? "ENABLED" : "DISARMED");
-        telemetry.addLine("G2 Dpad up/down select; left/right adjust; hold A fine");
+        telemetry.addLine("G2 Dpad up/down select; left/right adjust; hold A = fine");
         telemetry.addLine("G2 START toggle / B STOP / X-Y turn scale");
-        telemetry.addLine("DISARMED: G2 left stick jog; LB vision diagnostic trial (3 sec)");
-        telemetry.addLine("TRACKING: G2 RB starts 3-sec heading diagnostic trial");
-        telemetry.addData("Selected", "%d/%d %s",selectedParameter+1,NAMES.length,NAMES[selectedParameter]);
+        telemetry.addLine("DISARMED: G2 left stick jog; LB 3-sec vision step trial");
+        telemetry.addLine("TRACKING: G2 RB 3-sec manually driven heading trial");
+        telemetry.addData("Selected", "%d/%d %s", selectedParameter + 1,
+                NAMES.length, NAMES[selectedParameter]);
         telemetry.addData("Value", "%.5f", value(selectedParameter));
-        telemetry.addLine("Rotation limits: DISABLED (continuous rotation)");
-        telemetry.addData("Turn scale", turnScale);
+        telemetry.addLine("Rotation software limits: DISABLED (continuous rotation)");
+        telemetry.addData("Turn scale", "%.2f", turnScale);
         telemetry.addData("Mode", turret.mainPD.getTrackingMode());
-        telemetry.addData("Tag ID",turret.mainPD.getTrackedTagId());
-        telemetry.addData("Angle / target", "%.2f / %.2f",angle,headingTarget);
-        telemetry.addData("Vision error",turret.mainPD.getTargetErrorDeg());
-        telemetry.addData("Yaw source",yawSource);
-        telemetry.addData("Trial",trialType + (trialActive ? " (DIAGNOSTICS)" : ""));
+        telemetry.addData("Tag ID / count", "%d / %d",
+                turret.mainPD.getTrackedTagId(), vision.getAimingTargetCount());
+        telemetry.addData("Turret angle / speed", "%.2f deg / %.2f deg/s",
+                angle, turret.getTurretVelocityDegPerSec());
+        telemetry.addData("Vision raw / filtered", "%.2f / %.2f deg",
+                rawError, turret.mainPD.getTargetErrorDeg());
+        telemetry.addData("Heading hold error", "%.2f deg", holdError);
+        telemetry.addData("Robot yaw", "%.2f deg/s (Pedro)", yawRateDegPerSec);
+        telemetry.addData("Power total / FF / prediction", "%.3f / %.3f / %.3f",
+                turret.getAppliedPower(), turret.mainPD.getYawFeedforwardPower(),
+                turret.mainPD.getPredictivePower());
+        telemetry.addData("Trial", trialType + (trialActive ? " (RUNNING)" : ""));
+        telemetry.addData("Last trial", lastTrialResult);
         vision.addTelemetry(telemetry);
         turret.addTelemetry(telemetry);
         telemetry.update();
     }
-    @Override public void stop() {
-        stopTrial(); turret.stop(); vision.stop();
+
+    @Override
+    public void stop() {
+        cancelTrial();
+        turret.stop();
+        vision.stop();
     }
 }

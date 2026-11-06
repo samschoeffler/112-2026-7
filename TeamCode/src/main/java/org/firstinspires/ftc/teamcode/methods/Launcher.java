@@ -9,16 +9,16 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 public class Launcher {
     // Copy the final VOLTAGE-MODEL gains from LauncherTuning here.
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
-    public static double KS = 1.1527, KV = 0.005047;
-    public static double KP = 0.0352;
-    public double SHOOTING_VELOCITY = 1450;
+    public static double KS = 1.0396, KV = 0.005145;
+    public static double KP = 0.0662;
+    public double SHOOTING_VELOCITY = 1520;
 
     // Copy the confirmed settings from the tuner. With both motors configured
     // FORWARD as below, the POWER_SIGN values must match the tuning OpMode.
     // ENCODER_SIGN_0 must match its learned "Encoder signs M0" value.
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
-    public static double ENCODER_SIGN_0 = -1.0;
+    public static double ENCODER_SIGN_0 = 1.0;
 
     // Transfer power is now a -1..1 duty-cycle setting, not ticks/second.
     public static double MECH_POWER = 1.0;

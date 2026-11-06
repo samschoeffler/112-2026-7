@@ -237,6 +237,8 @@ public class MainTeleOp extends OpMode {
             );
         }
 
+        telemetry.addData("Yaw Rate", robotYawRateDegPerSec);
+
         /*
         //adjust ramp
         intake.adjustRamp(

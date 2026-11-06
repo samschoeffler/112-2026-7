@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 public class Transfer {
     // Copy the final VOLTAGE-MODEL gains from LauncherTuning here.
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
-    public static double KS = 0.438, KV = 0.0043;
+    public static double KS = 0.1696, KV = 0.004476;
     public static double KP = 0.0031;
     public static double SHOOTING_VELOCITY = 1300;
 

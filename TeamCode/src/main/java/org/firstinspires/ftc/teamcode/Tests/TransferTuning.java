@@ -31,7 +31,7 @@ public class TransferTuning extends OpMode {
     // kS: volts; kV and kP: volts per (encoder tick/second).
     // One controller for the linked flywheel. Launch0 is the feedback encoder;
     // Launch1 is monitored, but never runs a competing velocity controller.
-    private double kS = 0.1696, kV = 0.004476, kP = 0;
+    private double kS = 0.1696, kV = 0.004476, kP = 0.0031;
     private double target = HIGH_VELOCITY;
     private double intakePower = 0.0;
     private boolean ballTest = false;

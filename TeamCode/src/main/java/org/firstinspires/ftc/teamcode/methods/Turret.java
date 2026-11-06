@@ -23,7 +23,7 @@ public class Turret {
     public static double ROTATE_POWER = 0.20;
 
     /** Compatibility with current MainTeleOp and test code. */
-    public static double ROT_MAX_POWER = 0.20;
+    public static double ROT_MAX_POWER = 0.35;
     public static double ROT_KS = 0.0;
     public static double ROT_TOLERANCE_DEG = 1.0;
     public static double VELOCITY_FILTER_ALPHA = 0.35;
@@ -190,12 +190,12 @@ public class Turret {
             stopRotation();
             return;
         }
-        power = Range.clip(power, -1.0, 1.0);
-        power = limitPower(power);
-        if (rotation.getMode() != DcMotor.RunMode.RUN_WITHOUT_ENCODER) {
+        //power = Range.clip(power, -1.0, 1.0);
+        //power = limitPower(power);
+        /*if (rotation.getMode() != DcMotor.RunMode.RUN_WITHOUT_ENCODER) {
             rotation.setPower(0);
             rotation.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        }
+        }*/
         rotation.setPower(power);
         appliedPower = power;
     }
@@ -311,18 +311,18 @@ public class Turret {
         return deg;
     }
 
-    public static double TARGET_SMOOTHING_ALPHA = 1.0;
+    public static double TARGET_SMOOTHING_ALPHA = 0.9;
     // Signed power/(deg/s), matching HEADING_COMPENSATION_SIGN for positive gains.
     // Existing competition convention: turret-positive is opposite robot-positive yaw.
-    public static double ROBOT_YAW_FF_GAIN = 0.0030;
-    public static double ROBOT_YAW_FF_MAX_POWER = 0.35;
-    public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 5.0;
-    public static double TAG_LOSS_HOLD_SECONDS = 3.1;
+    public static double ROBOT_YAW_FF_GAIN = 0.0090;
+    public static double ROBOT_YAW_FF_MAX_POWER = 0.75;
+    public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 13.0;
+    public static double TAG_LOSS_HOLD_SECONDS = 1.3;
     public static double HEADING_HOLD_KP = 0.030;
     public static double HEADING_HOLD_KD = 0.0;
     public static double JOYSTICK_PREDICT_GAIN = 0.0;
     public static double JOYSTICK_PREDICT_MAX_POWER = 0.50;
-    public static double FAST_TURN_STICK_THRESHOLD = 0.10;
+    public static double FAST_TURN_STICK_THRESHOLD = 0.30;
     public static double HOLD_SETTLE_TOLERANCE_DEG = 3.0;
     // Verify on the robot: positive power increases encoder angle; positive tx
     // should be corrected by VISION_TO_TURRET_SIGN * positive turret motion.
@@ -362,7 +362,7 @@ public class Turret {
                 stopRotation();
                 return;
             }
-            setRotationPower(Range.clip(power, -0.12, 0.12));
+            setRotationPower(power);
         }
 
         public void calculate(double ignoredError, double kP, double kD,
