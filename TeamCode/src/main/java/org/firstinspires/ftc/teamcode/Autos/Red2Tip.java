@@ -19,6 +19,8 @@ import org.firstinspires.ftc.teamcode.methods.AutoCommands;
 import org.firstinspires.ftc.teamcode.methods.AutoPaths;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
+import org.firstinspires.ftc.teamcode.methods.Transfer;
+import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
@@ -31,7 +33,9 @@ public class Red2Tip extends OpMode {
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
+    private Launcher launcher;
     private Servo led;
+    //private Transfer transfer;
 
     private double kP = 0.02;
     private double kD = 0.0;
@@ -64,7 +68,7 @@ public class Red2Tip extends OpMode {
                 autoCommand.intakeTogg,
                 Commands.waitMs(3500),
                 autoCommand.intakeTogg,
-                autoCommand.stopShooter,
+                autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
                 autoCommand.flowerCollectClose(follower),
                 follow(
@@ -73,11 +77,12 @@ public class Red2Tip extends OpMode {
                 ),
                 autoCommand.shooterTogg,
                 Commands.waitMs(3500),
-                autoCommand.stopShooter,
+                autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Red2Tip.path4()),
-                autoCommand.flowerCollectFar(follower),
+                autoCommand.flowerCollectFarShoot(follower),
                 autoCommand.stopIntake,
                 follow(follower, AutoPaths.Red2Tip.path5()),
+                autoCommand.shooterTogg,
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
                 );
@@ -90,10 +95,13 @@ public class Red2Tip extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
+        launcher = new Launcher(hardwareMap);
         led = hardwareMap.get(Servo.class, "led");
 
         vision = new LimelightVision(hardwareMap, 3);
         follower.setPose(AutoPaths.Red2Tip.start);
+
+       // transfer = new Transfer(hardwareMap);
 
         Turret.ROT_MAX_POWER = 0.2;
         Turret.ROBOT_YAW_FF_GAIN = 0.003;
@@ -126,6 +134,7 @@ public class Red2Tip extends OpMode {
     @Override
     public void loop() {
         turret.update();
+        //transfer.update();
         follower.update();
 
         //visualizer.recordPose(follower.pose());
@@ -135,12 +144,12 @@ public class Red2Tip extends OpMode {
         vision.update();
         Scheduler.execute();
 
-        autoCommand.updateLauncher();
+        launcher.update(follower.pose().x(), follower.pose().y());
+        autoCommand.updateTransfer();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                vision.getBestAimingTarget(), vision.getAimingTargetCount(),
-                robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
 
         led.setPosition(Math.random());
 
@@ -150,6 +159,9 @@ public class Red2Tip extends OpMode {
         telemetry.addData("Follower Mode", follower.mode());
         telemetry.addData("LL Tags", vision.getVisibleTagIds());
         telemetry.addData("LL Frame Age (ms)", vision.getFrameAgeMs());
+        telemetry.addData("Current Velo", launcher.getFlywheelVelo());
+        telemetry.addData("Target Velo", launcher.getTargetVelocity());
+
         turret.addTelemetry(telemetry);
         telemetry.update();
     }

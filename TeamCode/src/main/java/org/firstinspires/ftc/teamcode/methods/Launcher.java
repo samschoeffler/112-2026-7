@@ -25,6 +25,8 @@ public class Launcher {
     public static double MOTOR1_POWER_SIGN = 1.0;
     public static double ENCODER_SIGN_0 = -1.0;
 
+    private boolean wasOn = false;
+
     // Transfer power is now a -1..1 duty-cycle setting, not ticks/second.
     public static double MECH_POWER = 1.0;
     // Starting examples: verify readiness settings on the robot.
@@ -70,7 +72,14 @@ public class Launcher {
             // Turning on from off also clears a latched fault so Y can retry.
             //stopAll();
             //clearFault();
+        if (!wasOn) {
             setTargetVelocity(SHOOTING_VELOCITY);
+            wasOn = true;
+        }
+        else {
+            stopAll();
+            wasOn = false;
+        }
 
     }
 
@@ -124,7 +133,7 @@ public class Launcher {
 
     // Call once every OpMode loop, AFTER updating command/trigger requests.
     // robotX/robotY: current robot pose from the follower, used for distance-based velocity.
-    /*public void update(double robotX, double robotY) {
+    public void update(double robotX, double robotY) {
         //distance to the closer hive target by pose
         double d1 = Math.hypot(robotX - 58, robotY - 50);
         double d2 = Math.hypot(robotX - 58, robotY - 90);
@@ -132,8 +141,8 @@ public class Launcher {
 
         //SHOOTING_VELOCITY = 8 * distanceFromHive + 1200;
         //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 1.3);
-        //SHOOTING_VELOCITY = Math.pow(distanceFromHive + 100, 1.2) + 1100;
-        SHOOTING_VELOCITY = Math.pow(distanceFromHive, 0.333) * 120 + 1050;
+        SHOOTING_VELOCITY = -170 * Math.sin(1.0 / 22 * distanceFromHive + 11.0 / 21);
+        //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 0.333) * 120 + 1050;
 
 
         //updating the speed
@@ -141,7 +150,7 @@ public class Launcher {
             setTargetVelocity(SHOOTING_VELOCITY);
 
         update();
-    }*/
+    }
 
     // Same as above but without pose: keeps the current target velocity.
     public void update() {

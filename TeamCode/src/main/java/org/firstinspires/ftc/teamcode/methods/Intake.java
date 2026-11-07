@@ -9,9 +9,9 @@ public class Intake {
     public static double INTAKE_POWER = 1.0;
 
     // Verify on the robot using Ramp Tuning, then copy the measured values here.
-    public static final double RAMP_DOWN = 0.25;
+    public static final double RAMP_DOWN = 0.1;
     public static final double RAMP_UP = 0.62;
-    public static final double RAMP_HOLD = 0.30;
+    public static final double RAMP_HOLD = 0.15;
     public static final double RAMP_DOWNER = 0.23;
 
     public enum RampState { UP, DOWN, HOLD, DOWNER }

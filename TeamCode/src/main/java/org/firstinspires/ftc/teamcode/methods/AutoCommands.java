@@ -5,8 +5,6 @@ import static com.pedropathing.ivy.commands.Commands.waitMs;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 
-import org.firstinspires.ftc.teamcode.methods.AutoPaths;
-
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
@@ -14,7 +12,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class AutoCommands {
     private Launcher launcher;
+    private Turret turret;
     private Intake intake;
+    private Transfer transfer;
 
     // how long to sit at the flower collecting balls
     public static long FLOWER_WAIT_MS = 2500;
@@ -22,9 +22,11 @@ public class AutoCommands {
     public AutoCommands(HardwareMap hardwareMap) {
         launcher = new Launcher(hardwareMap);
         intake = new Intake(hardwareMap);
+        transfer = new Transfer(hardwareMap);
+        turret = new Turret(hardwareMap);
     }
 
-    public Command shooterTogg = instant(() -> launcher.fire());
+    public Command shooterTogg = instant(() -> transfer.toggleOn());
 
     public Command stopShooter = instant(() -> launcher.stopFire());
 
@@ -56,7 +58,6 @@ public class AutoCommands {
     public Command flowerCollectFar(Follower follower) {
         return sequential(
                 intakeTogg,
-                rampTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
@@ -65,19 +66,38 @@ public class AutoCommands {
         );
     }
 
+    public Command flowerCollectFarShoot(Follower follower) {
+        return sequential(
+                intakeTogg,
+                shooterTogg,
+                follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
+                Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
+                Commands.lazy(() -> Commands.waitMs(2500)),
+                follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
+                holdBalls,
+                intakeTogg
+        );
+    }
 
 
-    public void updateLauncher() {
-        launcher.update();
 
+
+    // Call every loop with the follower pose: runs the flywheel (distance-based speed).
+    public void updateLauncher(double robotX, double robotY) {
+        launcher.update(robotX, robotY);
         if (!launcher.getFault().isEmpty()) {
             intake.stop();
         }
     }
 
+    public void updateTransfer() {
+        transfer.update();
+    }
+
     public void stopAll() {
         launcher.stopAll();
         intake.stop();
+        transfer.stopAll();
     }
 
     public String getLauncherFault() {

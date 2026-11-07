@@ -63,7 +63,7 @@ public class Red1TipPark extends OpMode {
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(4000),
-                autoCommand.stopShooter,
+                autoCommand.shooterTogg,
                 autoCommand.stopIntake,
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Red2CornerUp.path2())
@@ -115,12 +115,12 @@ public class Red1TipPark extends OpMode {
         vision.update();
         Scheduler.execute();
 
-        autoCommand.updateLauncher();
+        autoCommand.updateLauncher(follower.pose().x(), follower.pose().y());
+        autoCommand.updateTransfer();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                vision.getBestAimingTarget(), vision.getAimingTargetCount(),
-                robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
 
         led.setPosition(Math.random());
 

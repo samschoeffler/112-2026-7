@@ -85,6 +85,8 @@ public class MainTeleOp extends OpMode {
 
     public String allegiance;
 
+    private boolean wasOn = false;
+
     private void updateRobotYawRate(double headingRad) {
         double dt = yawTimer.seconds();
         yawTimer.reset();
@@ -189,8 +191,7 @@ public class MainTeleOp extends OpMode {
         //launcher.eject(gamepad2.right_bumper);
 
 // REQUIRED: calculate flywheel power and update the transfer every loop.
-        //launcher.update(follower.pose().x(), follower.pose().y());
-        launcher.update();
+        launcher.update(follower.pose().x(), follower.pose().y());
         transfer.update();
 
 // Intake follows the launcher's updated firing/ejecting state.
