@@ -24,7 +24,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
  *   Left stick  jog turret while disarmed (maximum 0.12 power)
  *   LB          start a 3-second vision step trial while disarmed
  *   RB          start a 3-second manual heading trial while tracking
- *   Dpad up/down    select one of 17 parameters
+ *   Dpad up/down    select one of 20 parameters
  *   Dpad left/right decrease/increase the selected parameter
  *   Hold A      fine adjustment (1/10 normal step)
  *   X / Y       decrease / increase chassis turning scale
@@ -44,7 +44,7 @@ public class TurretAutoAlignTest extends OpMode {
     private TelemetryManager panelsTelemetry;
 
     private double turnScale = 1;
-    private double kP = 0.02;
+    private double kP = 0.010; // baseline shown in Nov 6 tuning video
     private double kD = 0.0;
     private boolean trackingEnabled = false;
     private int selectedParameter = 0;
@@ -68,20 +68,22 @@ public class TurretAutoAlignTest extends OpMode {
             "Vision tolerance deg", "Target smoothing", "Yaw FF gain", "Yaw FF max power",
             "Yaw FF deadband", "Velocity filter", "Tag-loss hold seconds",
             "Heading hold kP", "Heading hold kD", "Joystick prediction gain",
-            "Prediction max power", "Fast turn threshold", "Hold tolerance deg"
+            "Prediction max power", "Fast turn threshold", "Hold tolerance deg",
+            "Translation FF gain", "Translation FF max power",
+            "Translation FF deadband (deg/s)"
     };
 
     private static final double[] STEPS = {
             .01, .001, .01, .05, .25, .1, .001, .05, 1, .1, .1,
-            .01, .001, .01, .05, .05, .25
+            .01, .001, .01, .05, .05, .25, .001, .02, .5
     };
     private static final double[] MINS = {
             0, 0, 0, .05, 0, .01, -.02, 0, 0, .01, 0,
-            0, 0, -1, 0, .05, .25
+            0, 0, -1, 0, .05, .25, 0, 0, 0
     };
     private static final double[] MAXS = {
             .5, .1, .3, 1, 10, 1, .02, 1, 180, 1, 5,
-            .5, .1, 1, 1, 1, 15
+            .5, .1, 1, 1, 1, 15, .03, .40, 30
     };
 
     private double value(int i) {
@@ -103,6 +105,9 @@ public class TurretAutoAlignTest extends OpMode {
             case 14: return Turret.JOYSTICK_PREDICT_MAX_POWER;
             case 15: return Turret.FAST_TURN_STICK_THRESHOLD;
             case 16: return Turret.HOLD_SETTLE_TOLERANCE_DEG;
+            case 17: return Turret.TRANSLATION_FF_GAIN;
+            case 18: return Turret.TRANSLATION_FF_MAX_POWER;
+            case 19: return Turret.TRANSLATION_FF_DEADBAND_DEG_PER_SEC;
             default: return 0;
         }
     }
@@ -127,6 +132,9 @@ public class TurretAutoAlignTest extends OpMode {
             case 14: Turret.JOYSTICK_PREDICT_MAX_POWER = v; break;
             case 15: Turret.FAST_TURN_STICK_THRESHOLD = v; break;
             case 16: Turret.HOLD_SETTLE_TOLERANCE_DEG = v; break;
+            case 17: Turret.TRANSLATION_FF_GAIN = v; break;
+            case 18: Turret.TRANSLATION_FF_MAX_POWER = v; break;
+            case 19: Turret.TRANSLATION_FF_DEADBAND_DEG_PER_SEC = v; break;
         }
     }
 
@@ -153,11 +161,26 @@ public class TurretAutoAlignTest extends OpMode {
         follower = Constants.create(hardwareMap);
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
 
-        // Safe, reproducible starting point. All other static constants remain
-        // at their current Turret.java defaults unless changed on G2.
-        Turret.ROT_MAX_POWER = 0.20;
-        Turret.ROBOT_YAW_FF_GAIN = 0.0;
-        Turret.JOYSTICK_PREDICT_GAIN = 0.0;
+        // Baseline recorded from your tuning video. New translation gain stays ZERO.
+        // All of these can be tuned live with G2; MainTeleOp is unaffected.
+        Turret.ROT_KS = 0.0;
+        Turret.ROT_MAX_POWER = 0.55;
+        Turret.ROT_TOLERANCE_DEG = 1.5;
+        Turret.TARGET_SMOOTHING_ALPHA = 0.9;
+        Turret.ROBOT_YAW_FF_GAIN = 0.002;
+        Turret.ROBOT_YAW_FF_MAX_POWER = 0.60;
+        Turret.ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 22.0;
+        Turret.VELOCITY_FILTER_ALPHA = 1.0;
+        Turret.TAG_LOSS_HOLD_SECONDS = 1.10;
+        Turret.HEADING_HOLD_KP = 0.010;
+        Turret.HEADING_HOLD_KD = 0.0;
+        Turret.JOYSTICK_PREDICT_GAIN = 0.050;
+        Turret.JOYSTICK_PREDICT_MAX_POWER = 0.450;
+        Turret.FAST_TURN_STICK_THRESHOLD = 0.650;
+        Turret.HOLD_SETTLE_TOLERANCE_DEG = 4.5;
+        Turret.TRANSLATION_FF_GAIN = 0.0;
+        Turret.TRANSLATION_FF_MAX_POWER = 0.15;
+        Turret.TRANSLATION_FF_DEADBAND_DEG_PER_SEC = 2.0;
         trackingEnabled = false;
         turret.stopRotation();
         telemetry.addLine("DISARMED. G2 START = track, G2 LB = 3-sec vision test.");
@@ -273,6 +296,14 @@ public class TurretAutoAlignTest extends OpMode {
         addPanelsFinite("08 Applied motor power", turret.getAppliedPower());
         addPanelsFinite("09 Yaw feedforward power", turret.mainPD.getYawFeedforwardPower());
         addPanelsFinite("10 Prediction power", turret.mainPD.getPredictivePower());
+        panelsTelemetry.addData("16 Translation FF power", turret.mainPD.getTranslationFeedforwardPower());
+        panelsTelemetry.addData("17 Robot forward speed (in/s)", turret.mainPD.getRobotForwardInchesPerSec());
+        panelsTelemetry.addData("18 Robot left speed (in/s)", turret.mainPD.getRobotLeftInchesPerSec());
+        addPanelsFinite("19 Target distance (m)", turret.mainPD.getTranslationTargetRangeMeters());
+        panelsTelemetry.addData("20 Translation FF gain", Turret.TRANSLATION_FF_GAIN);
+        panelsTelemetry.addData("21 Translation FF deadband (deg/s)",
+                Turret.TRANSLATION_FF_DEADBAND_DEG_PER_SEC);
+        panelsTelemetry.addData("22 Translation FF max power", Turret.TRANSLATION_FF_MAX_POWER);
         panelsTelemetry.addData("12 Visible aiming tags", tagCount);
         panelsTelemetry.addData("13 Tracking enabled", trackingEnabled ? 1 : 0);
         panelsTelemetry.addData("14 Trial active", trialActive ? 1 : 0);
@@ -305,6 +336,8 @@ public class TurretAutoAlignTest extends OpMode {
                 follower.pose().heading());
         follower.manual(powers);
         follower.update();
+        turret.mainPD.updateRobotTranslationFromPose(
+                follower.pose().x(), follower.pose().y(), follower.pose().heading());
         readYaw(follower.pose().heading());
 
         // Preserve existing gamepad-based tuning controls.
@@ -396,6 +429,12 @@ public class TurretAutoAlignTest extends OpMode {
         telemetry.addData("Power total / FF / prediction", "%.3f / %.3f / %.3f",
                 turret.getAppliedPower(), turret.mainPD.getYawFeedforwardPower(),
                 turret.mainPD.getPredictivePower());
+        telemetry.addData("Translation FF power / range", "%.4f / %.2f m",
+                turret.mainPD.getTranslationFeedforwardPower(),
+                turret.mainPD.getTranslationTargetRangeMeters());
+        telemetry.addData("Translation speed forward / left", "%.1f / %.1f in/s",
+                turret.mainPD.getRobotForwardInchesPerSec(),
+                turret.mainPD.getRobotLeftInchesPerSec());
         telemetry.addData("Trial", trialType + (trialActive ? " (RUNNING)" : ""));
         telemetry.addData("Last trial", lastTrialResult);
         vision.addTelemetry(telemetry);

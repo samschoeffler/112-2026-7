@@ -329,6 +329,17 @@ public class Turret {
     public static double VISION_TO_TURRET_SIGN = 1.0;
     public static double HEADING_COMPENSATION_SIGN = 1.0;
 
+    // ADDITIVE, OPT-IN translational feedforward. Existing gains are untouched.
+    // Gain units: motor power / (required turret deg/s). 0 = feature disabled.
+    public static double TRANSLATION_FF_GAIN = 0.0;
+    public static double TRANSLATION_FF_MAX_POWER = 0.15;
+    // Reject tiny apparent target angular velocities from localization noise.
+    // Units: deg/s (analogous to existing yaw FF deadband).
+    public static double TRANSLATION_FF_DEADBAND_DEG_PER_SEC = 2.0;
+    // Fixed at +1 based on on-robot verification.
+    private static final double TRANSLATION_VELOCITY_ALPHA = 0.5;
+    private static final double METERS_TO_INCHES = 39.3700787402;
+
     private static boolean isTargetTag(int id) {
         return id >= 30 && id <= 37;
     }
@@ -340,6 +351,14 @@ public class Turret {
         private int targetCount = 0;
         private int trackedTagId = -1;
         private double yawFeedforwardPower = 0;
+        private double translationFeedforwardPower = 0;
+        private double translationTargetRangeMeters = Double.NaN;
+        private double robotForwardInchesPerSec = 0;
+        private double robotLeftInchesPerSec = 0;
+        private boolean haveTranslationPose = false;
+        private double lastTranslationXInches = 0;
+        private double lastTranslationYInches = 0;
+        private long lastTranslationNs = 0;
         private double predictivePower = 0;
         private double commandedPower = 0;
         private boolean haveFilteredError = false;
@@ -352,6 +371,52 @@ public class Turret {
         private boolean catchingUp = false;
         private String trackingMode = "NO TARGET";
         private final ElapsedTime sinceLastVisual = new ElapsedTime();
+
+        /**
+         * Record translation of the robot center using Pedro field position (INCHES).
+         * Call AFTER follower.update() and BEFORE calculateHybrid(), every loop.
+         * Pose jumps and stale motion readings fail closed to zero feedforward.
+         */
+        public void updateRobotTranslationFromPose(double xInches, double yInches,
+                                                    double headingRad) {
+            long now = System.nanoTime();
+            if (!Double.isFinite(xInches) || !Double.isFinite(yInches)
+                    || !Double.isFinite(headingRad)) {
+                haveTranslationPose = false;
+                robotForwardInchesPerSec = robotLeftInchesPerSec = 0;
+                lastTranslationNs = 0;
+                return;
+            }
+
+            if (haveTranslationPose) {
+                double dt = (now - lastTranslationNs) * 1e-9;
+                if (dt >= 0.005 && dt <= 0.25) {
+                    double vxField = (xInches - lastTranslationXInches) / dt;
+                    double vyField = (yInches - lastTranslationYInches) / dt;
+                    double forward = vxField * Math.cos(headingRad)
+                                   + vyField * Math.sin(headingRad);
+                    double left = -vxField * Math.sin(headingRad)
+                                  + vyField * Math.cos(headingRad);
+                    // Reject localization glitches or implausible robot velocities.
+                    if (Double.isFinite(forward) && Double.isFinite(left)
+                            && Math.hypot(forward, left) <= 85.0) {
+                        double a = Range.clip(TRANSLATION_VELOCITY_ALPHA, 0.05, 1.0);
+                        robotForwardInchesPerSec += a * (forward - robotForwardInchesPerSec);
+                        robotLeftInchesPerSec += a * (left - robotLeftInchesPerSec);
+                    } else {
+                        robotForwardInchesPerSec = robotLeftInchesPerSec = 0;
+                    }
+                } else {
+                    robotForwardInchesPerSec = robotLeftInchesPerSec = 0;
+                }
+            } else {
+                robotForwardInchesPerSec = robotLeftInchesPerSec = 0;
+            }
+            lastTranslationXInches = xInches;
+            lastTranslationYInches = yInches;
+            lastTranslationNs = now;
+            haveTranslationPose = true;
+        }
 
         /**
          * Slow jog only AFTER forward zero and wire-safe limits are verified.
@@ -527,12 +592,45 @@ public class Turret {
                         robotYawRateDegPerSec * ROBOT_YAW_FF_GAIN,
                         -ROBOT_YAW_FF_MAX_POWER, ROBOT_YAW_FF_MAX_POWER);
             }
+            // Compensate for lateral movement of the robot relative to a
+            // stationary AprilTag. Only active with a fresh valid visual target,
+            // an estimated distance, and a recent robot pose update. It never
+            // initiates scanning or modifies existing yaw feedforward logic.
+            translationFeedforwardPower = 0;
+            translationTargetRangeMeters = Double.NaN;
+            if (visual && target != null && lastTranslationNs != 0
+                    && System.nanoTime() - lastTranslationNs < 250_000_000L
+                    && Double.isFinite(target.distanceMeters)
+                    && target.distanceMeters >= 0.35
+                    && target.distanceMeters <= 6.0
+                    && Double.isFinite(TRANSLATION_FF_GAIN)) {
+                translationTargetRangeMeters = target.distanceMeters;
+                // Robot coordinate convention: +X forward, +Y left.
+                // The turret's physical heading is opposite encoder-positive
+                // when HEADING_COMPENSATION_SIGN is +1 (existing convention).
+                double turretBearingRad = -HEADING_COMPENSATION_SIGN
+                        * Math.toRadians(rotationDeg);
+                double velocityAcrossView = -Math.sin(turretBearingRad)
+                        * robotForwardInchesPerSec
+                        + Math.cos(turretBearingRad) * robotLeftInchesPerSec;
+                double requiredTurretDegPerSec = HEADING_COMPENSATION_SIGN
+                        * Math.toDegrees(velocityAcrossView
+                            / (target.distanceMeters * METERS_TO_INCHES));
+                if (Math.abs(requiredTurretDegPerSec) >=
+                        Range.clip(TRANSLATION_FF_DEADBAND_DEG_PER_SEC, 0.0, 30.0)) {
+                    double ff = requiredTurretDegPerSec * TRANSLATION_FF_GAIN;
+                    translationFeedforwardPower = Range.clip(ff,
+                            -Math.abs(TRANSLATION_FF_MAX_POWER),
+                            Math.abs(TRANSLATION_FF_MAX_POWER));
+                }
+            }
             predictivePower = 0;
             if (canHold && fastTurn) {
                 predictivePower = Range.clip(turnStick * JOYSTICK_PREDICT_GAIN,
                         -JOYSTICK_PREDICT_MAX_POWER, JOYSTICK_PREDICT_MAX_POWER);
             }
-            double request = feedback + yawFeedforwardPower + predictivePower;
+            double request = feedback + yawFeedforwardPower
+                    + translationFeedforwardPower + predictivePower;
             if (Math.abs(request) > 1e-6) request += Math.abs(kS) * Math.signum(request);
             commandedPower = Range.clip(request, -Math.abs(maxPower), Math.abs(maxPower));
             setRotationPower(commandedPower); // Enforces limits and RUN_WITHOUT_ENCODER.
@@ -547,6 +645,8 @@ public class Turret {
             targetCount = 0;
             trackedTagId = -1;
             yawFeedforwardPower = 0;
+            translationFeedforwardPower = 0;
+            translationTargetRangeMeters = Double.NaN;
             predictivePower = 0;
             commandedPower = 0;
             acquiredVisualLock = false;
@@ -562,6 +662,9 @@ public class Turret {
             haveHeading = false;
             unwrappedRobotHeadingDeg = 0;
             previousHeadingRad = 0;
+            haveTranslationPose = false;
+            lastTranslationNs = 0;
+            robotForwardInchesPerSec = robotLeftInchesPerSec = 0;
             sinceLastVisual.reset();
         }
 
@@ -575,6 +678,10 @@ public class Turret {
         public double getRawErrorDeg() { return rawErrorDeg; }
         public double getEstimateSpreadDeg() { return estimateSpreadDeg; }
         public double getYawFeedforwardPower() { return yawFeedforwardPower; }
+        public double getTranslationFeedforwardPower() { return translationFeedforwardPower; }
+        public double getTranslationTargetRangeMeters() { return translationTargetRangeMeters; }
+        public double getRobotForwardInchesPerSec() { return robotForwardInchesPerSec; }
+        public double getRobotLeftInchesPerSec() { return robotLeftInchesPerSec; }
         public double getPredictivePower() { return predictivePower; }
         public double getHeadingHoldErrorDeg() { return headingHoldErrorDeg; }
         public double getHeadingHoldTargetDeg() {

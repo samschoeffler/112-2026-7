@@ -168,6 +168,10 @@ public class MainTeleOp extends OpMode {
         follower.manual(powers);
         ManualDrive.driveOrHold(follower, powers);
         follower.update();
+        // Optical target motion caused by robot translation (Pedro pose is inches).
+        // Gain defaults to ZERO, so existing competition behavior is unchanged.
+        turret.mainPD.updateRobotTranslationFromPose(
+                follower.pose().x(), follower.pose().y(), follower.pose().heading());
 
         vision.update();
 
@@ -231,7 +235,8 @@ public class MainTeleOp extends OpMode {
         if (turret.isTurretAuto()) {
             turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                     Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                    vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                    vision.getBestAimingTarget(), vision.getAimingTargetCount(),
+                    robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
         } else{
             turret.manualControl(
                     gamepad2.dpad_left,
