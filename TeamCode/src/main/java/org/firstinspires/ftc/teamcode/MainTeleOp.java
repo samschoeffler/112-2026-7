@@ -182,7 +182,7 @@ public class MainTeleOp extends OpMode {
 
 // Request shooting while the right trigger is held.
         if (gamepad2.aWasPressed()) {
-            intake.intake();
+            intake.toggle();
             //transfer.toggleOn();
             //launcher.actFire();
         }

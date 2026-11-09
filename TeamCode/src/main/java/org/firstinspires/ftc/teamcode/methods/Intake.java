@@ -41,6 +41,18 @@ public class Intake {
         intakeOn = true;
     }
 
+    public void toggle() {
+        if (intakeOn) {
+            intake.setPower(0);
+            intakeOn = false;
+        }
+        else {
+         intake.setPower(INTAKE_POWER);
+         intakeOn = true;
+        }
+
+    }
+
     public void outtake() {
         intake.setPower(-INTAKE_POWER);
         intakeOn = true;
