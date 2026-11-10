@@ -69,6 +69,7 @@ public class Transfer {
         }
     }
 
+
     public void setTargetVelocity(double ticksPerSecond) {
         if (!Double.isFinite(ticksPerSecond) || ticksPerSecond < 0.0) {
             tripFault("Invalid target velocity");

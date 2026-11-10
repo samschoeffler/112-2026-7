@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.methods.Transfer.SHOOTING_VELOCITY;
+
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
@@ -188,7 +190,10 @@ public class MainTeleOp extends OpMode {
         }
 
         if (gamepad2.bWasPressed()) {
-            transfer.toggleOn();
+            transfer.setTargetVelocity(1440);
+        }
+        else {
+            transfer.setTargetVelocity(0);
         }
 
 // Request reverse transfer operation.
