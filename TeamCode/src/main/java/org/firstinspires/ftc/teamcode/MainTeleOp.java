@@ -66,7 +66,7 @@ public class MainTeleOp extends OpMode {
     private boolean imuAvailable = false;
 
     //turret stuff
-    private double kP = 0.02;
+    private double kP = 0.01;
     private double kD = 0.0;
 
     private final ElapsedTime yawTimer = new ElapsedTime();
@@ -81,7 +81,7 @@ public class MainTeleOp extends OpMode {
     private boolean lastOptions1 = false;
 
     private double lastHeadingRad = 0;
-    private double robotYawRateDegPerSec = 0;
+    private double robotYawRateDegPerSec = Double.NaN;
 
     private boolean isRumbling = false;
 
@@ -89,13 +89,17 @@ public class MainTeleOp extends OpMode {
 
     private boolean wasOn = false;
 
-    private void updateRobotYawRate(double headingRad) {
+    boolean isManual;
+
+    private void readYaw(double headingRad) {
         double dt = yawTimer.seconds();
         yawTimer.reset();
-        robotYawRateDegPerSec = 0;
-        if (haveLastHeading && Double.isFinite(headingRad) && dt >= 0.005 && dt <= 0.25) {
-            double delta = headingRad - lastHeadingRad;
-            delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+        robotYawRateDegPerSec = Double.NaN;
+        if (haveLastHeading && Double.isFinite(headingRad)
+                && dt >= 0.005 && dt <= 0.25) {
+            double delta = Math.atan2(
+                    Math.sin(headingRad - lastHeadingRad),
+                    Math.cos(headingRad - lastHeadingRad));
             robotYawRateDegPerSec = Math.toDegrees(delta / dt);
         }
         lastHeadingRad = headingRad;
@@ -125,7 +129,7 @@ public class MainTeleOp extends OpMode {
 
         int pipeline = "BLUE".equals(allegiance) ? 2 : 1;
 
-        vision = new LimelightVision(hardwareMap, pipeline);
+        vision = new LimelightVision(hardwareMap, 4);
 
         telemetry.setMsTransmissionInterval(100);
 
@@ -138,8 +142,8 @@ public class MainTeleOp extends OpMode {
         }
 
         //setting up turret auto stuff
-        Turret.ROT_MAX_POWER = 0.2;
-        Turret.ROBOT_YAW_FF_GAIN = 0.003;
+        //Turret.ROT_MAX_POWER = 0.2;
+        //Turret.ROBOT_YAW_FF_GAIN = 0.003;
     }
 
     @Override
@@ -154,6 +158,8 @@ public class MainTeleOp extends OpMode {
 
     @Override
     public void loop() {
+
+        turret.update();
 
         //drive code
         if (gamepad1.options && !lastOptions1) {
@@ -174,6 +180,7 @@ public class MainTeleOp extends OpMode {
         // Gain defaults to ZERO, so existing competition behavior is unchanged.
         turret.mainPD.updateRobotTranslationFromPose(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading());
+        readYaw(follower.pose().heading());
 
         vision.update();
 
@@ -239,11 +246,13 @@ public class MainTeleOp extends OpMode {
 
         //turret manual/auto logic
         if (turret.isTurretAuto()) {
+            isManual = false;
             turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                     Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
                     vision.getBestAimingTarget(), vision.getAimingTargetCount(),
-                    robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                    robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x, telemetry);
         } else{
+            isManual = true;
             turret.manualControl(
                     gamepad2.dpad_left,
                     gamepad2.dpad_right
@@ -263,8 +272,8 @@ public class MainTeleOp extends OpMode {
 
 
         //turret auto sight loss correction
-        updateRobotYawRate(follower.pose().heading());
-        yawSource = "Pedro fallback";
+        //updateRobotYawRate(follower.pose().heading());
+        /*yawSource = "Pedro fallback";
         if (imuAvailable) {
             try {
                 AngularVelocity av = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
@@ -275,15 +284,17 @@ public class MainTeleOp extends OpMode {
             } catch (RuntimeException ex) {
                 yawSource = "Pedro fallback";
             }
-        }
+        }*/
 
         //led updates
-        if(launcher.isFlywheelsOn() && launcher.flywheelAtSpeed() /*&& vision.hasAimingTarget()*/)
-            led.setPosition(0.611);
-        else if(!turret.isTurretAuto())
-            led.setPosition(0.333);
+        if(launcher.isFlywheelsOn() && turret.isTurretAuto() /*&& vision.hasAimingTarget()*/)
+            led.setPosition(0.611); //blue
+        else if(launcher.isFlywheelsOn() && !turret.isTurretAuto())
+            led.setPosition(0.333); //orange
+        else if (!launcher.isFlywheelsOn() && turret.isTurretAuto())
+            led.setPosition(1); //white?
         else
-            led.setPosition(0.500);
+            led.setPosition(0.500); //green
 
         //rumble update
         if(launcher.flywheelAtSpeed()) {

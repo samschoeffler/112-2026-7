@@ -31,10 +31,10 @@ public final class AutoPaths {
                 poseFactory.of(47, 110, 60);
 
         public static final Pose flowerClose =
-                poseFactory.of(10, 48.5, 180);
+                poseFactory.of(11, 48.5, 180);
 
         public static final Pose flowerFar =
-                poseFactory.of(48, 128.75, 90);
+                poseFactory.of(47, 127.75, 90);
 
         // ---------- PATHS ----------
 
@@ -87,7 +87,7 @@ public final class AutoPaths {
                 poseFactory.of(34.5, 50, 0);
 
         public static final Pose point3 =
-                poseFactory.of(54, 120, 270);
+                poseFactory.of(54, 125, 270);
 
         public static final Pose point3Control1 =
                 poseFactory.of(47, 44, 0);
@@ -102,7 +102,7 @@ public final class AutoPaths {
                 poseFactory.of(45, 113, 0);
 
         public static final Pose point5 =
-                poseFactory.of(15, 117, 270);
+                poseFactory.of(15, 110, 270);
 
         // ---------- PATHS ----------
 

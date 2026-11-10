@@ -387,7 +387,7 @@ public class TurretAutoAlignTest extends OpMode {
                     kP, kD, Turret.ROT_KS, Turret.ROT_MAX_POWER,
                     Turret.ROT_TOLERANCE_DEG,
                     vision.getBestAimingTarget(), vision.getAimingTargetCount(),
-                    yawRateDegPerSec, follower.pose().heading(), turn);
+                    yawRateDegPerSec, follower.pose().heading(), turn, telemetry);
         }
 
         double angle = turret.getRotationDeg();

@@ -8,6 +8,7 @@ import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class AutoCommands {
@@ -45,8 +46,9 @@ public class AutoCommands {
     // takes the OpMode's follower (the one that gets update()d every loop)
     public Command flowerCollectClose(Follower follower) {
         return sequential(
-                intakeTogg,
                 rampTogg,
+                intakeTogg,
+                Commands.waitMs(200),
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
@@ -83,11 +85,12 @@ public class AutoCommands {
 
 
     // Call every loop with the follower pose: runs the flywheel (distance-based speed).
-    public void updateLauncher(double robotX, double robotY) {
-        launcher.update(robotX, robotY);
-        if (!launcher.getFault().isEmpty()) {
-            intake.stop();
-        }
+    public void updateLauncher(LimelightVision.TagObservation vision, int count, double robotYawRateDegPerSec, Follower follower) {
+
+    }
+
+    public void otherUpdate() {
+        launcher.update();
     }
 
     public void updateTransfer() {
@@ -98,6 +101,7 @@ public class AutoCommands {
         launcher.stopAll();
         intake.stop();
         transfer.stopAll();
+        turret.stop();
     }
 
     public String getLauncherFault() {

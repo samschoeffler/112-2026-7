@@ -115,12 +115,12 @@ public class Red1Tip extends OpMode {
         vision.update();
         Scheduler.execute();
 
-        autoCommand.updateLauncher(follower.pose().x(), follower.pose().y());
+        //autoCommand.updateLauncher();
         autoCommand.updateTransfer();
 
         turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
                 Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
+                vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x, telemetry);
 
         led.setPosition(Math.random());
 

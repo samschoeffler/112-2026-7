@@ -23,10 +23,10 @@ public class Turret {
     public static double ROTATE_POWER = 0.20;
 
     /** Compatibility with current MainTeleOp and test code. */
-    public static double ROT_MAX_POWER = 0.35;
+    public static double ROT_MAX_POWER = 0.55;
     public static double ROT_KS = 0.0;
-    public static double ROT_TOLERANCE_DEG = 1.0;
-    public static double VELOCITY_FILTER_ALPHA = 0.35;
+    public static double ROT_TOLERANCE_DEG = 1.5;
+    public static double VELOCITY_FILTER_ALPHA = 1;
 
     private final DcMotorEx rotation;
     private final ElapsedTime manualTimer = new ElapsedTime();
@@ -314,16 +314,16 @@ public class Turret {
     public static double TARGET_SMOOTHING_ALPHA = 0.9;
     // Signed power/(deg/s), matching HEADING_COMPENSATION_SIGN for positive gains.
     // Existing competition convention: turret-positive is opposite robot-positive yaw.
-    public static double ROBOT_YAW_FF_GAIN = 0.0090;
-    public static double ROBOT_YAW_FF_MAX_POWER = 0.75;
-    public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 13.0;
-    public static double TAG_LOSS_HOLD_SECONDS = 1.3;
-    public static double HEADING_HOLD_KP = 0.030;
+    public static double ROBOT_YAW_FF_GAIN = 0.0020;
+    public static double ROBOT_YAW_FF_MAX_POWER = 0.6;
+    public static double ROBOT_YAW_FF_DEADBAND_DEG_PER_SEC = 22.0;
+    public static double TAG_LOSS_HOLD_SECONDS = 1.1;
+    public static double HEADING_HOLD_KP = 0.010;
     public static double HEADING_HOLD_KD = 0.0;
-    public static double JOYSTICK_PREDICT_GAIN = 0.0;
-    public static double JOYSTICK_PREDICT_MAX_POWER = 0.50;
-    public static double FAST_TURN_STICK_THRESHOLD = 0.30;
-    public static double HOLD_SETTLE_TOLERANCE_DEG = 3.0;
+    public static double JOYSTICK_PREDICT_GAIN = 0.05;
+    public static double JOYSTICK_PREDICT_MAX_POWER = 0.45;
+    public static double FAST_TURN_STICK_THRESHOLD = 0.65;
+    public static double HOLD_SETTLE_TOLERANCE_DEG = 4.5;
     // Verify on the robot: positive power increases encoder angle; positive tx
     // should be corrected by VISION_TO_TURRET_SIGN * positive turret motion.
     public static double VISION_TO_TURRET_SIGN = 1.0;
@@ -363,11 +363,11 @@ public class Turret {
         private double commandedPower = 0;
         private boolean haveFilteredError = false;
         private boolean acquiredVisualLock = false;
-        private boolean haveHeading = false;
+        public boolean haveHeading = false;
         private double previousHeadingRad = 0;
         private double unwrappedRobotHeadingDeg = 0;
-        private double desiredFieldHeadingDeg = Double.NaN;
-        private double headingHoldErrorDeg = Double.NaN;
+        public double desiredFieldHeadingDeg = Double.NaN;
+        public double headingHoldErrorDeg = Double.NaN;
         private boolean catchingUp = false;
         private String trackingMode = "NO TARGET";
         private final ElapsedTime sinceLastVisual = new ElapsedTime();
@@ -432,28 +432,28 @@ public class Turret {
 
         public void calculate(double ignoredError, double kP, double kD,
                               double kS, double maxPower, double angleTolerance,
-                              LLResult result) {
+                              LLResult result, Telemetry telemetry) {
             calculate(ignoredError, kP, kD, kS, maxPower,
-                    angleTolerance, result, 0.0);
+                    angleTolerance, result, 0.0, telemetry);
         }
 
         public void calculate(double ignoredError, double kP, double kD,
                               double kS, double maxPower, double angleTolerance,
-                              LLResult result, double yawRate) {
+                              LLResult result, double yawRate, Telemetry telemetry) {
             calculateHybrid(kP, kD, kS, maxPower, angleTolerance,
-                    result, yawRate, Double.NaN, 0.0);
+                    result, yawRate, Double.NaN, 0.0, telemetry);
         }
 
         /** Legacy entrypoint for MainTeleOp and autonomous callers. */
         public void calculateHybrid(double kP, double kD, double kS,
                                     double maxPower, double angleTolerance,
                                     LLResult result, double robotYawRateDegPerSec,
-                                    double robotHeadingRad, double turnStick) {
+                                    double robotHeadingRad, double turnStick, Telemetry telemetry) {
             LimelightVision.AimingSelection selection =
                     LimelightVision.selectAimingTarget(result);
             calculateHybridProcessed(kP, kD, kS, maxPower, angleTolerance,
                     selection.target, selection.count,
-                    robotYawRateDegPerSec, robotHeadingRad, turnStick);
+                    robotYawRateDegPerSec, robotHeadingRad, turnStick, telemetry);
         }
 
         /** Processed-target entrypoint; reuses LimelightVision's cached selection. */
@@ -462,10 +462,10 @@ public class Turret {
                                     LimelightVision.TagObservation target,
                                     int aimingTargetCount,
                                     double robotYawRateDegPerSec,
-                                    double robotHeadingRad, double turnStick) {
+                                    double robotHeadingRad, double turnStick, Telemetry telemetry) {
             calculateHybridProcessed(kP, kD, kS, maxPower, angleTolerance,
                     target, aimingTargetCount, robotYawRateDegPerSec,
-                    robotHeadingRad, turnStick);
+                    robotHeadingRad, turnStick, telemetry);
         }
 
         /**
@@ -476,7 +476,7 @@ public class Turret {
                 double kP, double kD, double kS, double maxPower,
                 double angleTolerance, LimelightVision.TagObservation target,
                 int aimingTargetCount, double robotYawRateDegPerSec,
-                double robotHeadingRad, double turnStick) {
+                double robotHeadingRad, double turnStick, Telemetry telemetry) {
 
             if (!isRotationCalibrated() || !Double.isFinite(rotationDeg)
                     || !Double.isFinite(turretAngularVelocityDegPerSec)) {
@@ -564,6 +564,9 @@ public class Turret {
                     && !fastTurn))) {
                 catchingUp = false;
             }
+
+            telemetry.addData("Visual? True = good", visual);
+            telemetry.addData("Can Hold? True = good", canHold);
 
             if (!visual && !canHold) {
                 stopTracking();

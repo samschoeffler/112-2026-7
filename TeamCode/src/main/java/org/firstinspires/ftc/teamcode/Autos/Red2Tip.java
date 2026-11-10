@@ -46,14 +46,18 @@ public class Red2Tip extends OpMode {
     private double lastHeadingRad = 0;
     private double robotYawRateDegPerSec = 0;
 
-    private void updateRobotYawRate(double headingRad) {
+    private double yawRateDegPerSec;
+
+    private void readYaw(double headingRad) {
         double dt = yawTimer.seconds();
         yawTimer.reset();
-        robotYawRateDegPerSec = Double.NaN;
-        if (haveLastHeading && Double.isFinite(headingRad) && dt >= 0.005 && dt <= 0.25) {
-            double delta = headingRad - lastHeadingRad;
-            delta = Math.atan2(Math.sin(delta), Math.cos(delta));
-            robotYawRateDegPerSec = Math.toDegrees(delta / dt);
+        yawRateDegPerSec = Double.NaN;
+        if (haveLastHeading && Double.isFinite(headingRad)
+                && dt >= 0.005 && dt <= 0.25) {
+            double delta = Math.atan2(
+                    Math.sin(headingRad - lastHeadingRad),
+                    Math.cos(headingRad - lastHeadingRad));
+            yawRateDegPerSec = Math.toDegrees(delta / dt);
         }
         lastHeadingRad = headingRad;
         haveLastHeading = Double.isFinite(headingRad);
@@ -66,7 +70,7 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(3500),
+                Commands.waitMs(1500),
                 autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Red2Tip.path2()),
@@ -76,12 +80,14 @@ public class Red2Tip extends OpMode {
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
                 autoCommand.shooterTogg,
-                Commands.waitMs(3500),
+                Commands.waitMs(3000),
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Red2Tip.path4()),
                 autoCommand.flowerCollectFarShoot(follower),
-                autoCommand.stopIntake,
-                follow(follower, AutoPaths.Red2Tip.path5()),
+                follow(
+                        follower, AutoPaths.Red2Tip.path5()
+                                .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
+                ),
                 autoCommand.shooterTogg,
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
@@ -98,13 +104,14 @@ public class Red2Tip extends OpMode {
         launcher = new Launcher(hardwareMap);
         led = hardwareMap.get(Servo.class, "led");
 
+        turret.stopRotation();
+
         vision = new LimelightVision(hardwareMap, 3);
         follower.setPose(AutoPaths.Red2Tip.start);
 
        // transfer = new Transfer(hardwareMap);
 
-        Turret.ROT_MAX_POWER = 0.2;
-        Turret.ROBOT_YAW_FF_GAIN = 0.003;
+
 
         /*visualizer = new PathVisualizer(
                 AutoPaths.Red2Tip.path1(),
@@ -128,28 +135,43 @@ public class Red2Tip extends OpMode {
         haveLastHeading = false;
         yawTimer.reset();
 
+        //Turret.ROT_MAX_POWER = 0.35;
+        Turret.ROBOT_YAW_FF_GAIN = 0.002;
+
         //visualizer.startRecording(follower.pose());
     }
 
     @Override
     public void loop() {
-        turret.update();
+        Scheduler.execute();
+        //turret.update();
         //transfer.update();
+        turret.update();
         follower.update();
+
+        turret.mainPD.updateRobotTranslationFromPose(
+                follower.pose().x(), follower.pose().y(), follower.pose().heading());
 
         //visualizer.recordPose(follower.pose());
         //visualizer.draw(follower.pose());
 
-        updateRobotYawRate(follower.pose().heading());
+        readYaw(follower.pose().heading());
         vision.update();
-        Scheduler.execute();
 
-        launcher.update(follower.pose().x(), follower.pose().y());
+
+        /*if (!launcher.getFault().isEmpty()) {
+            intake.stop();
+        }*/
+
+
+
+        turret.mainPD.calculateHybrid(0.010, 0, Turret.ROT_KS,
+                0.25, Turret.ROT_TOLERANCE_DEG,
+                vision.getBestAimingTarget(), vision.getAimingTargetCount(), robotYawRateDegPerSec, follower.pose().heading(), 0, telemetry);
+
+        autoCommand.otherUpdate();
+
         autoCommand.updateTransfer();
-
-        turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
-                Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                vision.getRawResult(), robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x);
 
         led.setPosition(Math.random());
 
@@ -168,7 +190,7 @@ public class Red2Tip extends OpMode {
 
     @Override
     public void stop() {
-        turret.stop();
+        //turret.stop();
         vision.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";
