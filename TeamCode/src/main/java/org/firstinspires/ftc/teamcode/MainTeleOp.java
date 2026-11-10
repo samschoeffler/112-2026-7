@@ -189,7 +189,7 @@ public class MainTeleOp extends OpMode {
             //launcher.actFire();
         }
 
-        if (gamepad2.bWasPressed()) {
+        if (gamepad2.b) {
             transfer.setTargetVelocity(1440);
         }
         else {
