@@ -20,11 +20,14 @@ public class AutoCommands {
     // how long to sit at the flower collecting balls
     public static long FLOWER_WAIT_MS = 2500;
 
+    LimelightVision vision;
+
     public AutoCommands(HardwareMap hardwareMap) {
         launcher = new Launcher(hardwareMap);
         intake = new Intake(hardwareMap);
         transfer = new Transfer(hardwareMap);
         turret = new Turret(hardwareMap);
+        vision = new LimelightVision(hardwareMap, 4);
     }
 
     public Command shooterTogg = instant(() -> transfer.toggleOn());
@@ -43,17 +46,24 @@ public class AutoCommands {
 
     public Command holdBalls = instant(() -> intake.holdBalls());
 
+    public Command toggleAuto = instant(() -> turret.toggleTurretAuto());
+
+    public Command startVis = instant(() -> vision.shouldStart());
+
     // takes the OpMode's follower (the one that gets update()d every loop)
     public Command flowerCollectClose(Follower follower) {
         return sequential(
                 rampTogg,
                 intakeTogg,
+                fWheelTogg,
+                shooterTogg,
                 Commands.waitMs(200),
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
-                holdBalls,
-                intakeTogg
+                shooterTogg,
+                intakeTogg,
+                fWheelTogg
         );
     }
 
@@ -89,8 +99,8 @@ public class AutoCommands {
 
     }
 
-    public void otherUpdate() {
-        launcher.update();
+    public void otherUpdate(Follower follower) {
+        launcher.update(follower.pose().x(), follower.pose().y(), 0, 0);
     }
 
     public void updateTransfer() {

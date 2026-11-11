@@ -51,7 +51,7 @@ public class Turret {
     private double appliedPower = 0;
     private boolean limitActive = false;
     private double rawVelocityDegPerSec = 0;
-    private boolean turretAuto = true;
+    private static boolean turretAuto = true;
     private double rotationDeg = 0;
     private double turretAngularVelocityDegPerSec = 0;
     private double rotationTargetDeg = 0;

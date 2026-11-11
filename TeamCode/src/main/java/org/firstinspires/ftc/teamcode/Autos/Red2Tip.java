@@ -8,6 +8,7 @@ import org.firstinspires.ftc.teamcode.methods.LimelightVision;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import static com.pedropathing.ivy.Scheduler.schedule;
@@ -22,6 +23,8 @@ import org.firstinspires.ftc.teamcode.methods.PathVisualizer;
 import org.firstinspires.ftc.teamcode.methods.Transfer;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.Turret;
+import org.firstinspires.ftc.teamcode.methods.CoordinateAim;
+import org.firstinspires.ftc.teamcode.methods.CoordinateTurretControl;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Red2Tip", group="Red")
@@ -33,9 +36,13 @@ public class Red2Tip extends OpMode {
     private AutoCommands autoCommand;
     private LimelightVision vision;
     private Turret turret;
+    private DcMotorEx turretMotor;
+    private int turretZeroTicks;
     private Launcher launcher;
     private Servo led;
     //private Transfer transfer;
+
+    boolean started = false;
 
     private double kP = 0.02;
     private double kD = 0.0;
@@ -65,6 +72,7 @@ public class Red2Tip extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
+                autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Red2Tip.path1()),
                 Commands.waitMs(750),
@@ -80,8 +88,10 @@ public class Red2Tip extends OpMode {
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
                 autoCommand.shooterTogg,
+                autoCommand.startVis,
                 Commands.waitMs(3000),
                 autoCommand.shooterTogg,
+                autoCommand.toggleAuto,
                 follow(follower, AutoPaths.Red2Tip.path4()),
                 autoCommand.flowerCollectFarShoot(follower),
                 follow(
@@ -101,12 +111,18 @@ public class Red2Tip extends OpMode {
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
+        turretMotor = hardwareMap.get(DcMotorEx.class, "TurretRot");
         launcher = new Launcher(hardwareMap);
         led = hardwareMap.get(Servo.class, "led");
 
         turret.stopRotation();
+        // Red2Tip begins with the turret physically forward-zero. Preserve that raw
+        // encoder reference across the autonomous-to-TeleOp OpMode transition.
+        turretZeroTicks = turretMotor.getCurrentPosition();
+        OpModeStorage.turretForwardZeroTicks = turretZeroTicks;
+        OpModeStorage.turretForwardZeroConfirmed = true;
 
-        vision = new LimelightVision(hardwareMap, 3);
+        vision = new LimelightVision(hardwareMap, 4);
         follower.setPose(AutoPaths.Red2Tip.start);
 
        // transfer = new Transfer(hardwareMap);
@@ -129,14 +145,14 @@ public class Red2Tip extends OpMode {
     }
 @Override
     public void start() {
-        vision.start();
+        //vision.start();
         schedule(autoRoutine());
         turret.mainPD.reset();
         haveLastHeading = false;
         yawTimer.reset();
 
         //Turret.ROT_MAX_POWER = 0.35;
-        Turret.ROBOT_YAW_FF_GAIN = 0.002;
+        //Turret.ROBOT_YAW_FF_GAIN = 0.002;
 
         //visualizer.startRecording(follower.pose());
     }
@@ -149,6 +165,8 @@ public class Red2Tip extends OpMode {
         turret.update();
         follower.update();
 
+        telemetry.addData("Auto?", turret.isTurretAuto());
+
         turret.mainPD.updateRobotTranslationFromPose(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading());
 
@@ -158,18 +176,38 @@ public class Red2Tip extends OpMode {
         readYaw(follower.pose().heading());
         vision.update();
 
+        if (LimelightVision.shouldStart && !started) {
+            vision.start();
+            started = true;
+        }
+
+        telemetry.addData("Started Vision?", LimelightVision.shouldStart);
+
 
         /*if (!launcher.getFault().isEmpty()) {
             intake.stop();
         }*/
 
+        //follower.pose().heading()
 
 
-        turret.mainPD.calculateHybrid(0.010, 0, Turret.ROT_KS,
-                0.25, Turret.ROT_TOLERANCE_DEG,
-                vision.getBestAimingTarget(), vision.getAimingTargetCount(), robotYawRateDegPerSec, follower.pose().heading(), 0, telemetry);
+        CoordinateAim.Result aim = CoordinateAim.calculate(
+                follower.pose().x(), follower.pose().y(), follower.pose().heading(),
+                57.4, 82.3);
+        double turretAngleDeg = (turretMotor.getCurrentPosition() - (double) turretZeroTicks)
+                / CoordinateTurretControl.TICKS_PER_DEGREE;
+        CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(
+                aim.relativeBearingDeg, turretAngleDeg, 1, 0.04);
+        if (aim.valid && control.reachable) {
+            double power = CoordinateTurretControl.motorPower(turretAngleDeg, control.power, -1);
+            turret.setRotationPower(power);
+        } else {
+            turret.stopRotation();
+        }
+        telemetry.addData("Coordinate target bearing", aim.relativeBearingDeg);
+        telemetry.addData("Coordinate turret error", control.errorDeg);
 
-        autoCommand.otherUpdate();
+        autoCommand.otherUpdate(follower);
 
         autoCommand.updateTransfer();
 

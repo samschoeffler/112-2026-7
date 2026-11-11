@@ -120,6 +120,8 @@ public class LimelightVision {
         clearData();
     }
 
+    public static boolean shouldStart;
+
     public boolean setPipeline(int newPipeline) {
 
         boolean success = camera.pipelineSwitch(newPipeline);
@@ -131,6 +133,10 @@ public class LimelightVision {
         }
 
         return success;
+    }
+
+    public void shouldStart() {
+        shouldStart = true;
     }
 
     public int getPipeline() {

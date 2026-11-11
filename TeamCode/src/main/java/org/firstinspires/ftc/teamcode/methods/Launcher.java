@@ -133,7 +133,7 @@ public class Launcher {
 
     // Call once every OpMode loop, AFTER updating command/trigger requests.
     // robotX/robotY: current robot pose from the follower, used for distance-based velocity.
-    public void update(double robotX, double robotY) {
+    public void update(double robotX, double robotY, double amplitude, int yint) {
         //distance to the closer hive target by pose
         double d1 = Math.hypot(robotX - 58, robotY - 50);
         double d2 = Math.hypot(robotX - 58, robotY - 90);
@@ -141,7 +141,7 @@ public class Launcher {
 
         //SHOOTING_VELOCITY = 8 * distanceFromHive + 1200;
         //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 1.3);
-        SHOOTING_VELOCITY = -170 * Math.sin(1.0 / 22 * distanceFromHive + 11.0 / 21);
+        SHOOTING_VELOCITY = -70.3 * Math.cos(1.0 / 22 * distanceFromHive + 11.0 / 21) + 1407;
         //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 0.333) * 120 + 1050;
 
 

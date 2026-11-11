@@ -20,8 +20,11 @@ import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import org.firstinspires.ftc.teamcode.methods.LimelightVision;
+import org.firstinspires.ftc.teamcode.methods.CoordinateAim;
+import org.firstinspires.ftc.teamcode.methods.CoordinateTurretControl;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -54,8 +57,20 @@ public class MainTeleOp extends OpMode {
     //Methods
     private Follower follower;
     private Launcher launcher;
+
+    private String[] vals = {"Amplitude", "y-int"};
+
+    private String currTuning = vals[0];
+
+    private double amplitude = 170;
+    private int yint = 1375;
+
     private Intake intake;
     private Turret turret;
+    private DcMotorEx turretMotor;
+    private boolean lastZeroConfirm;
+    private boolean coordinateAimEnabled;
+    private boolean manualTurret;
     private LimelightVision vision;
     private Servo led;
 
@@ -71,6 +86,8 @@ public class MainTeleOp extends OpMode {
 
     private final ElapsedTime yawTimer = new ElapsedTime();
     private boolean haveLastHeading = false;
+
+    double[] target = {57.4, 82.3};
 
     //teleop swithcing sides variables
     private static final double RED_FORWARD_DEG  = 180;
@@ -115,6 +132,11 @@ public class MainTeleOp extends OpMode {
         transfer = new Transfer(hardwareMap);
         intake      = new Intake(hardwareMap);
         turret      = new Turret(hardwareMap);
+        turretMotor = hardwareMap.get(DcMotorEx.class, "TurretRot");
+        coordinateAimEnabled = OpModeStorage.turretForwardZeroConfirmed;
+        // Auto handoff supplies the forward-zero count, so begin tracking immediately.
+        // Without a valid handoff, remain manual until the operator confirms zero.
+        manualTurret = !coordinateAimEnabled;
 
         //setting up follower from autos
         follower.setPose(OpModeStorage.autonomousEndPose);   // start where Auto ended
@@ -209,7 +231,30 @@ public class MainTeleOp extends OpMode {
 // REQUIRED: calculate flywheel power and update the transfer every loop.
         //launcher.update(follower.pose().x(), follower.pose().y());
         transfer.update();
-        launcher.update();
+        launcher.update(follower.pose().x(), follower.pose().y(), amplitude, yint);
+
+        if (gamepad1.dpad_up) {
+            currTuning = vals[0];
+        }
+        if (gamepad1.dpad_down) {
+            currTuning = vals[1];
+        }
+        if (gamepad1.dpad_right) {
+            if (currTuning.equals("Amplitude")) {
+                amplitude += 0.1;
+            }
+            else {
+                yint++;
+            }
+        }
+        if (gamepad1.dpad_left) {
+            if (currTuning.equals("Amplitude")) {
+                amplitude -= 0.1;
+            }
+            else {
+                yint--;
+            }
+        }
 
 // Intake follows the launcher's updated firing/ejecting state.
 // Stop it if the launcher reports a fault.
@@ -230,36 +275,72 @@ public class MainTeleOp extends OpMode {
             intake.holdBalls();
         }
 
-        //turret auto
+        // Gamepad 1 A toggles manual turret control and coordinate auto-aim.
         if (gamepad1.aWasPressed()) {
-            turret.toggleTurretAuto();
+            manualTurret = !manualTurret;
+            turret.stopRotation();
             turret.mainPD.reset();
         }
+
+        // Gamepad 2 START confirms the physical forward reference while stationary.
+        boolean zeroConfirm = gamepad2.start;
+        if (zeroConfirm && !lastZeroConfirm) {
+            double speed = turret.getTurretVelocityDegPerSec();
+            if (Double.isFinite(speed) && Math.abs(speed) < 2.0) {
+                OpModeStorage.turretForwardZeroTicks = turretMotor.getCurrentPosition();
+                OpModeStorage.turretForwardZeroConfirmed = true;
+                coordinateAimEnabled = true;
+                telemetry.addLine("Turret forward zero captured; coordinate aim enabled");
+            } else {
+                telemetry.addLine("Turret zero rejected: stop turret and retry");
+            }
+        }
+        lastZeroConfirm = zeroConfirm;
 
         if (gamepad1.bWasPressed()) {
             launcher.stopFire();
         }
 
         if (gamepad1.xWasPressed()) {
-
+            if (target[0] == 57.4) {
+                target[0] = 58;
+                target[1] = 56.7;
+            }
+            else {
+                target[0] = 57.4;
+                target[1] = 82.3;
+            }
         }
 
-        //turret manual/auto logic
-        if (turret.isTurretAuto()) {
-            isManual = false;
-            turret.mainPD.calculateHybrid(kP, kD, Turret.ROT_KS,
-                    Turret.ROT_MAX_POWER, Turret.ROT_TOLERANCE_DEG,
-                    vision.getBestAimingTarget(), vision.getAimingTargetCount(),
-                    robotYawRateDegPerSec, follower.pose().heading(), -gamepad1.right_stick_x, telemetry);
-        } else{
-            isManual = true;
-            turret.manualControl(
-                    gamepad2.dpad_left,
-                    gamepad2.dpad_right
-            );
+        // Coordinate target baseline; Limelight refinement can be added after validation.
+        CoordinateAim.Result coordinateAim = CoordinateAim.calculate(
+                follower.pose().x(), follower.pose().y(), follower.pose().heading(),
+                target[0], target[1]);
+        double turretAngleDeg = (turretMotor.getCurrentPosition()
+                - (double) OpModeStorage.turretForwardZeroTicks)
+                / CoordinateTurretControl.TICKS_PER_DEGREE;
+        CoordinateTurretControl.Result coordinateControl = CoordinateTurretControl.calculate(
+                coordinateAim.relativeBearingDeg, turretAngleDeg, 1, 0.04);
+        double coordinatePower = CoordinateTurretControl.motorPower(
+                turretAngleDeg, coordinateControl.power, -1);
+        if (manualTurret) {
+            turret.manualControl(gamepad2.dpad_left, gamepad2.dpad_right);
+        } else if (coordinateAimEnabled && coordinateAim.valid && coordinateControl.reachable) {
+            turret.setRotationPower(coordinatePower);
+        } else {
+            turret.stopRotation();
         }
+        telemetry.addData("Turret forward zero confirmed", OpModeStorage.turretForwardZeroConfirmed);
+        telemetry.addData("Turret control mode", manualTurret ? "MANUAL" : "COORDINATE AUTO");
+        telemetry.addData("Turret zero ticks", OpModeStorage.turretForwardZeroTicks);
+        telemetry.addData("Coordinate relative bearing", coordinateAim.relativeBearingDeg);
+        telemetry.addData("Coordinate turret error", coordinateControl.errorDeg);
 
         telemetry.addData("Yaw Rate", robotYawRateDegPerSec);
+
+        telemetry.addData("Current", currTuning);
+        telemetry.addData("Amplitude", amplitude);
+        telemetry.addData("Y-Int", yint);
 
         /*
         //adjust ramp
@@ -287,11 +368,11 @@ public class MainTeleOp extends OpMode {
         }*/
 
         //led updates
-        if(launcher.isFlywheelsOn() && turret.isTurretAuto() /*&& vision.hasAimingTarget()*/)
+        if(launcher.isFlywheelsOn() && !manualTurret && coordinateAimEnabled /*&& vision.hasAimingTarget()*/)
             led.setPosition(0.611); //blue
-        else if(launcher.isFlywheelsOn() && !turret.isTurretAuto())
+        else if(launcher.isFlywheelsOn() && (manualTurret || !coordinateAimEnabled))
             led.setPosition(0.333); //orange
-        else if (!launcher.isFlywheelsOn() && turret.isTurretAuto())
+        else if (!launcher.isFlywheelsOn() && !manualTurret && coordinateAimEnabled)
             led.setPosition(1); //white?
         else
             led.setPosition(0.500); //green
@@ -319,7 +400,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Launcher On", launcher.isFlywheelsOn());
         telemetry.addData("Firing", launcher.isFiring());
         telemetry.addData("Ramp Down", !intake.isRampUp());
-        telemetry.addData("TurretAuto", turret.isTurretAuto());
+        telemetry.addData("TurretAuto", manualTurret ? "Manual" : (coordinateAimEnabled ? "Coordinate aim" : "Zero required"));
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("r trig thresh", gamepad2.right_trigger);
