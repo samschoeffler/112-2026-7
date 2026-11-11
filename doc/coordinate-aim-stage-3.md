@@ -3,7 +3,7 @@
 Select **Coordinate Aim - Stage 3** under Tests. Stage 2 and competition code are
 unchanged. This test uses the confirmed **kS = 0.04**, measured **3.983333 ticks per
 degree**, +/-170-degree software travel bounds, 0.4 total turret power cap, start
-pose **(56, 8, 90 degrees)**, and target **(57.4, 82.3)**. Pivot offset remains zero.
+pose **(56, 8, 90 degrees)**, and target **(57.4, 82.3)**. Pivot offsets are X = -2.25 inches, Y = 0; see [offset setup](coordinate-aim-offsets.md).
 
 ## Calibration (GAMEPAD 2)
 

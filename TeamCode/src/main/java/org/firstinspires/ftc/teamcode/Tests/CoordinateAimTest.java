@@ -65,13 +65,15 @@ public class CoordinateAimTest extends OpMode {
         telemetry.addData("Target X / Y (in)", "%.2f / %.2f", TARGET_X, TARGET_Y);
         telemetry.addData("Distance (in)", "%.2f", aim.distanceInches);
         telemetry.addData("Geometry", aim.valid ? "VALID" : "UNDEFINED: invalid pose or at target");
+        telemetry.addData("Turret offset in (+X forward, +Y left)", "%.2f / %.2f",
+                CoordinateAim.TURRET_OFFSET_X_INCHES, CoordinateAim.TURRET_OFFSET_Y_INCHES);
         telemetry.addData("Field bearing (deg, +X=0)", "%.2f", aim.fieldBearingDeg);
         telemetry.addData("Relative aim (deg, +LEFT / -RIGHT)", "%.2f", aim.relativeBearingDeg);
         // Existing Turret heading compensation implies encoder-positive is clockwise
         // when HEADING_COMPENSATION_SIGN is +1. Physical verification is still required.
         telemetry.addData("Provisional encoder target (deg)", "%.2f",
                 -Turret.HEADING_COMPENSATION_SIGN * aim.relativeBearingDeg);
-        telemetry.addLine("Zero pivot offset; encoder sign provisional; limits not evaluated");
+        telemetry.addLine("Encoder sign provisional; limits not evaluated");
         telemetry.update();
     }
 

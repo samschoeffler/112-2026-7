@@ -4,8 +4,8 @@ package org.firstinspires.ftc.teamcode.methods;
 public final class CoordinateTurretControl {
     /** Stage 2 only: measured +358 ticks left and -359 right over physical 90-degree turns. */
     public static final double TICKS_PER_DEGREE = (358.0 + 359.0) / (2.0 * 90.0);
-    public static final double MIN_DEG = -265;
-    public static final double MAX_DEG = 185;
+    public static final double MIN_DEG = -180;
+    public static final double MAX_DEG = 180;
     public static final double MAX_POWER = 0.4;
     public static final double KP = 0.010;
     public static final double TOLERANCE_DEG = 1.5;

@@ -53,17 +53,13 @@ public class AutoCommands {
     // takes the OpMode's follower (the one that gets update()d every loop)
     public Command flowerCollectClose(Follower follower) {
         return sequential(
-                rampTogg,
                 intakeTogg,
-                fWheelTogg,
-                shooterTogg,
-                Commands.waitMs(200),
+                rampTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
-                shooterTogg,
-                intakeTogg,
-                fWheelTogg
+                holdBalls,
+                intakeTogg
         );
     }
 
@@ -81,10 +77,14 @@ public class AutoCommands {
     public Command flowerCollectFarShoot(Follower follower) {
         return sequential(
                 intakeTogg,
-                shooterTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
+                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
+                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
-                Commands.lazy(() -> Commands.waitMs(2500)),
+                //Commands.lazy(() -> Commands.waitMs(6000)),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
                 holdBalls,
                 intakeTogg

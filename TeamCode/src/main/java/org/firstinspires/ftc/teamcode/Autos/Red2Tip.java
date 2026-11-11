@@ -85,8 +85,9 @@ public class Red2Tip extends OpMode {
                 autoCommand.flowerCollectClose(follower),
                 follow(
                         follower, AutoPaths.Red2Tip.path3()
-                                .with(Constants.foresightConfig.brakeAggression.at(0.5))
+                                .with(Constants.foresightConfig.brakeAggression.at(0.5)).with(Constants.foresightConfig.maxPathSpeed.at(0.2))
                 ),
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.startVis,
                 Commands.waitMs(3000),
@@ -98,10 +99,13 @@ public class Red2Tip extends OpMode {
                         follower, AutoPaths.Red2Tip.path5()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
+                //Commands.waitMs(2000),
+                autoCommand.rampTogg,
+                follow(follower, AutoPaths.Red2Tip.path6()),
+                Commands.waitMs(1000),
                 autoCommand.shooterTogg,
-                autoCommand.fWheelTogg,
-                autoCommand.rampTogg
-                );
+                Commands.waitMs(5000),
+                follow(follower, AutoPaths.Red2Tip.path7()));
     }
 
     @Override
@@ -193,7 +197,7 @@ public class Red2Tip extends OpMode {
 
         CoordinateAim.Result aim = CoordinateAim.calculate(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading(),
-                57.4, 82.3);
+                62.4, 82.3);
         double turretAngleDeg = (turretMotor.getCurrentPosition() - (double) turretZeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
         CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(

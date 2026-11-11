@@ -199,7 +199,7 @@ public class CoordinateAimStage2Test extends OpMode {
         CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(
                 aim.relativeBearingDeg, angle(), encoderSignForLeft, kS);
         telemetry.addData("Status", status);
-        telemetry.addLine("Start pose (56,8,90deg); target (57.4,82.3); zero pivot offset");
+        telemetry.addLine("Start pose (56,8,90deg); target (57.4,82.3)");
         telemetry.addLine("GP2 Y: confirm physically FORWARD zero (stationary)");
         telemetry.addLine("GP2 D-pad UP: +power jog (max 1s / +/-10deg from zero)");
         telemetry.addLine("After jog: GP2 X = moved RIGHT; GP2 B = moved LEFT");
@@ -212,6 +212,8 @@ public class CoordinateAimStage2Test extends OpMode {
         telemetry.addData("Encoder direction for +motor power", positivePowerEncoderSign);
         telemetry.addData("Robot X/Y/heading", "%.2f / %.2f / %.2f", follower.pose().x(),
                 follower.pose().y(), Math.toDegrees(follower.pose().heading()));
+        telemetry.addData("Turret offset in (+X forward, +Y left)", "%.2f / %.2f",
+                CoordinateAim.TURRET_OFFSET_X_INCHES, CoordinateAim.TURRET_OFFSET_Y_INCHES);
         telemetry.addData("Field / relative bearing deg", "%.2f / %.2f", aim.fieldBearingDeg, aim.relativeBearingDeg);
         telemetry.addData("Turret angle deg (local zero)", zeroed ? angle() : Double.NaN);
         telemetry.addData("Measured encoder ticks/degree", ticksPerDegree());

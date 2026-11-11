@@ -9,6 +9,15 @@ public final class CoordinateTurretControlRegression {
                 "Expected " + expected + ", got " + actual);
     }
     public static void main(String[] args) {
+        near(CoordinateTurretControl.MIN_DEG, -180);
+        near(CoordinateTurretControl.MAX_DEG, 180);
+        for (int sign : new int[]{-1, 1}) {
+            CoordinateTurretControl.Result endpoint = CoordinateTurretControl.calculate(sign * 180, 0, 1);
+            check(endpoint.reachable, "Both +/-180 endpoints must be reachable");
+            near(endpoint.targetDeg, sign * 180);
+            near(CoordinateTurretControl.limitPower(sign * 179, sign * 0.1), sign * 0.1);
+            near(CoordinateTurretControl.limitPower(sign * 185, sign * 0.1), 0);
+        }
         near(358.5 / CoordinateTurretControl.TICKS_PER_DEGREE, 90);
         near(-358.5 / CoordinateTurretControl.TICKS_PER_DEGREE, -90);
         CoordinateTurretControl.Result rightPositive = CoordinateTurretControl.calculate(30, 0, -1);
@@ -18,14 +27,14 @@ public final class CoordinateTurretControlRegression {
         near(CoordinateTurretControl.calculate(0, 1, -1).power, 0);
         near(CoordinateTurretControl.calculate(0, 5, -1).power, -0.05);
         CoordinateTurretControl.Result rear = CoordinateTurretControl.calculate(179, 160, 1);
-        check(!rear.reachable, "Rear target must be unreachable");
-        near(rear.power, 0);
+        check(rear.reachable, "179 degrees must be reachable within +/-180 limits");
+        near(rear.power, 0.19);
         near(CoordinateTurretControl.calculate(-170, 170, 1).errorDeg, -340);
         near(CoordinateTurretControl.calculate(-170, 170, 1).power, -0.4);
-        near(CoordinateTurretControl.limitPower(170, 0.1), 0);
-        near(CoordinateTurretControl.limitPower(-170, -0.1), 0);
-        near(CoordinateTurretControl.limitPower(175, -0.1), -0.1);
-        near(CoordinateTurretControl.limitPower(-175, 0.1), 0.1);
+        near(CoordinateTurretControl.limitPower(180, 0.1), 0);
+        near(CoordinateTurretControl.limitPower(-180, -0.1), 0);
+        near(CoordinateTurretControl.limitPower(185, -0.1), -0.1);
+        near(CoordinateTurretControl.limitPower(-185, 0.1), 0.1);
         near(CoordinateTurretControl.limitPower(0, 1), 0.4);
         near(CoordinateTurretControl.limitPower(Double.NaN, 0.1), 0);
         near(CoordinateTurretControl.calculate(10, 0, 0).power, 0);
@@ -33,9 +42,9 @@ public final class CoordinateTurretControlRegression {
         near(CoordinateTurretControl.calculate(10, Double.NaN, 1).power, 0);
         near(CoordinateTurretControl.motorPower(0, 0.1, -1), -0.1);
         near(CoordinateTurretControl.motorPower(0, -0.1, -1), 0.1);
-        near(CoordinateTurretControl.motorPower(170, 0.1, -1), 0);
-        near(CoordinateTurretControl.motorPower(-170, -0.1, -1), 0);
-        near(CoordinateTurretControl.motorPower(170, -0.1, -1), 0.1);
+        near(CoordinateTurretControl.motorPower(180, 0.1, -1), 0);
+        near(CoordinateTurretControl.motorPower(-180, -0.1, -1), 0);
+        near(CoordinateTurretControl.motorPower(180, -0.1, -1), 0.1);
         near(CoordinateTurretControl.motorPower(0, 0.1, 0), 0);
         CoordinateTurretControl.Result stalledCase = CoordinateTurretControl.calculate(-92, -88.4785, 1, 0.04);
         near(stalledCase.power, -0.075215);
@@ -44,7 +53,7 @@ public final class CoordinateTurretControlRegression {
         near(CoordinateTurretControl.calculate(0, 1.5, 1, 0.04).power, 0);
         near(CoordinateTurretControl.calculate(0, 0, 1, 0.04).power, 0);
         near(CoordinateTurretControl.calculate(170, 0, 1, 0.20).power, 0.4);
-        near(CoordinateTurretControl.calculate(179, 0, 1, 0.04).power, 0);
+        near(CoordinateTurretControl.calculate(179, 0, 1, 0.04).power, 0.4);
         near(CoordinateTurretControl.calculate(5, 0, 1, Double.NaN).power, 0);
         near(CoordinateTurretControl.calculate(5, 0, 1, -0.04).power, 0);
         for (int response : new int[]{-1, 1}) {

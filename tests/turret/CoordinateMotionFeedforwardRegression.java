@@ -50,8 +50,12 @@ public final class CoordinateMotionFeedforwardRegression {
         near(CoordinateMotionFeedforward.calculate(aligned, 0, 1, 0.001, 0.04).power, 0);
         near(CoordinateMotionFeedforward.calculate(aligned, 0, 500, 0.01, 0.04).feedforwardPower, 0.15);
         near(CoordinateMotionFeedforward.calculate(aligned, 0, Double.NaN, 0.001, 0.04).power, 0);
-        CoordinateTurretControl.Result atLimit = CoordinateTurretControl.calculate(170, 170, 1, 0.04);
-        near(CoordinateMotionFeedforward.calculate(atLimit, 170, 20, 0.001, 0.04).power, 0);
+        CoordinateTurretControl.Result atLimit = CoordinateTurretControl.calculate(180, 180, 1, 0.04);
+        near(CoordinateMotionFeedforward.calculate(atLimit, 180, 20, 0.001, 0.04).power, 0);
+        CoordinateTurretControl.Result atLowerLimit = CoordinateTurretControl.calculate(-180, -180, 1, 0.04);
+        near(CoordinateMotionFeedforward.calculate(atLowerLimit, -180, -20, 0.001, 0.04).power, 0);
+        near(CoordinateMotionFeedforward.calculate(atLimit, 180, -20, 0.001, 0.04).power, -0.06);
+        near(CoordinateMotionFeedforward.calculate(atLowerLimit, -180, 20, 0.001, 0.04).power, 0.06);
         check(movingError(0.001) < movingError(0) * 0.75, "Matched feedforward should reduce simulated tracking lag");
         System.out.println("Motion FF timing, wrap, stop, direction, limits, baseline and tracking checks passed");
     }

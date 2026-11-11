@@ -17,7 +17,7 @@ Existing autonomous and turret control code is unchanged.
 4. Do not reinitialize at a different location: INIT assumes the starting pose.
    Return to the start before restarting the test.
 
-The target is **(57.4, 82.3)**. Turret pivot offset is assumed zero.
+The target is **(57.4, 82.3)**. Turret pivot offsets are X = -2.25 inches, Y = 0; see [offset setup](coordinate-aim-offsets.md).
 `Relative aim` is positive LEFT/counterclockwise, negative RIGHT/clockwise,
 with zero straight ahead. Field bearings are measured from +X.
 

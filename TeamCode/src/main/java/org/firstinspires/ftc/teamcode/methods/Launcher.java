@@ -139,11 +139,7 @@ public class Launcher {
         double d2 = Math.hypot(robotX - 58, robotY - 90);
         distanceFromHive = Math.min(d1, d2);
 
-        //SHOOTING_VELOCITY = 8 * distanceFromHive + 1200;
-        //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 1.3);
         SHOOTING_VELOCITY = -70.3 * Math.cos(1.0 / 22 * distanceFromHive + 11.0 / 21) + 1407;
-        //SHOOTING_VELOCITY = Math.pow(distanceFromHive, 0.333) * 120 + 1050;
-
 
         //updating the speed
         if (flywheelsOn)

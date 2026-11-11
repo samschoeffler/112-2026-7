@@ -1,7 +1,7 @@
 # Coordinate aiming: Stage 2
 
 Select **Coordinate Aim - Stage 2** in Tests. Stage 1 and competition code remain
-unchanged. Target is (57.4, 82.3) inches, with zero pivot offset. This uses position
+unchanged. Target is (57.4, 82.3) inches, with configurable [pivot offsets](coordinate-aim-offsets.md) (X = -2.25 inches, Y = 0). This uses position
 feedback with optional static-friction compensation: no Limelight correction or motion feedforward yet.
 
 ## Setup and sign verification

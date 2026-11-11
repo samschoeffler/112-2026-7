@@ -25,7 +25,7 @@ public final class AutoPaths {
         public static final Pose shooterControl2 =
                 poseFactory.of(34.5, 50, 0);
         public static final Pose flowerWaitClose =
-                poseFactory.of(23, 46.5, 180);
+                poseFactory.of(33, 46.5, 180);
 
         public static final Pose flowerWaitFar =
                 poseFactory.of(47, 110, 60);
@@ -34,7 +34,10 @@ public final class AutoPaths {
                 poseFactory.of(11, 48.5, 180);
 
         public static final Pose flowerFar =
-                poseFactory.of(47, 127.75, 90);
+                poseFactory.of(47, 125, 90);
+
+        public static final Pose jiggle =
+                poseFactory.of(47, 128, 90);
 
         // ---------- PATHS ----------
 
@@ -59,6 +62,16 @@ public final class AutoPaths {
         public static Path flowerFarTo() {
             return Paths.line(flowerWaitFar, flowerFar)
                     .linear(flowerWaitFar, flowerFar);
+        }
+
+        public static Path flowerJiggle() {
+            return Paths.line(flowerFar, jiggle)
+                    .linear(flowerFar, jiggle);
+        }
+
+        public static Path jiggleFlower() {
+            return Paths.line(jiggle, flowerFar)
+                    .linear(jiggle, flowerFar);
         }
 
         public static Path flowerFarFro() {
@@ -87,7 +100,7 @@ public final class AutoPaths {
                 poseFactory.of(34.5, 50, 0);
 
         public static final Pose point3 =
-                poseFactory.of(54, 125, 270);
+                poseFactory.of(60, 130, 270);
 
         public static final Pose point3Control1 =
                 poseFactory.of(47, 44, 0);
@@ -102,7 +115,13 @@ public final class AutoPaths {
                 poseFactory.of(45, 113, 0);
 
         public static final Pose point5 =
-                poseFactory.of(15, 110, 270);
+                poseFactory.of(26, 126, 90);
+
+        public static final Pose point6 =
+                poseFactory.of(26, 130, 90);
+
+        public static final Pose point7 =
+                poseFactory.of(15, 113, 90);
 
         // ---------- PATHS ----------
 
@@ -143,7 +162,15 @@ public final class AutoPaths {
                     .linear(GeneralPaths.flowerWaitFar, point5);
         }
 
+        public static Path path6() {
+            return Paths.line(point5, point6)
+                    .linear(point5, point6);
+        }
 
+        public static Path path7() {
+            return Paths.line(point6, point7)
+                    .linear(point6, point7);
+        }
     }
 
     // RED2CORNER
@@ -313,13 +340,13 @@ public final class AutoPaths {
                 poseFactory.of(57, 131, 270);
 
         public static final Pose point2 =
-                poseFactory.of(54, 120, 270);
+                poseFactory.of(54, 125, 270);
 
         public static final Pose point3Control1 =
                 poseFactory.of(45, 113, 0);
 
         public static final Pose point4 =
-                poseFactory.of(15, 117, 270);
+                poseFactory.of(15, 110, 270);
 
         // ---------- PATHS ----------
 
@@ -369,7 +396,7 @@ public final class AutoPaths {
                 poseFactory.of(34.5, 50, 0);
 
         public static final Pose point3 =
-                poseFactory.of(54, 120, 270);
+                poseFactory.of(54, 125, 270);
 
         public static final Pose point3Control1 =
                 poseFactory.of(47, 44, 0);
@@ -384,7 +411,7 @@ public final class AutoPaths {
                 poseFactory.of(45, 113, 0);
 
         public static final Pose point5 =
-                poseFactory.of(15, 117, 270);
+                poseFactory.of(15, 110, 270);
 
         // ---------- PATHS ----------
 
@@ -588,13 +615,13 @@ public final class AutoPaths {
                 poseFactory.of(57, 131, 270);
 
         public static final Pose point2 =
-                poseFactory.of(54, 120, 270);
+                poseFactory.of(54, 125, 270);
 
         public static final Pose point3Control1 =
                 poseFactory.of(45, 113, 0);
 
         public static final Pose point4 =
-                poseFactory.of(15, 117, 270);
+                poseFactory.of(15, 110, 270);
 
         // ---------- PATHS ----------
 
