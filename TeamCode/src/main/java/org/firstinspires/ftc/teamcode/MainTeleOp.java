@@ -377,14 +377,14 @@ public class MainTeleOp extends OpMode {
         else
             led.setPosition(0.500); //green*/
 
-        if(target[1] == 56.7 allegiance.equals(BLUE)) //blue
+        if(target[1] == 56.7 && allegiance.equals("BLUE")) //blue
             led.setPosition(0.611); //Blue
-        else if(target[0] == 57.4 && allegiance.equals(BLUE))
+        else if(target[0] == 57.4 && allegiance.equals("BLUE"))
             led.setPosition(0.555); //Cyan
-        else if(target[1] == 56.7 && allegiance.equals(RED))
+        else if(target[1] == 56.7 && allegiance.equals("RED"))
             led.setPosition(0.277); //Red
-        else if (target[0] == 57.4 && allegiance.equals(RED))
-            led.setPosition(0.772) //Magenta
+        else if (target[0] == 57.4 && allegiance.equals("RED"))
+            led.setPosition(0.772); //Magenta
 
 
         //rumble update
