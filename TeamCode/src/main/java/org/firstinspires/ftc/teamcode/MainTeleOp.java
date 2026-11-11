@@ -414,7 +414,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Ramp Pos", intake.rampthingy());
         telemetry.addData("Turret Rot", turret.getRotationDeg());
         telemetry.addData("r trig thresh", gamepad2.right_trigger);
-        telemetry.addLine("I <3 Femboys");
+        telemetry.addLine("I <3 The Skin");
         telemetry.addData("Current Velo", launcher.getFlywheelVelo());
         telemetry.addData("Target Velo", launcher.getTargetVelocity());
         telemetry.addData("Error", launcher.getError());
