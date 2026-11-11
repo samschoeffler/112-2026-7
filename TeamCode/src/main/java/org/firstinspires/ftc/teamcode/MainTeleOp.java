@@ -367,15 +367,25 @@ public class MainTeleOp extends OpMode {
             }
         }*/
 
-        //led updates
-        if(launcher.isFlywheelsOn() && !manualTurret && coordinateAimEnabled /*&& vision.hasAimingTarget()*/)
+        /*//led updates
+        if(launcher.isFlywheelsOn() && !manualTurret && coordinateAimEnabled *//*&& vision.hasAimingTarget()*//*)
             led.setPosition(0.611); //blue
         else if(launcher.isFlywheelsOn() && (manualTurret || !coordinateAimEnabled))
             led.setPosition(0.333); //orange
         else if (!launcher.isFlywheelsOn() && !manualTurret && coordinateAimEnabled)
             led.setPosition(1); //white?
         else
-            led.setPosition(0.500); //green
+            led.setPosition(0.500); //green*/
+
+        if(target[1] == 56.7 allegiance.equals(BLUE)) //blue
+            led.setPosition(0.611); //Blue
+        else if(target[0] == 57.4 && allegiance.equals(BLUE))
+            led.setPosition(0.555); //Cyan
+        else if(target[1] == 56.7 && allegiance.equals(RED))
+            led.setPosition(0.277); //Red
+        else if (target[0] == 57.4 && allegiance.equals(RED))
+            led.setPosition(0.772) //Magenta
+
 
         //rumble update
         if(launcher.flywheelAtSpeed()) {
