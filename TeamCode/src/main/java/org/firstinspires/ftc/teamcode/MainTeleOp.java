@@ -211,19 +211,19 @@ public class MainTeleOp extends OpMode {
             launcher.toggleOn();
         }
 
-// Request shooting while the right trigger is held.
-        if (gamepad2.aWasPressed()) {
-            intake.toggle();
+
+        if (gamepad2.left_trigger > 0.1) {
+            intake.intake(1440);
             //transfer.toggleOn();
             //launcher.actFire();
         }
 
-        if (gamepad2.b) {
-            transfer.setTargetVelocity(1440);
-        }
+      /*  if (gamepad2.right_trigger > 0.01) {*/
+            transfer.setTargetVelocity(1440 * gamepad2.right_trigger);
+/*        }
         else {
             transfer.setTargetVelocity(0);
-        }
+        }*/
 
 // Request reverse transfer operation.
         //launcher.eject(gamepad2.right_bumper);
@@ -267,11 +267,11 @@ public class MainTeleOp extends OpMode {
         }*/
 
         //ramp
-        if (gamepad2.leftTriggerWasPressed()) {
+        if (gamepad2.aWasPressed()) {
             intake.toggleRamp();
         }
 
-        if(gamepad2.leftBumperWasPressed()) {
+        if(gamepad2.xWasPressed()) {
             intake.holdBalls();
         }
 
@@ -378,13 +378,13 @@ public class MainTeleOp extends OpMode {
             led.setPosition(0.500); //green*/
 
         if(target[1] == 56.7 && allegiance.equals("BLUE")) //blue
-            led.setPosition(0.611); //Blue
+            led.setPosition(0.60); //Blue
         else if(target[0] == 57.4 && allegiance.equals("BLUE"))
-            led.setPosition(0.555); //Cyan
+            led.setPosition(0.50); //Cyan
         else if(target[1] == 56.7 && allegiance.equals("RED"))
-            led.setPosition(0.277); //Red
+            led.setPosition(.70); //Red
         else if (target[0] == 57.4 && allegiance.equals("RED"))
-            led.setPosition(0.772); //Magenta
+            led.setPosition(0.50); //Magenta
 
 
         //rumble update
