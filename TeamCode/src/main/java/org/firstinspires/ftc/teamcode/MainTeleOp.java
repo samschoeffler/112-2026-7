@@ -6,6 +6,7 @@ import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
 
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -42,7 +43,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *   B (hold)       -> outtake
  *   Right Trigger  -> shoot (hold to keep firing; intake runs while firing)
  *   Right Bumper   -> eject balls from transfer (intake reverses while ejecting)
- *   Left Trigger   -> toggle ramp
+ *   Left Trigger   -> intake
  *   Left Bumper    -> hold balls
  *   D-pad          -> turret control while TurretAuto is off
  *                       left/right = rotate, up/down = pitch
@@ -206,14 +207,28 @@ public class MainTeleOp extends OpMode {
 
         vision.update();
 
+        //rezeroing robot positoon on GP1
+        if(gamepad1.aWasPressed() && gamepad1.dpad_up) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(0));
+            follower.setPose(resetPose);
+        } else if(gamepad1.aWasPressed() && gamepad1.dpad_right) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(90));
+            follower.setPose(resetPose);
+        } else if(gamepad1.aWasPressed() && gamepad1.dpad_down) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(180));
+            follower.setPose(resetPose);
+        } else if(gamepad1.aWasPressed() && gamepad1.dpad_left) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(270));
+            follower.setPose(resetPose);
+        }
+
         // Toggle flywheel speed control.
         if (gamepad2.yWasPressed()) {
             launcher.toggleOn();
         }
 
-
         if (gamepad2.left_trigger > 0.1) {
-            intake.intake(1440);
+            intake.intake();
             //transfer.toggleOn();
             //launcher.actFire();
         }
@@ -232,29 +247,7 @@ public class MainTeleOp extends OpMode {
         //launcher.update(follower.pose().x(), follower.pose().y());
         transfer.update();
         launcher.update(follower.pose().x(), follower.pose().y(), amplitude, yint);
-
-        if (gamepad1.dpad_up) {
-            currTuning = vals[0];
-        }
-        if (gamepad1.dpad_down) {
-            currTuning = vals[1];
-        }
-        if (gamepad1.dpad_right) {
-            if (currTuning.equals("Amplitude")) {
-                amplitude += 0.1;
-            }
-            else {
-                yint++;
-            }
-        }
-        if (gamepad1.dpad_left) {
-            if (currTuning.equals("Amplitude")) {
-                amplitude -= 0.1;
-            }
-            else {
-                yint--;
-            }
-        }
+        
 
 // Intake follows the launcher's updated firing/ejecting state.
 // Stop it if the launcher reports a fault.
