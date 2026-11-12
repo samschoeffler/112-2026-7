@@ -29,7 +29,7 @@ with tempfile.TemporaryDirectory(prefix='flywheel-compile-') as temp:
         jars.extend(str(p) for p in (CACHE / library).glob('*/*/*.jar')
                     if not p.name.endswith(('-sources.jar', '-javadoc.jar')))
     base = ROOT / 'TeamCode/src/main/java/org/firstinspires/ftc/teamcode'
-    files = ['methods/FlywheelVelocityControl.java', 'methods/FlywheelAutoTune.java',
+    files = ['methods/FlywheelVelocityControl.java', 'methods/FlywheelAutoTune.java', 'methods/FlywheelPositionVelocity.java', 'methods/FlywheelIntegralControl.java',
              'methods/Launcher.java', 'Tests/LauncherAutoTuning.java', 'Tests/LauncherTuning.java']
     subprocess.run(['javac', '-cp', os.pathsep.join(jars), '-d', temp,
                     *[str(base / name) for name in files]], check=True)

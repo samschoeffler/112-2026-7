@@ -1,0 +1,80 @@
+package org.firstinspires.ftc.teamcode.methods;
+
+public final class FlywheelIntegralRegression {
+    private static void check(boolean ok, String message) {
+        if (!ok) throw new AssertionError(message);
+    }
+    private static void near(double actual, double expected) {
+        check(Double.isFinite(actual) && Math.abs(actual - expected) < 1e-8,
+                "Expected " + expected + ", got " + actual);
+    }
+    public static void main(String[] args) {
+        FlywheelIntegralControl controller = new FlywheelIntegralControl();
+        for (int i = 0; i < 1000; i++) controller.volts(1400, 1390, .02, 12, 12, 0, 0, .06);
+        near(controller.integralVolts(), 0); // upper rail: no windup
+        for (int i = 0; i < 1000; i++) controller.volts(1400, 1410, .02, 12, 0, 0, 0, .06);
+        near(controller.integralVolts(), 0); // lower rail: no windup
+        near(controller.volts(1400, 1390, .01, 12, 11.95, 0, 0, 1), 12);
+        near(controller.integralVolts(), .05); // clamp newly crossing rail
+        controller.reset();
+        near(controller.volts(1400, 1410, .01, 12, .05, 0, 0, 1), 0);
+        near(controller.integralVolts(), -.05);
+        controller.reset();
+        for (int i = 0; i < 1000; i++) controller.volts(1400, 1410, .02, 12, 7, 0, 0, .06);
+        near(controller.integralVolts(), -.4);
+        controller.volts(1400, 1500, .02, 12, 7, 0, 0, .06);
+        near(controller.integralVolts(), -.4); // outside integration band: freeze
+        controller.volts(1400, 1390, .02, 12, 7, 0, 0, .06);
+        check(controller.integralVolts() > -.4, "Must unwind when error changes sign");
+        near(controller.volts(1400, 1390, .02, 12, 1, .005, .032, 0), 8.32);
+        near(controller.integralVolts(), 0); // Ki=0 restores exact original controller
+        FlywheelIntegralControl slower = new FlywheelIntegralControl();
+        for (int i = 0; i < 100; i++) controller.volts(1400, 1390, .01, 12, 7, 0, 0, .01);
+        for (int i = 0; i < 50; i++) slower.volts(1400, 1390, .02, 12, 7, 0, 0, .01);
+        near(controller.integralVolts(), slower.integralVolts());
+        near(controller.volts(0, 0, .01, 12, 7, 0, 0, .01), 0);
+        near(controller.integralVolts(), 0);
+        near(controller.volts(1400, Double.NaN, .01, 12, 7, 0, 0, .01), 0);
+
+        FlywheelAutoTune tune = new FlywheelAutoTune();
+        // Model needs KS=1, but baseline KS=1.22: approximately +6 ticks/s with P=.032.
+        tune.startIntegralComparison(0, 1.22, .005, .032);
+        FlywheelPositionVelocity fast = new FlywheelPositionVelocity(.06);
+        FlywheelPositionVelocity slow = new FlywheelPositionVelocity(.1);
+        fast.update(0, 0); slow.update(0, 0);
+        double velocity = 0, position = 0;
+        double oldKi = tune.kI();
+        for (int i = 1; i <= 40000 && tune.active(); i++) {
+            double dt = .01;
+            double equilibrium = Math.max(0, (tune.power() * 12 - 1) / .005);
+            velocity += (equilibrium - velocity) * (1 - Math.exp(-dt / .25));
+            position += velocity * dt;
+            tune.update(i * dt, velocity + .7 * Math.sin(i * .6), 12,
+                    fast.update(i * dt, (int) Math.round(position)),
+                    slow.update(i * dt, (int) Math.round(position)));
+            check(Math.abs(tune.integralVolts()) <= .40000001, "Integral must remain bounded");
+            if (tune.kI() != oldKi) {
+                // Candidate changes reset I; one dt of integration at the boundary is allowed.
+                check(Math.abs(tune.integralVolts()) <= .031, "Candidate must not inherit previous trim");
+                oldKi = tune.kI();
+            }
+        }
+        check(tune.stage() == FlywheelAutoTune.Stage.COMPLETE && tune.passed(), tune.report());
+        check(tune.kI() > 0, "Known persistent bias should select nonzero integral correction");
+        near(tune.kS(), 1.22); near(tune.kV(), .005); near(tune.kP(), .032);
+        for (double ki : new double[]{0, .01, .03, .06}) {
+            long windows = tune.trials().stream().filter(t -> (t.stage == FlywheelAutoTune.Stage.SEARCH
+                    || t.stage == FlywheelAutoTune.Stage.REPEAT) && t.kI == ki).count();
+            check(windows == 6, "Each Ki must receive the same six comparison windows");
+        }
+        check(tune.trials().stream().filter(t -> t.stage == FlywheelAutoTune.Stage.VALIDATE)
+                .allMatch(t -> Math.abs(t.meanError) < 1 && t.integralEndVolts < -.15),
+                "Integral should remove the measured bias with a negative voltage trim");
+        near(tune.integralVolts(), 0); near(tune.power(), 0);
+        tune.startIntegralComparison(0, 1, Double.NaN, .032);
+        check(tune.stage() == FlywheelAutoTune.Stage.ABORTED, "Reject invalid baseline");
+        tune.start(0);
+        near(tune.kI(), 0); near(tune.integralVolts(), 0);
+        System.out.println("PI anti-windup, bounds, resets, time scaling, repeated tuning and bias correction checks passed");
+    }
+}

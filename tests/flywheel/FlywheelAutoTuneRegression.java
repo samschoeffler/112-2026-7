@@ -16,7 +16,10 @@ public final class FlywheelAutoTuneRegression {
     private static FlywheelAutoTune simulate(boolean validationSpike, double battery, double extraFriction) {
         FlywheelAutoTune tune = new FlywheelAutoTune();
         tune.start(0);
-        double velocity = 0;
+        double velocity = 0, position = 0;
+        FlywheelPositionVelocity estimate60 = new FlywheelPositionVelocity(.060);
+        FlywheelPositionVelocity estimate100 = new FlywheelPositionVelocity(.100);
+        estimate60.update(0, 0); estimate100.update(0, 0);
         boolean injected = false;
         int validationTicks = 0;
         for (int i = 1; i < 25000 && tune.active(); i++) {
@@ -32,10 +35,17 @@ public final class FlywheelAutoTuneRegression {
                     injected = true;
                 }
             }
-            tune.update(i * dt, measured, battery);
+            position += velocity * dt;
+            tune.update(i * dt, measured, battery,
+                    estimate60.update(i * dt, (int) Math.round(position)),
+                    estimate100.update(i * dt, (int) Math.round(position)));
             check(tune.power() >= 0 && tune.power() <= 1, "Power must stay bounded");
         }
         return tune;
+    }
+
+    private static void update(FlywheelAutoTune tune, double now, double raw, double battery) {
+        tune.update(now, raw, battery, raw, raw);
     }
 
     public static void main(String[] args) {
@@ -52,9 +62,16 @@ public final class FlywheelAutoTuneRegression {
         near(good.kV(), .005, .00002);
         check(good.trials().stream().filter(t -> t.stage == FlywheelAutoTune.Stage.VALIDATE).count() == 6,
                 "All six held-out validation windows must run");
-        check(good.trials().stream().anyMatch(t -> t.stage == FlywheelAutoTune.Stage.REFINE),
-                "Must refine before validation");
+        check(good.trials().stream().anyMatch(t -> t.stage == FlywheelAutoTune.Stage.REPEAT),
+                "Must repeat in reverse order before validation");
         near(good.power(), 0, 0);
+        for (double p : new double[]{0, .002, .004, .008, .016, .032}) {
+            long count = good.trials().stream().filter(t -> (t.stage == FlywheelAutoTune.Stage.SEARCH
+                    || t.stage == FlywheelAutoTune.Stage.REPEAT) && t.kP == p).count();
+            check(count == 6, "Every P must get six comparison windows");
+        }
+        check(good.trials().stream().anyMatch(t -> t.recoveryStep && Double.isFinite(t.rawError125)
+                && Double.isFinite(t.fastError125) && Double.isFinite(t.slowError250)), "Record raw and estimated step response");
         FlywheelAutoTune loaded = simulate(false, 12, .08);
         check(loaded.passed() && loaded.kP() > 0, "Search must find feedback that corrects load bias: " + loaded.report());
         FlywheelAutoTune spiky = simulate(true, 12);
@@ -62,46 +79,70 @@ public final class FlywheelAutoTuneRegression {
         check(!spiky.passed(), "A raw spike cannot be hidden by mean/filtered scores");
         check(spiky.trials().stream().anyMatch(t -> t.stage == FlywheelAutoTune.Stage.VALIDATE
                 && t.peakError > 10 && t.withinFraction > .95), "Expose peak despite mostly good samples");
+        check(spiky.trials().stream().anyMatch(t -> t.stage == FlywheelAutoTune.Stage.VALIDATE
+                && t.peakError > 10 && t.slowPeak < t.peakError), "Raw spike must remain visible beside smoother estimate");
+        check(spiky.report().contains("diagnostic only") && spiky.report().contains("not ball-impact"),
+                "Report must qualify estimates and recovery measurements");
         FlywheelAutoTune lowBattery = simulate(false, 9);
         check(lowBattery.stage() == FlywheelAutoTune.Stage.ABORTED, "Reject insufficient characterization headroom");
         near(lowBattery.power(), 0, 0);
 
         FlywheelAutoTune invalid = new FlywheelAutoTune();
         invalid.start(0);
-        invalid.update(.02, Double.NaN, 12);
+        update(invalid, .02, Double.NaN, 12);
         check(invalid.stage() == FlywheelAutoTune.Stage.ABORTED, "Reject invalid encoder");
         invalid.start(0);
-        invalid.update(.02, 0, Double.NaN);
+        update(invalid, .02, 0, Double.NaN);
         check(!invalid.active(), "Reject invalid battery");
         invalid.start(0);
-        invalid.update(.3, 0, 12);
+        update(invalid, .3, 0, 12);
         check(!invalid.active(), "Reject stalled event loop");
         invalid.start(0);
-        invalid.update(.02, 2001, 12);
+        update(invalid, .02, 2001, 12);
         check(!invalid.active(), "Overspeed abort");
         invalid.start(0);
-        for (int i = 1; i < 100 && invalid.active(); i++) invalid.update(i * .02, 0, 12);
+        for (int i = 1; i < 100 && invalid.active(); i++) update(invalid, i * .02, 0, 12);
         check(!invalid.active(), "Stopped encoder under power must abort");
         invalid.start(0);
-        for (int i = 1; i < 30 && invalid.active(); i++) invalid.update(i * .02, -100, 12);
+        for (int i = 1; i < 30 && invalid.active(); i++) update(invalid, i * .02, -100, 12);
         check(!invalid.active(), "Reverse encoder must abort");
         invalid.start(0);
-        invalid.update(.02, 100, 12);
+        update(invalid, .02, 100, 12);
         invalid.abort("operator");
         near(invalid.power(), 0, 0);
         check(!invalid.passed(), "Aborted is not a pass");
         // A consistently slow loop cannot produce enough independent samples per window.
         invalid.start(0);
-        for (int i = 1; i < 100 && invalid.active(); i++) invalid.update(i * .09, 600, 12);
+        for (int i = 1; i < 100 && invalid.active(); i++) update(invalid, i * .09, 600, 12);
         check(!invalid.active(), "Reject too few samples even when each gap is below 100 ms");
         // Persistent raw fluctuation must trigger one retry, then rejection, not a false fit.
         invalid.start(0);
         for (int i = 1; i < 1000 && invalid.active(); i++)
-            invalid.update(i * .02, 600 + (i % 2 == 0 ? 100 : -100), 12);
+            update(invalid, i * .02, 600 + (i % 2 == 0 ? 100 : -100), 12);
         check(!invalid.active() && invalid.trials().size() == 2, "Unsteady characterization retries exactly once");
+        invalid.start(0);
+        for (int i = 1; i < 400 && invalid.active(); i++)
+            invalid.update(i * .02, 600, 12, Double.NaN, 600);
+        check(!invalid.active(), "Reject unavailable position estimate during scoring");
+        // Reverse gain and speed order must actually occur on the second pass.
+        FlywheelAutoTune.Trial firstRepeat = good.trials().stream()
+                .filter(t -> t.stage == FlywheelAutoTune.Stage.REPEAT).findFirst().get();
+        near(firstRepeat.kP, .032, 0);
+        near(firstRepeat.target, 1477, 0);
+        for (FlywheelAutoTune.Trial t : good.trials()) {
+            if (t.recoveryStep) check(t.stepSampleSeconds >= .125 && t.stepSampleSeconds <= .150,
+                    "125ms response must include actual timely sample timestamp");
+        }
+        invalid.start(0);
+        for (int i = 1; i <= 351; i++)
+            invalid.update(i * .02, 600, 12, i % 30 == 0 ? Double.NaN : 600, 600);
+        check(invalid.active() && invalid.trials().size() == 1,
+                "Occasional unavailable short-window estimate should disclose coverage, not abort run");
+        check(invalid.trials().get(0).fastSamples < invalid.trials().get(0).samples,
+                "Missing estimates must not be silently filled with raw values");
         good.start(1000);
         check(good.trials().isEmpty() && !good.passed(), "Restart must discard previous result");
         near(good.kP(), 0, 0);
-        System.out.println("Flywheel shared control, model fit, search/refinement, raw validation, restart and abort checks passed");
+        System.out.println("Flywheel shared control, model fit, repeated comparison/step response, raw validation, restart and abort checks passed");
     }
 }

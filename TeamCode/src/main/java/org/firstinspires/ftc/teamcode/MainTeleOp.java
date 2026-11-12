@@ -213,7 +213,7 @@ public class MainTeleOp extends OpMode {
 
 
         if (gamepad2.left_trigger > 0.1) {
-            intake.intake(1440);
+            intake.intake();
             //transfer.toggleOn();
             //launcher.actFire();
         }
