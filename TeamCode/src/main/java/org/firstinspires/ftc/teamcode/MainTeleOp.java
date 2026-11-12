@@ -213,17 +213,17 @@ public class MainTeleOp extends OpMode {
 
 
         if (gamepad2.left_trigger > 0.1) {
-            intake.intake(1440);
+            intake.intake(gamepad2.left_trigger);
             //transfer.toggleOn();
             //launcher.actFire();
         }
 
-      /*  if (gamepad2.right_trigger > 0.01) {*/
-            transfer.setTargetVelocity(1440 * gamepad2.right_trigger);
-/*        }
+        if (gamepad2.right_trigger > 0.01) {
+            transfer.setTargetVelocity(1440);
+        }
         else {
             transfer.setTargetVelocity(0);
-        }*/
+        }
 
 // Request reverse transfer operation.
         //launcher.eject(gamepad2.right_bumper);
