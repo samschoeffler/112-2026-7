@@ -339,14 +339,23 @@ public final class AutoPaths {
         public static final Pose point1 =
                 poseFactory.of(57, 131, 270);
 
+        // same as Red2Tip.point3
         public static final Pose point2 =
-                poseFactory.of(54, 125, 270);
+                poseFactory.of(60, 130, 270);
 
+        // same as Red2Tip.point4Control1
         public static final Pose point3Control1 =
                 poseFactory.of(45, 113, 0);
 
+        // same as Red2Tip.point5 / point6 / point7
         public static final Pose point4 =
-                poseFactory.of(15, 110, 270);
+                poseFactory.of(26, 126, 90);
+
+        public static final Pose point5 =
+                poseFactory.of(26, 130, 90);
+
+        public static final Pose point6 =
+                poseFactory.of(15, 113, 90);
 
         // ---------- PATHS ----------
 
@@ -374,6 +383,18 @@ public final class AutoPaths {
             return Paths.line(GeneralPaths.flowerWaitFar, point4)
                     .linear(GeneralPaths.flowerWaitFar, point4);
         }
+
+        // same as Red2Tip.path6()
+        public static Path path5() {
+            return Paths.line(point4, point5)
+                    .linear(point4, point5);
+        }
+
+        // same as Red2Tip.path7()
+        public static Path path6() {
+            return Paths.line(point5, point6)
+                    .linear(point5, point6);
+        }
     }
 
     // BLUE2TIP
@@ -396,7 +417,7 @@ public final class AutoPaths {
                 poseFactory.of(34.5, 50, 0);
 
         public static final Pose point3 =
-                poseFactory.of(54, 125, 270);
+                poseFactory.of(60, 130, 270);
 
         public static final Pose point3Control1 =
                 poseFactory.of(47, 44, 0);
@@ -411,7 +432,13 @@ public final class AutoPaths {
                 poseFactory.of(45, 113, 0);
 
         public static final Pose point5 =
-                poseFactory.of(15, 110, 270);
+                poseFactory.of(26, 126, 90);
+
+        public static final Pose point6 =
+                poseFactory.of(26, 130, 90);
+
+        public static final Pose point7 =
+                poseFactory.of(15, 113, 90);
 
         // ---------- PATHS ----------
 
@@ -452,7 +479,15 @@ public final class AutoPaths {
                     .linear(GeneralPaths.flowerWaitFar, point5);
         }
 
+        public static Path path6() {
+            return Paths.line(point5, point6)
+                    .linear(point5, point6);
+        }
 
+        public static Path path7() {
+            return Paths.line(point6, point7)
+                    .linear(point6, point7);
+        }
     }
 
     // BLUE2CORNER
@@ -614,14 +649,23 @@ public final class AutoPaths {
         public static final Pose point1 =
                 poseFactory.of(57, 131, 270);
 
+        // same as Red2Tip.point3
         public static final Pose point2 =
-                poseFactory.of(54, 125, 270);
+                poseFactory.of(60, 130, 270);
 
+        // same as Red2Tip.point4Control1
         public static final Pose point3Control1 =
                 poseFactory.of(45, 113, 0);
 
+        // same as Red2Tip.point5 / point6 / point7
         public static final Pose point4 =
-                poseFactory.of(15, 110, 270);
+                poseFactory.of(26, 126, 90);
+
+        public static final Pose point5 =
+                poseFactory.of(26, 130, 90);
+
+        public static final Pose point6 =
+                poseFactory.of(15, 113, 90);
 
         // ---------- PATHS ----------
 
@@ -635,7 +679,7 @@ public final class AutoPaths {
                     .linear(point1, point2);
         }
 
-        // same as Blue2Tip.path4()
+        // same as Red2Tip.path4()
         public static Path path3() {
             return Paths.curve(
                     point2,
@@ -644,10 +688,22 @@ public final class AutoPaths {
             ).linear(point2, GeneralPaths.flowerWaitFar);
         }
 
-        // same as Blue2Tip.path5()
+        // same as Red2Tip.path5()
         public static Path path4() {
             return Paths.line(GeneralPaths.flowerWaitFar, point4)
                     .linear(GeneralPaths.flowerWaitFar, point4);
+        }
+
+        // same as Red2Tip.path6()
+        public static Path path5() {
+            return Paths.line(point4, point5)
+                    .linear(point4, point5);
+        }
+
+        // same as Red2Tip.path7()
+        public static Path path6() {
+            return Paths.line(point5, point6)
+                    .linear(point5, point6);
         }
     }
 }

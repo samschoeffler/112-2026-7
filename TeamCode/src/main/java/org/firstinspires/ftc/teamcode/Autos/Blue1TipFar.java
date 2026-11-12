@@ -82,6 +82,7 @@ public class Blue1TipFar extends OpMode {
                 autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Blue2Opp.path2()),
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.startVis,
                 Commands.waitMs(3000),
@@ -93,9 +94,16 @@ public class Blue1TipFar extends OpMode {
                         follower, AutoPaths.Blue2Opp.path4()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
+                autoCommand.rampTogg,
+                follow(follower, AutoPaths.Blue2Opp.path5()),
+                Commands.waitMs(1000),
                 autoCommand.shooterTogg,
-                autoCommand.fWheelTogg
-                );
+                Commands.waitMs(5000),
+                follow(
+                        follower, AutoPaths.Blue2Opp.path6()
+                                .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
+                )
+        );
     }
 
     @Override
@@ -127,7 +135,9 @@ public class Blue1TipFar extends OpMode {
                 AutoPaths.Blue2Opp.path1(),
                 AutoPaths.Blue2Opp.path2(),
                 AutoPaths.Blue2Opp.path3(),
-                AutoPaths.Blue2Opp.path4()
+                AutoPaths.Blue2Opp.path4(),
+                AutoPaths.Blue2Opp.path5(),
+                AutoPaths.Blue2Opp.path6()
         );*/
 
         //visualizer.drawNow(follower.pose());
@@ -182,7 +192,7 @@ public class Blue1TipFar extends OpMode {
 
         CoordinateAim.Result aim = CoordinateAim.calculate(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading(),
-                57.4, 82.3);
+                62.4, 82.3);
         double turretAngleDeg = (turretMotor.getCurrentPosition() - (double) turretZeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
         CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(

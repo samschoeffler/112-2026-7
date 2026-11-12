@@ -85,7 +85,7 @@ public class Red2Tip extends OpMode {
                 autoCommand.flowerCollectClose(follower),
                 follow(
                         follower, AutoPaths.Red2Tip.path3()
-                                .with(Constants.foresightConfig.brakeAggression.at(0.5)).with(Constants.foresightConfig.maxPathSpeed.at(0.2))
+                                .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
                 Commands.waitMs(2000),
                 autoCommand.shooterTogg,
@@ -105,7 +105,10 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(1000),
                 autoCommand.shooterTogg,
                 Commands.waitMs(5000),
-                follow(follower, AutoPaths.Red2Tip.path7()));
+                follow(follower, AutoPaths.Red2Tip.path7()
+                        .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
+                )
+        );
     }
 
     @Override
