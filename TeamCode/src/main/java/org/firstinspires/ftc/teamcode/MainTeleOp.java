@@ -213,12 +213,16 @@ public class MainTeleOp extends OpMode {
 
 
         if (gamepad2.left_trigger > 0.1) {
-            intake.intake(gamepad2.left_trigger);
-            //transfer.toggleOn();
-            //launcher.actFire();
+            intake.intake();
         }
 
-        if (gamepad2.right_trigger > 0.01) {
+        else if (gamepad2.left_trigger < 0.1)
+        {
+            intake.stop();
+        }
+
+        if (gamepad2.right_trigger > 0.1)
+        {
             transfer.setTargetVelocity(1440);
         }
         else {
@@ -266,12 +270,12 @@ public class MainTeleOp extends OpMode {
             intake.stop();
         }*/
 
-        //ramp
-        if (gamepad2.aWasPressed()) {
+        //ramp might not work should be dpad up to toggle up n down and dpad down to toggle hold balls.
+        if (gamepad2.xWasPressed()) {
             intake.toggleRamp();
         }
 
-        if(gamepad2.xWasPressed()) {
+        if(gamepad2.aWasPressed()) {
             intake.holdBalls();
         }
 
