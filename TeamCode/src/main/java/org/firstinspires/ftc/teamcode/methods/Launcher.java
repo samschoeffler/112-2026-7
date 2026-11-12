@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 public class Launcher {
-    // Copy the final VOLTAGE-MODEL gains from LauncherTuning here.
+    // Copy validated VOLTAGE-MODEL gains from LauncherAutoTuning here.
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
     public static double KS = 1.0396, KV = 0.005145;
     public static double KP = 0.0662;
@@ -165,8 +165,8 @@ public class Launcher {
         requestedVolts = motorPower = 0.0;
         if (flywheelsOn) {
             double error = targetVelocity - measuredVelocity;
-            requestedVolts = KS + KV * targetVelocity + KP * error;
-            motorPower = clip(requestedVolts / batteryVoltage, 0.0, 1.0);
+            requestedVolts = FlywheelVelocityControl.volts(targetVelocity, measuredVelocity, KS, KV, KP);
+            motorPower = FlywheelVelocityControl.power(requestedVolts, batteryVoltage);
             if (Math.abs(error) <= VELOCITY_TOLERANCE) {
                 if (readySince == 0) readySince = now;
             } else readySince = 0;

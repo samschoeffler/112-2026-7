@@ -283,7 +283,7 @@ public class MainTeleOp extends OpMode {
         }
 
         // Gamepad 2 START confirms the physical forward reference while stationary.
-        boolean zeroConfirm = gamepad2.start;
+        /*boolean zeroConfirm = gamepad2.start;
         if (zeroConfirm && !lastZeroConfirm) {
             double speed = turret.getTurretVelocityDegPerSec();
             if (Double.isFinite(speed) && Math.abs(speed) < 2.0) {
@@ -295,7 +295,7 @@ public class MainTeleOp extends OpMode {
                 telemetry.addLine("Turret zero rejected: stop turret and retry");
             }
         }
-        lastZeroConfirm = zeroConfirm;
+        lastZeroConfirm = zeroConfirm;*/
 
         if (gamepad1.bWasPressed()) {
             launcher.stopFire();
