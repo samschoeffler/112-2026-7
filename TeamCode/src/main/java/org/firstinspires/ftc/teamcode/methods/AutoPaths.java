@@ -31,13 +31,17 @@ public final class AutoPaths {
                 poseFactory.of(47, 110, 60);
 
         public static final Pose flowerClose =
-                poseFactory.of(11, 48.5, 180);
+                poseFactory.of(11.5, 48.5, 180);
 
         public static final Pose flowerFar =
-                poseFactory.of(47, 125, 90);
+                poseFactory.of(47, 128, 90);
 
         public static final Pose jiggle =
-                poseFactory.of(47, 128, 90);
+                poseFactory.of(47, 127.5, 90);
+
+        public static final Pose jiggleC =
+                poseFactory.of(12, 48.5, 170);
+
 
         // ---------- PATHS ----------
 
@@ -73,6 +77,17 @@ public final class AutoPaths {
             return Paths.line(jiggle, flowerFar)
                     .linear(jiggle, flowerFar);
         }
+
+        public static Path flowerJiggleC() {
+            return Paths.line(flowerClose, jiggleC)
+                    .linear(flowerClose, jiggleC);
+        }
+
+        public static Path jiggleFlowerC() {
+            return Paths.line(jiggleC, flowerClose)
+                    .linear(jiggleC, flowerClose);
+        }
+
 
         public static Path flowerFarFro() {
             return Paths.line(flowerFar, flowerWaitFar)
@@ -159,7 +174,7 @@ public final class AutoPaths {
 
         public static Path path5() {
             return Paths.line(GeneralPaths.flowerWaitFar, point5)
-                    .linear(GeneralPaths.flowerWaitFar, point5);
+                    .linear(GeneralPaths.flowerWaitFar, point7);
         }
 
         public static Path path6() {
