@@ -74,17 +74,17 @@ public class Blue1TipFlower extends OpMode {
         return sequential(
                 autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Blue2Flower.path1()),
+                follow(follower, AutoPaths.Flower.path1()),
                 Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(1500),
                 autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
-                follow(follower, AutoPaths.Blue2Flower.path2()),
+                follow(follower, AutoPaths.Flower.path2()),
                 autoCommand.flowerCollectClose(follower),
                 autoCommand.toggleAuto,
-                follow(follower, AutoPaths.Blue2Flower.path3()),
+                follow(follower, AutoPaths.Flower.path3()),
                 autoCommand.stopIntake,
                 autoCommand.fWheelTogg,
                 autoCommand.rampTogg
@@ -110,16 +110,16 @@ public class Blue1TipFlower extends OpMode {
         OpModeStorage.turretForwardZeroConfirmed = true;
 
         vision = new LimelightVision(hardwareMap, 5);
-        follower.setPose(AutoPaths.Blue2Flower.start);
+        follower.setPose(AutoPaths.Flower.start);
 
        // transfer = new Transfer(hardwareMap);
 
 
 
         /*visualizer = new PathVisualizer(
-                AutoPaths.Blue2Flower.path1(),
-                AutoPaths.Blue2Flower.path2(),
-                AutoPaths.Blue2Flower.path3()
+                AutoPaths.Flower.path1(),
+                AutoPaths.Flower.path2(),
+                AutoPaths.Flower.path3()
         );*/
 
         //visualizer.drawNow(follower.pose());

@@ -31,10 +31,10 @@ public class TurretRotTestAuto extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                follow(follower, AutoPaths .Red2Tip.path1()),
+                follow(follower, AutoPaths.Tip.path1()),
                 Commands.waitMs(4000),
-                follow(follower, AutoPaths .Red2Tip.path2()),
-                follow(follower, AutoPaths .Red2Tip.path3()),
+                follow(follower, AutoPaths.Tip.path2()),
+                follow(follower, AutoPaths.Tip.path3()),
                 Commands.waitMs(4000)
                 );
     }
@@ -43,7 +43,7 @@ public class TurretRotTestAuto extends OpMode {
     public void init() {
         Scheduler.reset();
         follower = Constants.create(hardwareMap);
-        follower.setPose(AutoPaths.Red2Tip.start);
+        follower.setPose(AutoPaths.Tip.start);
         follower.update();
         launcher    = new Launcher(hardwareMap);
         intake      = new Intake(hardwareMap);

@@ -74,33 +74,33 @@ public class Red1TipFar extends OpMode {
         return sequential(
                 autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Red2Opp.path1()),
+                follow(follower, AutoPaths.Opp.path1()),
                 Commands.waitMs(10000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(1500),
                 autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
-                follow(follower, AutoPaths.Red2Opp.path2()),
+                follow(follower, AutoPaths.Opp.path2()),
                 Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.startVis,
                 Commands.waitMs(3000),
                 autoCommand.shooterTogg,
                 autoCommand.toggleAuto,
-                follow(follower, AutoPaths.Red2Opp.path3()),
+                follow(follower, AutoPaths.Opp.path3()),
                 autoCommand.flowerCollectFarShoot(follower),
                 follow(
-                        follower, AutoPaths.Red2Opp.path4()
+                        follower, AutoPaths.Opp.path4()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
                 autoCommand.rampTogg,
-                follow(follower, AutoPaths.Red2Opp.path5()),
+                follow(follower, AutoPaths.Opp.path5()),
                 Commands.waitMs(1000),
                 autoCommand.shooterTogg,
                 Commands.waitMs(5000),
                 follow(
-                        follower, AutoPaths.Red2Opp.path6()
+                        follower, AutoPaths.Opp.path6()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 )
         );
@@ -125,19 +125,19 @@ public class Red1TipFar extends OpMode {
         OpModeStorage.turretForwardZeroConfirmed = true;
 
         vision = new LimelightVision(hardwareMap, 4);
-        follower.setPose(AutoPaths.Red2Opp.start);
+        follower.setPose(AutoPaths.Opp.start);
 
        // transfer = new Transfer(hardwareMap);
 
 
 
         /*visualizer = new PathVisualizer(
-                AutoPaths.Red2Opp.path1(),
-                AutoPaths.Red2Opp.path2(),
-                AutoPaths.Red2Opp.path3(),
-                AutoPaths.Red2Opp.path4(),
-                AutoPaths.Red2Opp.path5(),
-                AutoPaths.Red2Opp.path6()
+                AutoPaths.Opp.path1(),
+                AutoPaths.Opp.path2(),
+                AutoPaths.Opp.path3(),
+                AutoPaths.Opp.path4(),
+                AutoPaths.Opp.path5(),
+                AutoPaths.Opp.path6()
         );*/
 
         //visualizer.drawNow(follower.pose());

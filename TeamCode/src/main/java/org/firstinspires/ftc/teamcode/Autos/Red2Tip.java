@@ -74,21 +74,21 @@ public class Red2Tip extends OpMode {
         return sequential(
                 autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
-                follow(follower, AutoPaths.Red2Tip.path1()),
+                follow(follower, AutoPaths.Tip.path1()),
                 Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(1500),
                 //autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
-                follow(follower, AutoPaths.Red2Tip.path2wall()),
-                follow(follower, AutoPaths.Red2Tip.path21()),
+                follow(follower, AutoPaths.Tip.path2wall()),
+                follow(follower, AutoPaths.Tip.path21()),
                 autoCommand.shooterTogg,
                 Commands.waitMs(50),
                 autoCommand.shooterTogg,
                 Commands.waitMs(500),
                 parallel(
-                        follow(follower, AutoPaths.Red2Tip.path22()),
+                        follow(follower, AutoPaths.Tip.path22()),
                         sequential(
                                 Commands.waitMs(500),
                                 autoCommand.rampTogg
@@ -96,7 +96,7 @@ public class Red2Tip extends OpMode {
                 ),
                 //autoCommand.flowerCollectClose(follower),
                 follow(
-                        follower, AutoPaths.Red2Tip.path3()
+                        follower, AutoPaths.Tip.path3()
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5)).with(Constants.foresightConfig.maxPathSpeed.at(0.8))
                 ),
                 autoCommand.shooterTogg,
@@ -104,10 +104,10 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(2500),
                 autoCommand.shooterTogg,
                 autoCommand.toggleAuto,
-                follow(follower, AutoPaths.Red2Tip.path4()),
+                follow(follower, AutoPaths.Tip.path4()),
                 autoCommand.flowerCollectFarShoot(follower),
                 follow(
-                        follower, AutoPaths.Red2Tip.path5()
+                        follower, AutoPaths.Tip.path5()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
                 //Commands.waitMs(2000),
@@ -137,22 +137,22 @@ public class Red2Tip extends OpMode {
         OpModeStorage.turretForwardZeroConfirmed = true;
 
         vision = new LimelightVision(hardwareMap, 4);
-        follower.setPose(AutoPaths.Red2Tip.start);
+        follower.setPose(AutoPaths.Tip.start);
 
        // transfer = new Transfer(hardwareMap);
 
 
 
         /*visualizer = new PathVisualizer(
-                AutoPaths.Red2Tip.path1(),
-                AutoPaths.Red2Tip.path2(),
+                AutoPaths.Tip.path1(),
+                AutoPaths.Tip.path2(),
                 AutoPaths.GeneralPaths.flowerCloseTo(),
                 AutoPaths.GeneralPaths.flowerCloseFro(),
-                AutoPaths.Red2Tip.path3(),
-                AutoPaths.Red2Tip.path4(),
+                AutoPaths.Tip.path3(),
+                AutoPaths.Tip.path4(),
                 AutoPaths.GeneralPaths.flowerFarTo(),
                 AutoPaths.GeneralPaths.flowerFarFro(),
-                AutoPaths.Red2Tip.path5()
+                AutoPaths.Tip.path5()
         );*/
 
         //visualizer.drawNow(follower.pose());
