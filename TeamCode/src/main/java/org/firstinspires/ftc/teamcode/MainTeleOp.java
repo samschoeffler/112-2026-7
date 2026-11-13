@@ -232,6 +232,10 @@ public class MainTeleOp extends OpMode {
             //transfer.toggleOn();
             //launcher.actFire();
         }
+        else
+        {
+            intake.stop();
+        }
 
       /*  if (gamepad2.right_trigger > 0.01) {*/
             transfer.setTargetVelocity(1440 * gamepad2.right_trigger);

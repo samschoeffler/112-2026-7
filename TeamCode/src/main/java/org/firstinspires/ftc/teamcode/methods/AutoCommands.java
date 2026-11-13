@@ -84,6 +84,7 @@ public class AutoCommands {
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
                 shooterTogg,
+                Commands.waitMs(500),
                 flowerFarJiggle(follower),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro())

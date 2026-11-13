@@ -79,17 +79,29 @@ public class Red2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(1500),
-                autoCommand.intakeTogg,
+                //autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
-                follow(follower, AutoPaths.Red2Tip.path2()),
-                autoCommand.flowerCollectClose(follower),
+                follow(follower, AutoPaths.Red2Tip.path2wall()),
+                follow(follower, AutoPaths.Red2Tip.path21()),
+                autoCommand.shooterTogg,
+                Commands.waitMs(50),
+                autoCommand.shooterTogg,
+                Commands.waitMs(500),
+                parallel(
+                        follow(follower, AutoPaths.Red2Tip.path22()),
+                        sequential(
+                                Commands.waitMs(500),
+                                autoCommand.rampTogg
+                        )
+                ),
+                //autoCommand.flowerCollectClose(follower),
                 follow(
                         follower, AutoPaths.Red2Tip.path3()
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5)).with(Constants.foresightConfig.maxPathSpeed.at(0.8))
                 ),
                 autoCommand.shooterTogg,
                 autoCommand.startVis,
-                Commands.waitMs(3000),
+                Commands.waitMs(2500),
                 autoCommand.shooterTogg,
                 autoCommand.toggleAuto,
                 follow(follower, AutoPaths.Red2Tip.path4()),

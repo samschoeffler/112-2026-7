@@ -34,10 +34,10 @@ public final class AutoPaths {
                 poseFactory.of(11.5, 48.5, 180);
 
         public static final Pose flowerFar =
-                poseFactory.of(47, 128, 90);
+                poseFactory.of(47, 129, 90);
 
         public static final Pose jiggle =
-                poseFactory.of(47, 127.5, 90);
+                poseFactory.of(47, 128.8, 90);
 
         public static final Pose jiggleC =
                 poseFactory.of(12, 48.5, 170);
@@ -114,6 +114,12 @@ public final class AutoPaths {
         public static final Pose point2Control2 =
                 poseFactory.of(34.5, 50, 0);
 
+        public static final Pose point2=
+                poseFactory.of(30, 10, 180);
+
+        public static final Pose pointwall=
+                poseFactory.of(9, 8, 180);
+
         public static final Pose point3 =
                 poseFactory.of(60, 130, 270);
 
@@ -136,7 +142,7 @@ public final class AutoPaths {
                 poseFactory.of(26, 130, 90);
 
         public static final Pose point7 =
-                poseFactory.of(15, 113, 90);
+                poseFactory.of(10, 100, 90);
 
         // ---------- PATHS ----------
 
@@ -153,6 +159,33 @@ public final class AutoPaths {
                     GeneralPaths.flowerWaitClose
             ).linear(point1, GeneralPaths.flowerWaitClose);
         }
+
+        public static Path path2wall() {
+            return Paths.line(
+                    point1, point2
+            ).linear(point1,point2);
+        }
+
+        public static Path path21() {
+            return Paths.line(
+                    point2, pointwall
+            ).linear(point2,pointwall);
+        }
+
+        public static Path path22() {
+            return Paths.line(
+                    pointwall, point2
+            ).linear(pointwall,GeneralPaths.flowerWaitClose);
+        }
+
+
+        public static Path path3wall() {
+            return Paths.line(
+                    point2, point3
+            ).linear(point2,point3);
+        }
+
+
 
         public static Path path3() {
             return Paths.curve(
@@ -173,7 +206,7 @@ public final class AutoPaths {
         }
 
         public static Path path5() {
-            return Paths.line(GeneralPaths.flowerWaitFar, point5)
+            return Paths.line(GeneralPaths.flowerWaitFar, point7)
                     .linear(GeneralPaths.flowerWaitFar, point7);
         }
 
@@ -430,6 +463,9 @@ public final class AutoPaths {
 
         public static final Pose point2Control2 =
                 poseFactory.of(34.5, 50, 0);
+
+        public static final Pose point2=
+                poseFactory.of(9, 15, 270);
 
         public static final Pose point3 =
                 poseFactory.of(60, 130, 270);
