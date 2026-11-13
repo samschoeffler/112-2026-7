@@ -9,6 +9,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
+import org.firstinspires.ftc.teamcode.methods.FlywheelVelocityControl;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
@@ -19,6 +21,7 @@ import java.util.ArrayList;
  * Motor output is always setPower(volts / measuredBatteryVolts).
  * RUN_WITHOUT_ENCODER avoids the hub's built-in velocity loop.
  *
+ * Feedback and scoring use raw velocity; the filtered trace is display-only.
  * Starting mode is FIXED VOLTAGE so the coefficients can be fit from scratch.
  * No game pieces during voltage characterization or direction check.
  */
@@ -229,7 +232,6 @@ public class LauncherTuning extends OpMode {
         // including fixed-voltage mode and motor-off periods.
         double signedVelocity = encoderOk ? encoderSign * raw : Double.NaN;
         double filtered = encoderOk ? filterVelocity(signedVelocity) : Double.NaN;
-        double feedforwardVolts = target > 0.0 ? kS + kV * target : 0.0;
         double requestedVolts = 0.0;
         double motorPower = 0.0;
 
@@ -284,11 +286,11 @@ public class LauncherTuning extends OpMode {
 
             if (enabled && (voltageMode ? testVolts > 0.0 : target > 0.0)) {
                 requestedVolts = voltageMode ? testVolts
-                        : feedforwardVolts + kP * (target - filtered);
+                        : FlywheelVelocityControl.volts(target, signedVelocity, kS, kV, kP);
 
                 // Critical: kS/kV/kP and testVolts are VOLTS, but setPower needs [-1,+1].
                 // This is an approximate voltage compensation, not direct motor-voltage sensing.
-                motorPower = clip(requestedVolts / battery, 0.0, 1.0);
+                motorPower = FlywheelVelocityControl.power(requestedVolts, battery);
 
                 boolean reversed = signedVelocity < -50.0;
                 reverseSince = reversed ? (reverseSince == 0 ? now : reverseSince) : 0;
@@ -382,6 +384,7 @@ public class LauncherTuning extends OpMode {
             panels.addData("Target", target);
             panels.addData("Raw_Velocity", signedVelocity);
             panels.addData("Filtered_Velocity", filtered);
+            panels.addData("Raw_Error", target - signedVelocity);
             panels.addData("Filtered_Error", target - filtered);
             panels.addData("Voltage_Mode", voltageMode ? 1 : 0);
             panels.addData("Test_V", testVolts);
@@ -405,14 +408,14 @@ public class LauncherTuning extends OpMode {
     }
 
     private void addSteadyStateTelemetry() {
-        if (recent.size() < 15) {
+        if (recent.size() < 15 || recent.peekLast()[0] - recent.peekFirst()[0] < 4.9) {
             telemetry.addData("5s steady score", "Collecting (3s settle + 5s window)");
             return;
         }
         double sum = 0, min = Double.POSITIVE_INFINITY, max = Double.NEGATIVE_INFINITY;
         double peakPower = 0;
         for (double[] item : recent) {
-            double v = item[2];
+            double v = item[1]; // Score raw feedback, just like Launcher and the automatic tuner.
             sum += v;
             min = Math.min(min, v);
             max = Math.max(max, v);
@@ -422,7 +425,7 @@ public class LauncherTuning extends OpMode {
         double meanErrorPct = target > 0.0 ? 100.0 * Math.abs(mean - target) / target : 0.0;
         double worstErrorPct = target > 0.0
                 ? 100.0 * Math.max(Math.abs(min - target), Math.abs(max - target)) / target : 0.0;
-        telemetry.addData("5s mean / min / max", "%.1f / %.1f / %.1f", mean, min, max);
+        telemetry.addData("5s RAW mean / min / max", "%.1f / %.1f / %.1f", mean, min, max);
         telemetry.addData("5s mean / worst error", "%.2f%% / %.2f%%", meanErrorPct, worstErrorPct);
         telemetry.addData("5s max power", "%.3f", peakPower);
     }

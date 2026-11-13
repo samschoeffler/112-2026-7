@@ -87,6 +87,7 @@ public class Blue2Tip extends OpMode {
                         follower, AutoPaths.Blue2Tip.path3()
                                 .with(Constants.foresightConfig.brakeAggression.at(0.5))
                 ),
+                Commands.waitMs(2000),
                 autoCommand.shooterTogg,
                 autoCommand.startVis,
                 Commands.waitMs(3000),
@@ -98,10 +99,16 @@ public class Blue2Tip extends OpMode {
                         follower, AutoPaths.Blue2Tip.path5()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
+                autoCommand.rampTogg,
+                follow(follower, AutoPaths.Blue2Tip.path6()),
+                Commands.waitMs(1000),
                 autoCommand.shooterTogg,
-                autoCommand.fWheelTogg,
-                autoCommand.rampTogg
-                );
+                Commands.waitMs(5000),
+                follow(
+                        follower, AutoPaths.Blue2Tip.path7()
+                                .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
+                )
+        );
     }
 
     @Override
@@ -134,7 +141,9 @@ public class Blue2Tip extends OpMode {
                 AutoPaths.Blue2Tip.path2(),
                 AutoPaths.Blue2Tip.path3(),
                 AutoPaths.Blue2Tip.path4(),
-                AutoPaths.Blue2Tip.path5()
+                AutoPaths.Blue2Tip.path5(),
+                AutoPaths.Blue2Tip.path6(),
+                AutoPaths.Blue2Tip.path7()
         );*/
 
         //visualizer.drawNow(follower.pose());
@@ -189,7 +198,7 @@ public class Blue2Tip extends OpMode {
 
         CoordinateAim.Result aim = CoordinateAim.calculate(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading(),
-                57.4, 82.3);
+                62.4, 82.3);
         double turretAngleDeg = (turretMotor.getCurrentPosition() - (double) turretZeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
         CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(

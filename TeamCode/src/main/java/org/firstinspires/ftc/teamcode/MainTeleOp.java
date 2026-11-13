@@ -6,6 +6,7 @@ import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.ManualDrive;
 
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -42,7 +43,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  *   B (hold)       -> outtake
  *   Right Trigger  -> shoot (hold to keep firing; intake runs while firing)
  *   Right Bumper   -> eject balls from transfer (intake reverses while ejecting)
- *   Left Trigger   -> toggle ramp
+ *   Left Trigger   -> intake
  *   Left Bumper    -> hold balls
  *   D-pad          -> turret control while TurretAuto is off
  *                       left/right = rotate, up/down = pitch
@@ -206,28 +207,38 @@ public class MainTeleOp extends OpMode {
 
         vision.update();
 
+        //rezeroing robot positoon on GP1
+        if(gamepad1.aWasPressed() && gamepad1.dpad_up) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(0));
+            follower.setPose(resetPose);
+        } else if(gamepad1.aWasPressed() && gamepad1.dpad_right) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(90));
+            follower.setPose(resetPose);
+        } else if(gamepad1.aWasPressed() && gamepad1.dpad_down) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(180));
+            follower.setPose(resetPose);
+        } else if(gamepad1.aWasPressed() && gamepad1.dpad_left) {
+            Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(270));
+            follower.setPose(resetPose);
+        }
+
         // Toggle flywheel speed control.
         if (gamepad2.yWasPressed()) {
             launcher.toggleOn();
         }
 
-
         if (gamepad2.left_trigger > 0.1) {
             intake.intake();
+            //transfer.toggleOn();
+            //launcher.actFire();
         }
 
-        else if (gamepad2.left_trigger < 0.1)
-        {
-            intake.stop();
-        }
-
-        if (gamepad2.right_trigger > 0.1)
-        {
-            transfer.setTargetVelocity(1440);
-        }
+      /*  if (gamepad2.right_trigger > 0.01) {*/
+            transfer.setTargetVelocity(1440 * gamepad2.right_trigger);
+/*        }
         else {
             transfer.setTargetVelocity(0);
-        }
+        }*/
 
 // Request reverse transfer operation.
         //launcher.eject(gamepad2.right_bumper);
@@ -236,29 +247,7 @@ public class MainTeleOp extends OpMode {
         //launcher.update(follower.pose().x(), follower.pose().y());
         transfer.update();
         launcher.update(follower.pose().x(), follower.pose().y(), amplitude, yint);
-
-        if (gamepad1.dpad_up) {
-            currTuning = vals[0];
-        }
-        if (gamepad1.dpad_down) {
-            currTuning = vals[1];
-        }
-        if (gamepad1.dpad_right) {
-            if (currTuning.equals("Amplitude")) {
-                amplitude += 0.1;
-            }
-            else {
-                yint++;
-            }
-        }
-        if (gamepad1.dpad_left) {
-            if (currTuning.equals("Amplitude")) {
-                amplitude -= 0.1;
-            }
-            else {
-                yint--;
-            }
-        }
+        
 
 // Intake follows the launcher's updated firing/ejecting state.
 // Stop it if the launcher reports a fault.
@@ -270,12 +259,12 @@ public class MainTeleOp extends OpMode {
             intake.stop();
         }*/
 
-        //ramp might not work should be dpad up to toggle up n down and dpad down to toggle hold balls.
-        if (gamepad2.xWasPressed()) {
+        //ramp
+        if (gamepad2.aWasPressed()) {
             intake.toggleRamp();
         }
 
-        if(gamepad2.aWasPressed()) {
+        if(gamepad2.xWasPressed()) {
             intake.holdBalls();
         }
 
@@ -287,7 +276,7 @@ public class MainTeleOp extends OpMode {
         }
 
         // Gamepad 2 START confirms the physical forward reference while stationary.
-        boolean zeroConfirm = gamepad2.start;
+        /*boolean zeroConfirm = gamepad2.start;
         if (zeroConfirm && !lastZeroConfirm) {
             double speed = turret.getTurretVelocityDegPerSec();
             if (Double.isFinite(speed) && Math.abs(speed) < 2.0) {
@@ -299,7 +288,7 @@ public class MainTeleOp extends OpMode {
                 telemetry.addLine("Turret zero rejected: stop turret and retry");
             }
         }
-        lastZeroConfirm = zeroConfirm;
+        lastZeroConfirm = zeroConfirm;*/
 
         if (gamepad1.bWasPressed()) {
             launcher.stopFire();

@@ -11,6 +11,8 @@ import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.teamcode.pedro.Constants;
+
 public class AutoCommands {
     private Launcher launcher;
     private Turret turret;
@@ -57,7 +59,9 @@ public class AutoCommands {
                 rampTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
-                follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()),
+                follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()
+                        .with(Constants.foresightConfig.maxPathSpeed.at(0.2))
+                ),
                 holdBalls,
                 intakeTogg
         );
@@ -78,16 +82,22 @@ public class AutoCommands {
         return sequential(
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
-                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
-                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
-                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
-                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
-                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
+                flowerFarJiggle(follower),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
-                //Commands.lazy(() -> Commands.waitMs(6000)),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
                 holdBalls,
                 intakeTogg
+        );
+    }
+
+    //(.)(.)    <-- titties hehe
+    public Command flowerFarJiggle(Follower follower) {
+        return sequential(
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
+                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
+                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggle())
         );
     }
 

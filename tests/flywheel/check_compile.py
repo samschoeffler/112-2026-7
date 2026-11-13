@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Compile both flywheel tuners and Launcher using cached FTC/Android dependencies."""
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[2]
+CACHE = Path(os.environ.get('GRADLE_USER_HOME', Path.home() / '.gradle')) / 'caches/modules-2/files-2.1'
+SDK = Path(os.environ.get('ANDROID_HOME', Path.home() / 'Library/Android/sdk'))
+with tempfile.TemporaryDirectory(prefix='flywheel-compile-') as temp:
+    jars = []
+    for group, artifact, version in [('org.firstinspires.ftc', 'RobotCore', '12.0.0'),
+                                     ('org.firstinspires.ftc', 'Hardware', '12.0.0'),
+                                     ('com.bylazar.sloth', 'telemetry', '0.3.2+1.0.5')]:
+        aar = next((CACHE / group / artifact / version).glob('*/*.aar'), None)
+        if aar is None:
+            raise SystemExit(f'Missing cached {group}:{artifact}:{version}; build project dependencies first')
+        jar = Path(temp) / (artifact + '.jar')
+        with zipfile.ZipFile(aar) as archive:
+            jar.write_bytes(archive.read('classes.jar'))
+        jars.append(str(jar))
+    platforms = sorted((SDK / 'platforms').glob('android-*/android.jar'))
+    if not platforms:
+        raise SystemExit('Set ANDROID_HOME to an installed Android SDK')
+    jars.append(str(platforms[-1]))
+    for library in ['com.google.code.gson/gson', 'org.jetbrains.kotlin/kotlin-stdlib', 'org.jetbrains/annotations']:
+        jars.extend(str(p) for p in (CACHE / library).glob('*/*/*.jar')
+                    if not p.name.endswith(('-sources.jar', '-javadoc.jar')))
+    base = ROOT / 'TeamCode/src/main/java/org/firstinspires/ftc/teamcode'
+    files = ['methods/FlywheelVelocityControl.java', 'methods/FlywheelAutoTune.java', 'methods/FlywheelPositionVelocity.java', 'methods/FlywheelIntegralControl.java',
+             'methods/Launcher.java', 'Tests/LauncherAutoTuning.java', 'Tests/LauncherTuning.java']
+    subprocess.run(['javac', '-cp', os.pathsep.join(jars), '-d', temp,
+                    *[str(base / name) for name in files]], check=True)
+    print('Launcher and both tuning OpModes compile against cached FTC 12.0.0 dependencies')

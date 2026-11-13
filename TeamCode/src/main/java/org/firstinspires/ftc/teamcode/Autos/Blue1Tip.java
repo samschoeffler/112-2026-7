@@ -84,7 +84,7 @@ public class Blue1Tip extends OpMode {
                 autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Blue2Corner.path2())
-                );
+        );
     }
 
     @Override
@@ -169,7 +169,7 @@ public class Blue1Tip extends OpMode {
 
         CoordinateAim.Result aim = CoordinateAim.calculate(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading(),
-                57.4, 82.3);
+                62.4, 82.3);
         double turretAngleDeg = (turretMotor.getCurrentPosition() - (double) turretZeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
         CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(
