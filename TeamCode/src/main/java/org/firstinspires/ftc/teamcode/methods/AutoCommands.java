@@ -20,7 +20,7 @@ public class AutoCommands {
     private Transfer transfer;
 
     // how long to sit at the flower collecting balls
-    public static long FLOWER_WAIT_MS = 2500;
+    public static long FLOWER_WAIT_MS = 2000;
 
     LimelightVision vision;
 
@@ -58,6 +58,7 @@ public class AutoCommands {
                 intakeTogg,
                 rampTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseTo()),
+                flowerCloseJiggle(follower),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
                 follow(follower, AutoPaths.GeneralPaths.flowerCloseFro()
                         .with(Constants.foresightConfig.maxPathSpeed.at(0.2))
@@ -82,11 +83,10 @@ public class AutoCommands {
         return sequential(
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
+                shooterTogg,
                 flowerFarJiggle(follower),
                 Commands.lazy(() -> Commands.waitMs(FLOWER_WAIT_MS)),
-                follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
-                holdBalls,
-                intakeTogg
+                follow(follower, AutoPaths.GeneralPaths.flowerFarFro())
         );
     }
 
@@ -96,10 +96,17 @@ public class AutoCommands {
                 follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
                 follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
                 follow(follower, AutoPaths.GeneralPaths.flowerJiggle()),
-                follow(follower, AutoPaths.GeneralPaths.jiggleFlower()),
-                follow(follower, AutoPaths.GeneralPaths.flowerJiggle())
+                follow(follower, AutoPaths.GeneralPaths.jiggleFlower())
         );
     }
+
+    public Command flowerCloseJiggle(Follower follower) {
+        return sequential(
+                follow(follower, AutoPaths.GeneralPaths.flowerJiggleC()),
+                follow(follower, AutoPaths.GeneralPaths.jiggleFlowerC())
+        );
+    }
+
 
 
 
