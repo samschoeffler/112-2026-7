@@ -300,6 +300,75 @@ public final class AutoPaths {
         }
     }
 
+    // 3Tip
+    public static final class TweaTip {
+
+        private TweaTip() {}
+
+        // ---------- POSES ----------
+
+        public static final Pose start =
+                poseFactory.of(56, 8, 90);
+
+        public static final Pose point1 =
+                poseFactory.of(56, 12, 90);
+
+        public static final Pose point2Control1 =
+                poseFactory.of(24, 39.5, 0);
+
+        public static final Pose point2Control2 =
+                poseFactory.of(34.5, 50, 0);
+
+        public static final Pose point3 =
+                poseFactory.of(36, 12, 180);
+
+        public static final Pose wall =
+                poseFactory.of(9, 8, 180);
+
+        public static final Pose park =
+                poseFactory.of(10, 90, 270);
+
+
+
+
+        // ---------- PATHS ----------
+
+        public static Path path1() {
+            return Paths.line(start, point1)
+                    .linear(start, point1);
+        }
+
+        public static Path path2() {
+            return Paths.curve(
+                    point1,
+                    point2Control1,
+                    point2Control2,
+                    GeneralPaths.flowerWaitClose
+            ).linear(point1, GeneralPaths.flowerWaitClose);
+        }
+
+        public static Path path3() {
+            return Paths.line(GeneralPaths.flowerWaitClose, point3)
+                    .linear(GeneralPaths.flowerWaitClose, point3);
+        }
+
+        public static Path WallTo() {
+            return Paths.line(point3, wall)
+                    .linear(point3, wall);
+        }
+
+        public static Path WallFro() {
+            return Paths.line(wall, point3)
+                    .linear(wall, point3);
+        }
+
+        public static Path park() {
+            return Paths.line(point3, park)
+                    .linear(point3, park);
+        }
+
+    }
+
     // CORNERUP
     public static final class CornerUp {
 
