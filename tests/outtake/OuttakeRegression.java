@@ -79,7 +79,7 @@ public final class OuttakeRegression {
         Rig r = new Rig();
         r.reverse();
         near(r.f.power, -.4, "Reverse from forward OFF"); near(r.t.power, -.4, "Transfer reverse");
-        near(r.i.power, -Intake.INTAKE_POWER, "Intake reverse");
+        near(r.i.power, -Math.min(1, Intake.INTAKE_POWER * Intake.REFERENCE_VOLTAGE / r.battery), "Intake reverse");
         check(!r.launcher.isFlywheelsOn() && !r.transfer.isFlywheelsOn(), "Reverse does not enable forward control");
         check(r.f.velocityReads == 0 && r.t.velocityReads == 0, "Reverse is independent of encoder/PID reads");
         r.battery = Double.NaN; r.f.velocity = r.t.velocity = Double.NaN;

@@ -8,5 +8,5 @@ public class OpModeStorage {
     public static String LastAllegiance = "Undefined";
     public static int turretForwardZeroTicks;
     public static boolean turretForwardZeroConfirmed;
-    // default pose to avoid null errors
+    // default pose to avoid null errorshow
 }

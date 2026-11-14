@@ -1,0 +1,113 @@
+package org.firstinspires.ftc.teamcode.experimental.methods;
+
+import static org.firstinspires.ftc.teamcode.experimental.methods.CoordinateTrackingAutoTune.*;
+
+public final class CoordinateTrackingAutoTuneRegression {
+    private static void check(boolean value, String why) { if (!value) throw new AssertionError(why); }
+    private static void near(double a,double b,double tolerance) { check(Double.isFinite(a)&&Math.abs(a-b)<tolerance,a+" != "+b); }
+    private static Metrics run(double gain) {
+        Metrics m=new Metrics();
+        for (int mode=0;mode<3;mode++) for (double t=0;t<MODE_SECONDS;t+=0.02) {
+            Profile p=profile(t);
+            // Synthetic ranking oracle; verifies search protocol rather than claiming hardware accuracy.
+            double error=0.2+Math.abs(gain-0.00125)*1000;
+            m.add(mode,0.02,error,0.1,mode==1?0:12*p.position,mode==0?0:30*p.position);
+        }
+        return m;
+    }
+    public static void main(String[] args) {
+        SettlingMotion motion=new SettlingMotion();
+        motion.update(0,0,0,0);
+        check(!Double.isFinite(motion.speed()),"No readiness before measurement window");
+        for(int i=1;i<=250;i++) {
+            // 1ms loops with small pose jitter: instantaneous velocity would exceed the 1in/s gate.
+            motion.update(i%2==0?0.01:0,0,0,i*0.001);
+        }
+        check(motion.speed()<1,"Stationary quantization must not veto readiness");
+        motion=new SettlingMotion();
+        for(int i=0;i<=100;i++) motion.update(i*0.02,0,i*0.001,i*0.01);
+        near(motion.speed(),2,1e-9);
+        near(motion.yawDegPerSec(),Math.toDegrees(0.1),1e-9);
+        motion.update(2,0,0,2);
+        check(!Double.isFinite(motion.speed()),"Stale window cannot declare stopped");
+        motion.update(Double.NaN,0,0,2.1);
+        check(!Double.isFinite(motion.speed()),"Invalid pose cannot declare stopped");
+        for(double duration:new double[]{5,6.25}) {
+            near(positioningProfile(0,duration).position,0,1e-9);
+            near(positioningProfile(duration,duration).position,1,1e-9);
+            near(positioningProfile(duration+8,duration).position,1,1e-9);
+            near(positioningProfile(duration+8,duration).speed,0,1e-9);
+            near(positioningProfile(duration*0.5,duration).speed,1/(0.75*duration),1e-9);
+        }
+        // Robot-relative forward then right at Red2Tip heading 90 degrees ends at (81,28).
+        near(56+Math.cos(Math.PI/2)*20+Math.sin(Math.PI/2)*25,81,1e-9);
+        near(8+Math.sin(Math.PI/2)*20-Math.cos(Math.PI/2)*25,28,1e-9);
+        for (int leg=0;leg<4;leg++) {
+            double t=leg*(MOVE_SECONDS+DWELL_SECONDS);
+            near(profile(t).speed,0,1e-9);
+            near(profile(t+MOVE_SECONDS).speed,0,1e-9);
+            near(profile(t+MOVE_SECONDS+0.1).speed,0,1e-9);
+        }
+        check(profile(MOVE_SECONDS*0.5).phase.equals("CRUISE"),"Includes constant-speed cruise");
+        near(profile(MOVE_SECONDS*0.4).speed,profile(MOVE_SECONDS*0.6).speed,1e-9);
+        near(profile(0).position,0,1e-9); near(profile(MODE_SECONDS).position,0,1e-9);
+        near(profile(MOVE_SECONDS).position,1,1e-9);
+        near(profile(2*(MOVE_SECONDS+DWELL_SECONDS)+MOVE_SECONDS).position,-1,1e-9);
+        // Analytical rate must match finite-difference coordinate geometry, including pivot rotation.
+        for (double h:new double[]{-2,0,1.57,3}) {
+            double dt=1e-6, x=56,y=8,vx=7,vy=-4,w=0.3;
+            CoordinateAim.Result a=CoordinateAim.calculate(x,y,h,62.4,82.3);
+            CoordinateAim.Result b=CoordinateAim.calculate(x+vx*dt,y+vy*dt,h+w*dt,62.4,82.3);
+            double finite=Math.toDegrees(wrap(Math.toRadians(b.relativeBearingDeg-a.relativeBearingDeg)))/dt;
+            near(targetRate(x,y,h,vx,vy,w,62.4,82.3),finite,1e-4);
+        }
+        check(Double.isNaN(targetRate(0,0,0,0,0,0,-2.25,0)),"Reject near-zero range");
+        near(power(0,0,20,0.001,0.5),0.30,1e-9);
+        near(power(0,0,-20,0.001,0.5),-0.30,1e-9);
+        near(power(0.6,0,0,0,0.5),0.30,1e-9);
+        near(power(0.6,0,0,0,1.5),0,1e-9);
+        near(power(0,180,20,0.001,0.5),0,1e-9);
+        near(power(0,-180,-20,0.001,0.5),0,1e-9);
+        near(power(0,0,Double.NaN,0.001,0.5),0,1e-9);
+        for(double error:new double[]{-200,-1,0,1,200}) for(double rate:new double[]{-500,0,500}) {
+            double p=power(error,0,rate,0.004,0.5);
+            check(Math.abs(p)<=0.4,"Bounded output");
+            check(p==0||Math.abs(p)>=0.30,"Every nonzero movement has the 30% floor");
+        }
+        near(power(0,0,0,0.001,0.5),0,1e-9); // on target and stopped
+        near(power(0.5,0,0,0.001,0.5),0,1e-9); // tolerance edge
+        near(power(-0.6,0,0,0,0.5),-0.30,1e-9);
+        near(power(0,180,-20,0.001,0.5),-0.30,1e-9); // inward motion remains allowed
+        near(power(0,-180,20,0.001,0.5),0.30,1e-9);
+        near(power(1,0,0,0,Double.NaN),0,1e-9);
+        Metrics baseline=run(0.00125), regressed=new Metrics();
+        for(int mode=0;mode<3;mode++) for(double t=0;t<MODE_SECONDS;t+=0.02) {
+            Profile p=profile(t);
+            regressed.add(mode,0.02,mode==1?0.4:0,0.1,mode==1?0:12*p.position,mode==0?0:30*p.position);
+        }
+        check(!regressed.preservesRotation(baseline),"Rotation regression is rejected even if other modes improve");
+        Metrics stationary=new Metrics();
+        for(int mode=0;mode<3;mode++) for(int i=0;i<700;i++) stationary.add(mode,0.02,0,0,0,0);
+        check(!stationary.valid(),"Stationary robot cannot pass");
+        CoordinateTrackingAutoTune tune=new CoordinateTrackingAutoTune();
+        boolean rejected=false;
+        try { tune.finish(stationary); } catch(IllegalStateException e) { rejected=true; }
+        check(rejected&&tune.trial()==0,"Invalid run cannot advance");
+        near(tune.tolerance(),1.5,1e-9);
+        while(!tune.complete()) {
+            check(tune.gain()>=0&&tune.gain()<=0.004,"Bounded search");
+            tune.finish(run(tune.gain()));
+        }
+        near(tune.bestGain(),0.00125,1e-9);
+        check(tune.report().contains("Both validation runs within +/-1 computed degree=true"),"Validation reported");
+        check(tune.report().contains("RECOMMENDED for"),"Validated improvement reported");
+        CoordinateTrackingAutoTune worse=new CoordinateTrackingAutoTune();
+        while(!worse.complete()) worse.finish(run(worse.validation()?0.004:0.00125));
+        check(worse.report().contains("NO RECOMMENDATION"),"Failed validation cannot recommend");
+        check(new CoordinateTrackingAutoTune().report().contains("INCOMPLETE"),"Partial run cannot recommend");
+        Metrics weighted=new Metrics(); weighted.add(0,0.02,2,0.4,0,0); weighted.add(0,0.08,0,0,0,0);
+        near(weighted.outsideSeconds,0.02,1e-9); near(weighted.saturatedSeconds,0.02,1e-9);
+        near(weighted.seconds,0.1,1e-9);
+        System.out.println("Auto tune search, repeated validation, motion coverage, geometry, output limits and time-weighted metrics passed");
+    }
+}

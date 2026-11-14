@@ -49,6 +49,33 @@ public final class SynchronizedMechanismRegression {
         void stopped() { check(f.power == 0 && t.power == 0 && i.power == 0, "All motor powers stop"); }
     }
     public static void main(String[] args) {
+        Rig resetRig = new Rig();
+        resetRig.f.velocity = -1420;
+        resetRig.tick(false, false, false, false);
+        check(resetRig.launcher.getIntegralVolts() < 0, "Spin-up overspeed builds negative trim");
+        resetRig.shooting.setResetIntegralAtFeedStart(true);
+        while (resetRig.shooting.state() != SynchronizedFeed.State.RAMP_TRANSFER)
+            resetRig.tick(true, false, false, false);
+        check(resetRig.shooting.getIntegralResetCount() == 0 && resetRig.i.power == 0,
+                "Readiness must finish before reset; no early feeding");
+        resetRig.f.velocity = -1407;
+        resetRig.tick(true, false, false, false);
+        check(resetRig.shooting.isFeeding() && resetRig.shooting.getIntegralResetCount() == 1,
+                "Reset occurs on first positive feed command");
+        check(resetRig.shooting.getTrimBeforeFeedReset() < 0 && resetRig.launcher.getIntegralVolts() == 0,
+                "Recorded negative trim is cleared without changing target");
+        check(resetRig.launcher.getTargetVelocity() == 1407 && resetRig.launcher.isFlywheelsOn(),
+                "Reset preserves forward target and enabled state");
+        resetRig.f.velocity = -1390;
+        for (int n = 0; n < 20; n++) resetRig.tick(true, false, false, false);
+        check(resetRig.shooting.getIntegralResetCount() == 1 && resetRig.launcher.getIntegralVolts() > 0,
+                "Integration continues normally after one reset");
+        resetRig.shooting.stopAll(); resetRig.stopped();
+        resetRig.shooting.setResetIntegralAtFeedStart(false);
+        resetRig.launcher.setTargetVelocity(1407); resetRig.f.velocity = -1420;
+        resetRig.tick(false, false, false, false); resetRig.ready();
+        check(resetRig.shooting.getIntegralResetCount() == 0 && resetRig.launcher.getIntegralVolts() < 0,
+                "KEEP condition retains trim and performs no reset");
         Rig r = new Rig();
         r.tick(false, false, false, false);
         check(r.shooting.state() == SynchronizedFeed.State.IDLE

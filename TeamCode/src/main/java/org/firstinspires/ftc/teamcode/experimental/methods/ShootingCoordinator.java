@@ -10,6 +10,9 @@ public final class ShootingCoordinator {
     private final DoubleSupplier clock;
     private final SynchronizedFeed feed = new SynchronizedFeed();
     private String status = "Not updated";
+    private boolean resetIntegralAtFeedStart, integralResetForRequest;
+    private int integralResetCount;
+    private double trimBeforeFeedReset = Double.NaN;
 
     public ShootingCoordinator(Launcher launcher, Transfer transfer, Intake intake) {
         this(launcher, transfer, intake, () -> System.nanoTime() / 1e9);
@@ -28,6 +31,7 @@ public final class ShootingCoordinator {
         // Only explicit operator/test aborts latch; no automatic sensor/stall lockouts.
         if (!feed.fault().isEmpty()) { stopMotors(); return; }
         if (outtake || eject) {
+            integralResetForRequest = false;
             status = outtake ? "B OUTTAKE overrides shooting" : "RIGHT BUMPER EJECT overrides shooting";
             launcher.outtake();
             launcher.update();
@@ -37,6 +41,16 @@ public final class ShootingCoordinator {
         } else {
             launcher.stopOuttake();
             if (toggleFlywheel) launcher.toggleOn();
+            if (!shoot || !launcher.isFlywheelsOn()) integralResetForRequest = false;
+            // WAIT_FLYWHEEL transitions to RAMP_TRANSFER with zero feed output.
+            // Clear once on the following loop, before PI and the first positive feed command.
+            if (shoot && launcher.isFlywheelsOn() && resetIntegralAtFeedStart
+                    && !integralResetForRequest && feed.state() == SynchronizedFeed.State.RAMP_TRANSFER) {
+                trimBeforeFeedReset = launcher.getIntegralVolts();
+                launcher.resetIntegralTrim();
+                integralResetForRequest = true;
+                integralResetCount++;
+            }
             launcher.update();
             feed.update(clock.getAsDouble(), shoot, launcher.isFlywheelsOn(),
                     launcher.getTargetVelocity(), launcher.getMeasuredVelocity(),
@@ -57,10 +71,11 @@ public final class ShootingCoordinator {
 
     public void abort(String reason) { feed.abort(reason); stopMotors(); }
     private void stopMotors() {
+        integralResetForRequest = false;
         launcher.stopAll(); transfer.stopAll(); intake.stop();
     }
     public void stopAll() { feed.cancel(); stopMotors(); status = "STOPPED"; }
-    public void stopFeed() { feed.cancel(); transfer.stopAll(); intake.stop(); }
+    public void stopFeed() { feed.cancel(); integralResetForRequest = false; transfer.stopAll(); intake.stop(); }
     /** An explicit stopped reset never starts any motor. */
     public void clearFault() {
         stopAll(); launcher.clearFault(); transfer.clearFault(); feed.clearFault();
@@ -68,6 +83,14 @@ public final class ShootingCoordinator {
     public boolean isFeeding() { return feed.intakeEnabled(); }
     public SynchronizedFeed.State state() { return feed.state(); }
     public double feedSeconds() { return feed.feedSeconds(); }
+    public void setTransferRampSeconds(double seconds) { feed.setRampSeconds(seconds); }
+    public void setResetIntegralAtFeedStart(boolean enabled) {
+        if (feed.state() != SynchronizedFeed.State.IDLE) throw new IllegalStateException("Configure only while idle");
+        resetIntegralAtFeedStart = enabled;
+        integralResetForRequest = false; integralResetCount = 0; trimBeforeFeedReset = Double.NaN;
+    }
+    public int getIntegralResetCount() { return integralResetCount; }
+    public double getTrimBeforeFeedReset() { return trimBeforeFeedReset; }
     public String getStatus() { return getFault().isEmpty() ? status : "FAULT: " + getFault(); }
     public String getFault() {
         if (!feed.fault().isEmpty()) return feed.fault();

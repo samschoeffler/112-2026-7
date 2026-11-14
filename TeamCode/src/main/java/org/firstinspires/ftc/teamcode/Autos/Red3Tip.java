@@ -92,7 +92,7 @@ public class Red3Tip extends OpMode {
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.TweaTip.WallTo()),
                 autoCommand.shooterTogg,
-                Commands.waitMs(50),
+                autoCommand.waitForFeedMs(50),
                 autoCommand.shooterTogg,
                 Commands.waitMs(500),
                 parallel(
@@ -117,7 +117,7 @@ public class Red3Tip extends OpMode {
         autoCommand = new AutoCommands(hardwareMap);
         turret = new Turret(hardwareMap);
         turretMotor = hardwareMap.get(DcMotorEx.class, "TurretRot");
-        launcher = new Launcher(hardwareMap);
+        launcher = autoCommand.getLauncher();
         led = hardwareMap.get(Servo.class, "led");
 
         turret.stopRotation();
@@ -201,6 +201,7 @@ public class Red3Tip extends OpMode {
         telemetry.addData("LL Frame Age (ms)", vision.getFrameAgeMs());
         telemetry.addData("Current Velo", launcher.getFlywheelVelo());
         telemetry.addData("Target Velo", launcher.getTargetVelocity());
+        telemetry.addData("Shooting feed state", autoCommand.getFeedState());
 
         turret.addTelemetry(telemetry);
         telemetry.update();

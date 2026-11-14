@@ -18,6 +18,8 @@ public class AutoCommands {
     private Turret turret;
     private Intake intake;
     private Transfer transfer;
+    private ShootingCoordinator shooting;
+    private boolean shootRequested, collectRequested;
 
     // how long to sit at the flower collecting balls
     public static long FLOWER_WAIT_MS = 2000;
@@ -28,17 +30,18 @@ public class AutoCommands {
         launcher = new Launcher(hardwareMap);
         intake = new Intake(hardwareMap);
         transfer = new Transfer(hardwareMap);
+        shooting = new ShootingCoordinator(launcher, transfer, intake);
         turret = new Turret(hardwareMap);
         vision = new LimelightVision(hardwareMap, 4);
     }
 
-    public Command shooterTogg = instant(() -> transfer.toggleOn());
+    public Command shooterTogg = instant(() -> shootRequested = !shootRequested);
 
-    public Command stopShooter = instant(() -> launcher.stopFire());
+    public Command stopShooter = instant(() -> { shootRequested = false; shooting.stopFeed(); });
 
-    public Command intakeTogg = instant(() -> intake.intake());
+    public Command intakeTogg = instant(() -> collectRequested = true);
 
-    public Command stopIntake = instant(() -> intake.stop());
+    public Command stopIntake = instant(() -> { collectRequested = false; intake.stop(); });
 
     public Command rampTogg = instant(() -> intake.toggleRamp());
 
@@ -118,14 +121,26 @@ public class AutoCommands {
     }
 
     public void otherUpdate(Follower follower) {
-        launcher.update(follower.pose().x(), follower.pose().y(), 0, 0);
+        launcher.updateDistanceTarget(follower.pose().x(), follower.pose().y());
+        shooting.update(shootRequested, collectRequested, false);
     }
 
     public void updateTransfer() {
-        transfer.update();
+        // Compatibility with every Red/Blue auto: otherUpdate owns all motor updates.
+    }
+
+    public Launcher getLauncher() { return launcher; }
+    public SynchronizedFeed.State getFeedState() { return shooting.state(); }
+
+    /** Preserve a short full-speed pulse instead of cancelling it during readiness/ramp. */
+    public Command waitForFeedMs(double milliseconds) {
+        return sequential(Commands.waitUntil(() -> shooting.state() == SynchronizedFeed.State.FEED),
+                Commands.waitMs(milliseconds));
     }
 
     public void stopAll() {
+        shootRequested = collectRequested = false;
+        shooting.stopAll();
         launcher.stopAll();
         intake.stop();
         transfer.stopAll();

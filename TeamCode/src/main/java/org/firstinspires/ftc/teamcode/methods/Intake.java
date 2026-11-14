@@ -4,9 +4,12 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 public class Intake {
-    public static double INTAKE_POWER = 1.0;
+    /** Calibrated at 12.76 V; command is compensated for measured battery voltage. */
+    public static double INTAKE_POWER = 0.85;
+    public static double REFERENCE_VOLTAGE = 12.76;
 
     // Verify on the robot using Ramp Tuning, then copy the measured values here.
     public static final double RAMP_DOWN = 0.05;
@@ -18,18 +21,25 @@ public class Intake {
 
     private final DcMotorEx intake;
     private final Servo ramp;
+    private final HardwareMap hardwareMap;
     private RampState rampState = RampState.UP;
     private boolean intakeOn = false;
+    private double requestedPower;
 
     public Intake(HardwareMap hardwareMap) {
         this(hardwareMap.get(DcMotorEx.class, "Intake"),
-                hardwareMap.get(Servo.class, "Ramp"));
+                hardwareMap.get(Servo.class, "Ramp"), hardwareMap);
     }
 
     // Hardware injection for desktop regression tests.
     Intake(DcMotorEx intake, Servo ramp) {
+        this(intake, ramp, null);
+    }
+
+    private Intake(DcMotorEx intake, Servo ramp, HardwareMap hardwareMap) {
         this.intake = intake;
         this.ramp = ramp;
+        this.hardwareMap = hardwareMap;
         stop();
         // Intake and outtake are power commands; stop must not switch to velocity control.
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -37,30 +47,55 @@ public class Intake {
     }
 
     public void intake() {
-        intake.setPower(INTAKE_POWER);
-        intakeOn = true;
+        setPower(INTAKE_POWER);
+    }
+
+    /** Sets a requested normalized power and applies battery compensation. */
+    public void setPower(double power) {
+        requestedPower = Math.max(-1.0, Math.min(1.0, power));
+        intakeOn = Math.abs(requestedPower) > 0;
+        if (!intakeOn) intake.setPower(0.0);
+        else update();
     }
 
     public void toggle() {
         if (intakeOn) {
-            intake.setPower(0);
-            intakeOn = false;
+            stop();
         }
         else {
-         intake.setPower(INTAKE_POWER);
-         intakeOn = true;
+            intake();
         }
 
     }
 
     public void outtake() {
-        intake.setPower(-INTAKE_POWER);
-        intakeOn = true;
+        setPower(-INTAKE_POWER);
     }
 
     public void stop() {
+        requestedPower = 0.0;
         intake.setPower(0.0);
         intakeOn = false;
+    }
+
+    /** Call every OpMode loop so compensation tracks battery sag during operation. */
+    public void update() {
+        if (!intakeOn) return;
+        double voltage = readBatteryVoltage();
+        double compensated = voltage > 0 && Double.isFinite(REFERENCE_VOLTAGE)
+                ? requestedPower * REFERENCE_VOLTAGE / voltage : requestedPower;
+        intake.setPower(Math.max(-1.0, Math.min(1.0, compensated)));
+    }
+
+    private double readBatteryVoltage() {
+        if (hardwareMap == null) return Double.NaN;
+        double minimum = Double.POSITIVE_INFINITY;
+        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
+            double voltage = sensor.getVoltage();
+            if (Double.isFinite(voltage) && voltage >= 6.0 && voltage <= 16.8)
+                minimum = Math.min(minimum, voltage);
+        }
+        return Double.isFinite(minimum) ? minimum : Double.NaN;
     }
 
     /** UP toggles to DOWN; DOWN, HOLD and DOWNER toggle to UP. */

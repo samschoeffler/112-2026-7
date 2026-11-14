@@ -1,0 +1,68 @@
+package org.firstinspires.ftc.teamcode.experimental.methods;
+
+import static org.firstinspires.ftc.teamcode.experimental.methods.TurretSweepAutoTune.*;
+import static org.firstinspires.ftc.teamcode.experimental.methods.CoordinateTrackingAutoTune.power;
+
+public final class TurretSweepAutoTuneRegression {
+    private static void check(boolean ok,String why){if(!ok)throw new AssertionError(why);}
+    private static void near(double a,double b){check(Double.isFinite(a)&&Math.abs(a-b)<1e-6,a+" != "+b);}
+    private static Result simulate(double gain,double tolerance) {
+        Result result=new Result();
+        for(int level=0;level<LEVELS;level++) {
+            double angle=0,velocity=0;
+            for(int i=0;i<=800;i++) {
+                Sample s=sample(level,i*0.01);
+                double error=s.target-angle;
+                double request=power(error,angle,s.rate,gain,tolerance);
+                check(request==0||Math.abs(request)>=0.30,"Every simulated movement respects floor");
+                check(Math.abs(request)<=0.4,"Every simulated movement respects cap");
+                result.add(level,0.01,error,angle,request);
+                // Friction + velocity cost and a finite motor response time.
+                double wanted=Math.copySign(Math.max(0,Math.abs(request)-0.04)/0.0015,request);
+                velocity+=(wanted-velocity)*0.25;angle+=velocity*0.01;
+            }
+        }
+        return result;
+    }
+    public static void main(String[] args) {
+        for(int level=0;level<LEVELS;level++) {
+            near(sample(level,0).target,0);near(sample(level,LEVEL_SECONDS).target,0);
+            near(sample(level,LEVEL_SECONDS+100).target,0);
+            near(sample(level,MOVE).target,amplitude(level));
+            near(sample(level,2*(MOVE+PAUSE)+MOVE).target,-amplitude(level));
+            near(sample(level,MOVE+0.1).rate,0);
+            for(double t=0.01;t<LEVEL_SECONDS-0.01;t+=0.01) {
+                Sample s=sample(level,t);
+                check(Math.abs(s.target)<=amplitude(level)+1e-9,"Amplitude bound");
+                check(Math.abs(s.rate)<=4*amplitude(level)/(3*MOVE)+1e-9,"Speed bound");
+                if(t%(MOVE+PAUSE)>0.01&&t%(MOVE+PAUSE)<MOVE-0.01) {
+                    double numerical=(sample(level,t+1e-5).target-sample(level,t-1e-5).target)/2e-5;
+                    check(Math.abs(numerical-s.rate)<1e-3,"Feedforward derivative matches trajectory");
+                }
+            }
+        }
+        Result baseline=simulate(0,1.5),matched=simulate(0.0015,0.5);
+        check(baseline.valid()&&matched.valid(),"Real sweep coverage");
+        // The plant is unchanged: the imposed floor can defeat an otherwise matched kV.
+        check(matched.score()>=baseline.score(),"Floor-induced tracking degradation must remain visible");
+        check(matched.max()>1,"A 30% floor cannot imply a one-degree guarantee");
+        Result stationary=new Result();
+        for(int level=0;level<LEVELS;level++)for(int i=0;i<800;i++)stationary.add(level,0.01,0,0,0);
+        check(!stationary.valid(),"Stationary encoder cannot pass");
+        TurretSweepAutoTune tune=new TurretSweepAutoTune();
+        boolean rejected=false;try{tune.finish(stationary);}catch(IllegalStateException e){rejected=true;}
+        check(rejected&&tune.trial()==0,"Invalid trial cannot advance");
+        check(tune.report().contains("INCOMPLETE"),"Partial run has no recommendation");
+        while(!tune.complete()) {
+            check(tune.gain()>=0&&tune.gain()<=0.004,"Bounded search");
+            tune.finish(simulate(tune.gain(),tune.tolerance()));
+        }
+        check(tune.bestGain()>=0&&tune.bestGain()<=0.004,"Model search remains bounded even when floor dominates");
+        check(tune.report().contains("Both validation runs"),"Repeated validation reported");
+        // Equal baseline and candidate results cannot produce a false recommendation.
+        TurretSweepAutoTune equal=new TurretSweepAutoTune();
+        while(!equal.complete())equal.finish(baseline);
+        check(equal.report().contains("NO RECOMMENDATION"),"No improvement cannot recommend");
+        System.out.println("Progressive sweep bounds, derivatives, plant tracking, coverage, search and repeated validation passed");
+    }
+}

@@ -1,25 +1,37 @@
 package org.firstinspires.ftc.teamcode.methods;
 
-/** Experimental tuner-only integral trim. Production Launcher still uses feedforward + P. */
+/** Voltage-model PI trim shared by production Launcher and tuning OpModes. */
 public final class FlywheelIntegralControl {
     public static final double MAX_INTEGRAL_VOLTS = .4;
     public static final double INTEGRATION_ERROR_BAND = 50;
+    public static final double TARGET_STEP_RESET = 50;
     private double integralVolts;
+    private double previousTarget = Double.NaN;
 
-    public void reset() { integralVolts = 0; }
+    public void reset() { integralVolts = 0; previousTarget = Double.NaN; }
     public double integralVolts() { return integralVolts; }
 
     /** kI units: volts / ((ticks/second) * seconds). dt is measured monotonic elapsed time. */
     public double volts(double target, double measured, double dt, double battery,
                         double kS, double kV, double kP, double kI) {
+        return volts(target, measured, dt, battery, kS, kV, kP, kI, 0);
+    }
+
+    /** Additional voltage participates in saturation protection, rather than bypassing PI. */
+    public double volts(double target, double measured, double dt, double battery,
+                        double kS, double kV, double kP, double kI, double extraVolts) {
         if (!Double.isFinite(target) || !Double.isFinite(measured) || !Double.isFinite(dt)
                 || !Double.isFinite(battery) || !Double.isFinite(kS) || !Double.isFinite(kV)
                 || !Double.isFinite(kP) || !Double.isFinite(kI)
+                || !Double.isFinite(extraVolts) || kS < 0 || kV < 0 || kP < 0
                 || target <= 0 || dt <= 0 || dt > .1 || battery <= 0 || kI < 0) {
             reset();
             return 0;
         }
-        double base = FlywheelVelocityControl.volts(target, measured, kS, kV, kP);
+        if (Double.isFinite(previousTarget) && Math.abs(target - previousTarget) > TARGET_STEP_RESET)
+            integralVolts = 0;
+        previousTarget = target;
+        double base = FlywheelVelocityControl.volts(target, measured, kS, kV, kP) + extraVolts;
         if (kI == 0) { reset(); return base; }
         double error = target - measured;
         // Freeze during startup/large target steps and when error would worsen output saturation.

@@ -259,6 +259,11 @@ public class Launcher {
     public double getFlywheelVelo() { return fWheel.getVelocity(); }
     public double getMeasuredVelocity() { return measuredVelocity; }
     public double getMotorPower() { return motorPower; }
+    /** Unclipped controller demand, before conversion to available battery power. */
+    public double getRequestedVolts() { return requestedVolts; }
+    public double getIntegralVolts() { return flywheelController.integralVolts(); }
+    /** Clears PI history only; the next update retains the target and normal motor control. */
+    public void resetIntegralTrim() { flywheelController.reset(); }
     /** SDK-reported commanded power; this does not prove physical motor motion. */
     public double getAppliedMotorPower() { return fWheel.getPower(); }
     public double getBatteryVoltage() { return batteryVoltage; }

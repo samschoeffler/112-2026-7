@@ -13,6 +13,22 @@ public final class SynchronizedFeedRegression {
         check(f.state() == SynchronizedFeed.State.FEED, "Eventually feeds after readiness and ramp");
     }
     public static void main(String[] args) {
+        SynchronizedFeed quick = new SynchronizedFeed();
+        quick.setRampSeconds(.1); now = 0;
+        while (quick.state() != SynchronizedFeed.State.RAMP_TRANSFER) tick(quick, true, 1407, 0);
+        double quickStart = now;
+        boolean rejected = false;
+        try { quick.setRampSeconds(.3); } catch (IllegalStateException expected) { rejected = true; }
+        check(rejected, "Cannot change ramp during active batch");
+        while (quick.state() == SynchronizedFeed.State.RAMP_TRANSFER) tick(quick, true, 1407, 0);
+        check(now - quickStart >= .1 && now - quickStart < .13 && quick.transferTarget() == 1440,
+                "Selected 100 ms ramp reaches full target on schedule");
+        quick.cancel(); quick.setRampSeconds(.3);
+        for (double bad : new double[]{0, -1, Double.NaN, Double.POSITIVE_INFINITY}) {
+            rejected = false;
+            try { quick.setRampSeconds(bad); } catch (IllegalArgumentException expected) { rejected = true; }
+            check(rejected, "Reject invalid ramp duration");
+        }
         SynchronizedFeed f = new SynchronizedFeed(); now = 0;
         for (int n = 0; n < 20; n++) tick(f, true, 1300, 0);
         check(f.state() == SynchronizedFeed.State.WAIT_FLYWHEEL && f.transferTarget() == 0,

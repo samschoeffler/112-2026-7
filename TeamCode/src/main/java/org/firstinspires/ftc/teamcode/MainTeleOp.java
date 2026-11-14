@@ -17,6 +17,7 @@ import org.firstinspires.ftc.teamcode.methods.Intake;
 import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.OpModeStorage;
 import org.firstinspires.ftc.teamcode.methods.Transfer;
+import org.firstinspires.ftc.teamcode.methods.ShootingCoordinator;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
@@ -80,6 +81,7 @@ public class MainTeleOp extends OpMode {
     private Servo led;
 
     private Transfer transfer;
+    private ShootingCoordinator shooting;
 
     private String yawSource = "Pedro";
     private IMU imu;
@@ -136,6 +138,7 @@ public class MainTeleOp extends OpMode {
         launcher    = new Launcher(hardwareMap);
         transfer = new Transfer(hardwareMap);
         intake      = new Intake(hardwareMap);
+        shooting = new ShootingCoordinator(launcher, transfer, intake);
         turret      = new Turret(hardwareMap);
         turretMotor = hardwareMap.get(DcMotorEx.class, "TurretRot");
         coordinateAimEnabled = OpModeStorage.turretForwardZeroConfirmed;
@@ -217,20 +220,11 @@ public class MainTeleOp extends OpMode {
         // Consume Y's edge during reverse, without changing the prior on/off state.
         boolean toggleLauncher = gamepad2.yWasPressed();
         boolean outtakeRequested = gamepad2.b || gamepad2.right_bumper;
-        if (outtakeRequested) {
-            launcher.outtake();
-            transfer.outtake();
-            intake.outtake();
-        } else {
-            launcher.stopOuttake();
-            transfer.stopOuttake();
-            if (toggleLauncher) launcher.toggleOn();
-            if (gamepad2.left_trigger > 0.1) intake.intake();
-            else intake.stop();
-            transfer.setTargetVelocity(1440 * gamepad2.right_trigger);
-            transfer.update();
-            launcher.update(follower.pose().x(), follower.pose().y(), amplitude, yint);
-        }
+        if (!outtakeRequested && toggleLauncher) launcher.toggleOn();
+        launcher.updateDistanceTarget(follower.pose().x(), follower.pose().y());
+        shooting.update(gamepad2.right_trigger > TRIGGER_THRESHOLD,
+                gamepad2.left_trigger > 0.1, outtakeRequested, false);
+        telemetry.addData("Shooting feed state", shooting.state());
         
 
 // Intake follows the launcher's updated firing/ejecting state.

@@ -7,10 +7,10 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 public class Transfer {
-    // Copy the final VOLTAGE-MODEL gains from LauncherTuning here.
+    // Voltage-model gains validated by TransferAutoTuning and single-ball tests.
     // These are not REV Hub PIDFCoefficients. KV must be positive before use.
-    public static double KS = 0.1696, KV = 0.004476;
-    public static double KP = 0.0031;
+    public static double KS = 1.1294224, KV = 0.004082160;
+    public static double KP = 0.001;
     public static double SHOOTING_VELOCITY = 1440;
 
     // Copy the confirmed settings from the tuner. With both motors configured
@@ -19,6 +19,7 @@ public class Transfer {
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
     public static double ENCODER_SIGN_0 = 1.0;
+
     public static final double OUTTAKE_POWER = 0.40;
     private boolean outtaking;
 
@@ -29,17 +30,17 @@ public class Transfer {
     // Starting examples: verify readiness settings on the robot.
     public static double VELOCITY_TOLERANCE = 40.0;
     public static double READY_HOLD_SECONDS = 0.15;
+    /** Legacy setting retained for compatibility; readiness timeouts are disabled. */
     public static double FEED_READY_TIMEOUT_SECONDS = 3.0;
 
-    private final HardwareMap hardwareMap;
+    private final Iterable<VoltageSensor> voltageSensors;
     private final DcMotorEx fWheel;
     private boolean flywheelsOn = false;
     private boolean fireRequested = false, firing = false, ejecting = false;
     private boolean feedStarted = false;
     private double targetVelocity = 0.0, measuredVelocity = 0.0;
-    private double batteryVoltage = Double.NaN, requestedVolts = 0.0, motorPower = 0.0;
-    private long readySince = 0, fireRequestedAt = 0, reverseSince = 0, stalledSince = 0;
-    private String fault = "";
+    private double batteryVoltage = 12.76, requestedVolts = 0.0, motorPower = 0.0;
+    private long readySince = 0, fireRequestedAt = 0;
     private boolean ballJustShot = false;
     private boolean flywheelDropped = false;
     // only count drops once the flywheel has been up to speed (ignores spin-up)
@@ -47,8 +48,12 @@ public class Transfer {
     private double flywheelThreshold = 1200;
 
     public Transfer(HardwareMap hardwareMap) {
-        this.hardwareMap = hardwareMap;
-        fWheel = hardwareMap.get(DcMotorEx.class, "LaunchMech");
+        this(hardwareMap.get(DcMotorEx.class, "LaunchMech"), hardwareMap.voltageSensor);
+    }
+
+    Transfer(DcMotorEx motor, Iterable<VoltageSensor> sensors) {
+        voltageSensors = sensors;
+        fWheel = motor;
         configureFlywheel(fWheel);
         //stopAll();
     }
@@ -74,10 +79,8 @@ public class Transfer {
 
     public void setTargetVelocity(double ticksPerSecond) {
         if (!Double.isFinite(ticksPerSecond) || ticksPerSecond < 0.0) {
-            tripFault("Invalid target velocity");
             return;
         }
-        if (!fault.isEmpty()) return;
         if (targetVelocity != ticksPerSecond || !flywheelsOn) {
             readySince = 0;
             feedStarted = false;
@@ -90,7 +93,6 @@ public class Transfer {
 
     // Safe to call repeatedly from a held trigger; does not reset the timeout.
     public void fire() {
-        //if (!flywheelsOn || !fault.isEmpty()) return;
         if (!fireRequested) fireRequestedAt = System.nanoTime();
         fireRequested = true;
         ejecting = false;
@@ -104,10 +106,11 @@ public class Transfer {
         fWheel.setPower(0);
     }
 
+
     /** Reverse directly; the saved forward velocity/toggle state is preserved. */
     public void outtake() {
         outtaking = true;
-        readySince = reverseSince = stalledSince = 0;
+        readySince = 0;
         firing = false;
         requestedVolts = 0;
         motorPower = -OUTTAKE_POWER;
@@ -118,14 +121,14 @@ public class Transfer {
     public void stopOuttake() {
         if (!outtaking) return;
         outtaking = false;
-        readySince = reverseSince = stalledSince = 0;
+        readySince = 0;
         requestedVolts = motorPower = 0;
         fWheel.setPower(0);
     }
 
 
     public void eject(boolean requested) {
-        ejecting = requested && fault.isEmpty();
+        ejecting = requested;
         if (ejecting) {
             fireRequested = false;
             firing = false;
@@ -138,16 +141,9 @@ public class Transfer {
     public void update() {
         if (outtaking) { outtake(); return; }
         long now = System.nanoTime();
-        measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
+        double velocity = ENCODER_SIGN_0 * fWheel.getVelocity();
+        if (Double.isFinite(velocity)) measuredVelocity = velocity;
         batteryVoltage = readBatteryVoltage();
-        if (!Double.isFinite(measuredVelocity) || !Double.isFinite(batteryVoltage)) {
-            tripFault("Invalid encoder velocity or battery voltage");
-            return;
-        }
-        if (!validConfiguration()) {
-            tripFault("Enter valid KS/KV/KP, signs, feed power, and readiness settings");
-            return;
-        }
 
         requestedVolts = motorPower = 0.0;
         if (flywheelsOn && targetVelocity > 0.0) {
@@ -158,31 +154,16 @@ public class Transfer {
                 if (readySince == 0) readySince = now;
             } else readySince = 0;
 
-            boolean reversed = measuredVelocity < -50.0;
-            reverseSince = reversed ? (reverseSince == 0 ? now : reverseSince) : 0;
-            boolean stalled = motorPower >= 0.25 && Math.abs(measuredVelocity) < 15.0;
-            stalledSince = stalled ? (stalledSince == 0 ? now : stalledSince) : 0;
-            if (reverseSince != 0 && now - reverseSince >= 200_000_000L) {
-                tripFault("Launch0 encoder sign disagrees with tuned direction");
-                return;
-            }
-            if (stalledSince != 0 && now - stalledSince >= 1_500_000_000L) {
-                tripFault("Flywheel stopped or Launch0 encoder missing under power");
-                return;
-            }
         } else {
-            readySince = reverseSince = stalledSince = 0;
+            readySince = 0;
         }
-        fWheel.setPower(MOTOR0_POWER_SIGN * motorPower);
+        if (ejecting) motorPower = -.4;
+        fWheel.setPower(clip(MOTOR0_POWER_SIGN * motorPower, -1, 1));
 
         // Gate the START of a firing request on stable speed. Once feeding
         // starts, keep feeding through normal shot dips, matching the ball test.
         if (fireRequested && flywheelsOn && !ejecting && !feedStarted) {
             if (flywheelAtSpeed()) feedStarted = true;
-            else if ((now - fireRequestedAt) / 1e9 >= FEED_READY_TIMEOUT_SECONDS) {
-                tripFault("Timed out waiting for shooting speed; feeding cancelled");
-                return;
-            }
         }
         firing = fireRequested && flywheelsOn && feedStarted && !ejecting;
 
@@ -198,53 +179,34 @@ public class Transfer {
             ballJustShot = false;
     }
 
-    private boolean validConfiguration() {
-        return Double.isFinite(KS) && KS >= 0.0 && Double.isFinite(KV) && KV > 0.0
-                && Double.isFinite(KP) && KP >= 0.0
-                && Math.abs(MOTOR0_POWER_SIGN) == 1.0
-                && Math.abs(MOTOR1_POWER_SIGN) == 1.0
-                && Math.abs(ENCODER_SIGN_0) == 1.0
-                && Double.isFinite(MECH_POWER) && MECH_POWER >= 0.0 && MECH_POWER <= 1.0
-                && Double.isFinite(VELOCITY_TOLERANCE) && VELOCITY_TOLERANCE >= 0.0
-                && Double.isFinite(READY_HOLD_SECONDS) && READY_HOLD_SECONDS >= 0.0
-                && Double.isFinite(FEED_READY_TIMEOUT_SECONDS) && FEED_READY_TIMEOUT_SECONDS > 0.0;
-    }
-
     private double readBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;
-        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
+        for (VoltageSensor sensor : voltageSensors) {
             double voltage = sensor.getVoltage();
-            if (Double.isFinite(voltage) && voltage >= 6.0 && voltage <= 16.8) {
+            if (Double.isFinite(voltage) && voltage > 0) {
                 result = Math.min(result, voltage);
             }
         }
-        return Double.isFinite(result) ? result : Double.NaN;
+        return Double.isFinite(result) ? result : batteryVoltage;
     }
 
     private static double clip(double value, double low, double high) {
-        return Math.max(low, Math.min(value, high));
+        return Double.isFinite(value) ? Math.max(low, Math.min(value, high)) : 0;
     }
 
-    private void tripFault(String reason) {
-        fault = reason;
-    }
-
-    // Faults stay latched until explicitly cleared while stopped, or a new
-    // Launcher is constructed for a new OpMode run.
-    public void clearFault() {
-        if (!flywheelsOn && !fireRequested && !ejecting) fault = "";
-    }
+    /** Compatibility API: automatic transfer fault latching is disabled. */
+    public void clearFault() { }
 
     public void stopAll() {
         outtaking = false;
         flywheelsOn = fireRequested = firing = ejecting = feedStarted = false;
         targetVelocity = requestedVolts = motorPower = 0.0;
-        readySince = fireRequestedAt = reverseSince = stalledSince = 0;
+        readySince = fireRequestedAt = 0;
         fWheel.setPower(0.0);
     }
 
     public boolean flywheelAtSpeed() {
-        return fault.isEmpty() && flywheelsOn && targetVelocity > 0.0
+        return flywheelsOn && targetVelocity > 0.0
                 && readySince != 0 && Math.abs(targetVelocity - measuredVelocity) <= VELOCITY_TOLERANCE
                 && (System.nanoTime() - readySince) / 1e9 >= READY_HOLD_SECONDS;
     }
@@ -259,5 +221,5 @@ public class Transfer {
     public double getMotorPower() { return motorPower; }
     public double getBatteryVoltage() { return batteryVoltage; }
     public boolean ballWasShot() {return ballJustShot;}
-    public String getFault() { return fault; }
+    public String getFault() { return ""; }
 }

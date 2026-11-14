@@ -10,6 +10,14 @@ public final class SynchronizedFeed {
     private double transferTarget, feedSeconds;
     private boolean intakeEnabled;
     private String fault = "";
+    private double rampSeconds = RAMP_SECONDS;
+
+    /** Per-instance experiment setting; never change a batch already in progress. */
+    public void setRampSeconds(double seconds) {
+        if (!Double.isFinite(seconds) || seconds <= 0) throw new IllegalArgumentException("Positive finite ramp required");
+        if (state != State.IDLE) throw new IllegalStateException("Set ramp only while idle");
+        rampSeconds = seconds;
+    }
 
     public State state() { return state; }
     public double transferTarget() { return transferTarget; }
@@ -46,9 +54,9 @@ public final class SynchronizedFeed {
                 }
                 break;
             case RAMP_TRANSFER:
-                transferTarget = TRANSFER_TARGET * Math.min(1, elapsed / RAMP_SECONDS);
+                transferTarget = TRANSFER_TARGET * Math.min(1, elapsed / rampSeconds);
                 intakeEnabled = transferTarget > 0;
-                if (elapsed >= RAMP_SECONDS) transition(State.FEED, now);
+                if (elapsed >= rampSeconds) transition(State.FEED, now);
                 break;
             case FEED:
                 // Empty the whole tunnel: normal shot dips never interrupt a stored batch.
