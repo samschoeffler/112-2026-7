@@ -75,20 +75,17 @@ public class Red1TipFar extends OpMode {
                 autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.Opp.path1()),
-                Commands.waitMs(10000),
+                Commands.waitMs(5000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(1500),
                 autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Opp.path2()),
-                Commands.waitMs(2000),
-                autoCommand.shooterTogg,
                 autoCommand.startVis,
-                Commands.waitMs(3000),
-                autoCommand.shooterTogg,
                 autoCommand.toggleAuto,
                 follow(follower, AutoPaths.Opp.path3()),
+                autoCommand.rampTogg,
                 autoCommand.flowerCollectFarShoot(follower),
                 follow(
                         follower, AutoPaths.Opp.path4()
@@ -96,12 +93,9 @@ public class Red1TipFar extends OpMode {
                 ),
                 autoCommand.rampTogg,
                 follow(follower, AutoPaths.Opp.path5()),
-                Commands.waitMs(1000),
-                autoCommand.shooterTogg,
-                Commands.waitMs(5000),
                 follow(
                         follower, AutoPaths.Opp.path6()
-                                .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
+                                .with(Constants.foresightConfig.maxPathSpeed.at(0.8))
                 )
         );
     }
