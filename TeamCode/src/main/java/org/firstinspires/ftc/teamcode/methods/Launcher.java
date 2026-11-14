@@ -24,6 +24,8 @@ public class Launcher {
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
     public static double ENCODER_SIGN_0 = -1.0;
+    public static final double OUTTAKE_POWER = 0.40;
+    private boolean outtaking;
 
     private boolean wasOn = false;
 
@@ -120,6 +122,25 @@ public class Launcher {
         fWheel.setPower(0);
     }
 
+    /** Reverse directly without changing the saved forward target or Y-toggle state. */
+    public void outtake() {
+        outtaking = true;
+        readySince = reverseSince = stalledSince = 0;
+        firing = false;
+        requestedVolts = 0;
+        motorPower = -OUTTAKE_POWER;
+        fWheel.setPower(MOTOR0_POWER_SIGN * motorPower);
+    }
+
+    /** Stop only an active reverse command. Normal forward update() resumes separately. */
+    public void stopOuttake() {
+        if (!outtaking) return;
+        outtaking = false;
+        readySince = reverseSince = stalledSince = 0;
+        requestedVolts = motorPower = 0;
+        fWheel.setPower(0);
+    }
+
 
     public void eject(boolean requested) {
         ejecting = requested && fault.isEmpty();
@@ -150,6 +171,7 @@ public class Launcher {
 
     // Same as above but without pose: keeps the current target velocity.
     public void update() {
+        if (outtaking) { outtake(); return; }
         long now = System.nanoTime();
         measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
         batteryVoltage = readBatteryVoltage();
@@ -248,6 +270,7 @@ public class Launcher {
     }
 
     public void stopAll() {
+        outtaking = false;
         flywheelsOn = fireRequested = firing = ejecting = feedStarted = false;
         targetVelocity = requestedVolts = motorPower = 0.0;
         readySince = fireRequestedAt = reverseSince = stalledSince = 0;

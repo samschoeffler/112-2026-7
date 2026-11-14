@@ -1,0 +1,80 @@
+package org.firstinspires.ftc.teamcode.Tests;
+
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
+import org.firstinspires.ftc.teamcode.methods.Intake;
+import org.firstinspires.ftc.teamcode.methods.TransferAutoTune;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Locale;
+
+/** Automatic transfer feedforward/P tune. Does not modify production Transfer gains. */
+@TeleOp(name = "Transfer | Automatic Retune", group = "Diagnostics")
+public final class TransferAutoTuning extends OpMode {
+    private final TransferAutoTune tune = new TransferAutoTune();
+    private DcMotorEx transfer;
+    private Intake intake;
+    private BufferedWriter log;
+    private File report;
+    private boolean started, justStarted, saved;
+    private double runStart;
+    private String status = "Clear transfer. Press G1 A to start autotune; G1 B aborts.";
+
+    @Override public void init() {
+        transfer = hardwareMap.get(DcMotorEx.class, "LaunchMech");
+        transfer.setPower(0);
+        transfer.setDirection(DcMotor.Direction.FORWARD);
+        transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        intake = new Intake(hardwareMap);
+        intake.setPower(Intake.INTAKE_POWER);
+        telemetry.addLine(status);
+        telemetry.addLine("Flywheel stays off. Intake runs at compensated 85%.");
+        telemetry.addLine("A starts | B aborts | STOP saves report");
+        telemetry.update();
+    }
+
+    @Override public void loop() {
+        double now = System.nanoTime() / 1e9;
+        double velocity = transfer.getVelocity();
+        double battery = batteryVoltage();
+        if (gamepad1.b && tune.active()) { tune.abort("Aborted by G1 B"); status = tune.message(); }
+        if (gamepad1.aWasPressed() && !started) {
+            if (openLog()) { started = true; justStarted = true; runStart = now; tune.start(now); status = "Autotune started; keep mechanism clear."; }
+        }
+        intake.update();
+        if (tune.active()) {
+            transfer.setPower(justStarted ? 0 : tune.power());
+            try {
+                log.write(String.format(Locale.US, "%.6f,%.3f,%.3f,%.3f,%b\n", now-runStart, velocity, battery, tune.power(), true));
+                if (justStarted) justStarted = false;
+                else tune.update(now, velocity, battery);
+                status = tune.message();
+            } catch (IOException ex) { tune.abort("Log failed: " + ex.getMessage()); status = tune.message(); }
+        } else transfer.setPower(0);
+        if (started && !tune.active() && !saved) saveReport();
+        telemetry.addData("Status", status);
+        telemetry.addData("Stage", tune.stage());
+        telemetry.addData("Target / velocity", "%.0f / %.1f", tune.target(), velocity);
+        telemetry.addData("Error", "%.1f", tune.target() - velocity);
+        telemetry.addData("Battery / power", "%.2f V / %.3f", battery, tune.power());
+        telemetry.addData("KS / KV / KP", "%.6f / %.8f / %.6f", tune.kS(), tune.kV(), tune.kP());
+        telemetry.addLine("No flywheel. Positive encoder direction expected. Keep balls out during tune.");
+        telemetry.update();
+    }
+
+    private double batteryVoltage() {
+        double minimum = Double.POSITIVE_INFINITY;
+        for (VoltageSensor sensor : hardwareMap.voltageSensor) { double v=sensor.getVoltage(); if (Double.isFinite(v)&&v>=6&&v<=16.8) minimum=Math.min(minimum,v); }
+        return Double.isFinite(minimum) ? minimum : Double.NaN;
+    }
+    private boolean openLog() {
+        try { File base=hardwareMap.appContext.getExternalFilesDir(null); if(base==null)throw new IOException("No storage"); File dir=new File(base,"flywheel-tuning"); if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create directory"); File csv=new File(dir,"transfer-autotune-"+System.currentTimeMillis()+".csv"); report=new File(dir,csv.getName().replace(".csv","-report.txt")); log=new BufferedWriter(new FileWriter(csv)); log.write("time_s,velocity_ticks_s,battery_V,power,active\n"); return true; } catch(IOException ex){status="Cannot log: "+ex.getMessage();return false;}
+    }
+    private void saveReport() { saved=true; try { if(log!=null)log.close(); if(report!=null)try(BufferedWriter out=new BufferedWriter(new FileWriter(report))){out.write(tune.report());} } catch(IOException ex){status += " | report failed: "+ex.getMessage();} }
+    @Override public void stop(){ if(transfer!=null)transfer.setPower(0); if(intake!=null)intake.stop(); if(started&&!saved)saveReport(); }
+}

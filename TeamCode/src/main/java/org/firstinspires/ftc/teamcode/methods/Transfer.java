@@ -19,6 +19,8 @@ public class Transfer {
     public static double MOTOR0_POWER_SIGN = 1.0;
     public static double MOTOR1_POWER_SIGN = 1.0;
     public static double ENCODER_SIGN_0 = 1.0;
+    public static final double OUTTAKE_POWER = 0.40;
+    private boolean outtaking;
 
     private boolean wasOn = false;
 
@@ -102,6 +104,25 @@ public class Transfer {
         fWheel.setPower(0);
     }
 
+    /** Reverse directly; the saved forward velocity/toggle state is preserved. */
+    public void outtake() {
+        outtaking = true;
+        readySince = reverseSince = stalledSince = 0;
+        firing = false;
+        requestedVolts = 0;
+        motorPower = -OUTTAKE_POWER;
+        fWheel.setPower(MOTOR0_POWER_SIGN * motorPower);
+    }
+
+    /** Stop only reverse output, independently of the forward velocity controller. */
+    public void stopOuttake() {
+        if (!outtaking) return;
+        outtaking = false;
+        readySince = reverseSince = stalledSince = 0;
+        requestedVolts = motorPower = 0;
+        fWheel.setPower(0);
+    }
+
 
     public void eject(boolean requested) {
         ejecting = requested && fault.isEmpty();
@@ -115,6 +136,7 @@ public class Transfer {
 
     // Call once every OpMode loop, AFTER updating command/trigger requests.
     public void update() {
+        if (outtaking) { outtake(); return; }
         long now = System.nanoTime();
         measuredVelocity = ENCODER_SIGN_0 * fWheel.getVelocity();
         batteryVoltage = readBatteryVoltage();
@@ -214,6 +236,7 @@ public class Transfer {
     }
 
     public void stopAll() {
+        outtaking = false;
         flywheelsOn = fireRequested = firing = ejecting = feedStarted = false;
         targetVelocity = requestedVolts = motorPower = 0.0;
         readySince = fireRequestedAt = reverseSince = stalledSince = 0;

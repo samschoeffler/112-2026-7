@@ -1,0 +1,72 @@
+package org.firstinspires.ftc.teamcode.methods;
+
+public final class SynchronizedFeedRegression {
+    private static double now;
+    private static void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
+    private static void tick(SynchronizedFeed f, boolean request, double wheel, double transfer) {
+        now += .02; f.update(now, request, true, 1407, wheel, transfer);
+        check(f.transferTarget() >= 0 && f.transferTarget() <= 1440, "Bounded transfer target");
+    }
+    private static void reachFeed(SynchronizedFeed f) {
+        int n = 0;
+        while (f.state() != SynchronizedFeed.State.FEED && n++ < 100) tick(f, true, 1407, 1440);
+        check(f.state() == SynchronizedFeed.State.FEED, "Eventually feeds after readiness and ramp");
+    }
+    public static void main(String[] args) {
+        SynchronizedFeed f = new SynchronizedFeed(); now = 0;
+        for (int n = 0; n < 20; n++) tick(f, true, 1300, 0);
+        check(f.state() == SynchronizedFeed.State.WAIT_FLYWHEEL && f.transferTarget() == 0,
+                "No transfer/intake before flywheel stabilizes");
+        for (int n = 0; n < 9; n++) tick(f, true, 1407, 0);
+        check(!f.intakeEnabled() && f.transferTarget() == 0, "Single lucky sample cannot release intake");
+        while (f.state() != SynchronizedFeed.State.RAMP_TRANSFER) tick(f, true, 1407, 0);
+        double rampStart = now, last = 0;
+        while (f.state() == SynchronizedFeed.State.RAMP_TRANSFER) {
+            tick(f, true, 1407, 0);
+            check(f.intakeEnabled() && f.transferTarget() > 0 && f.transferTarget() >= last,
+                    "Intake runs from first positive transfer-ramp command");
+            last = f.transferTarget();
+        }
+        check(now - rampStart >= .3 && last == 1440, "Full 300 ms ramp");
+        for (int n = 0; n < 300; n++) {
+            tick(f, true, 1280, 1200);
+            check(f.intakeEnabled() && f.state() == SynchronizedFeed.State.FEED,
+                    "Keep both motors feeding throughout stored batch, beyond two seconds");
+        }
+        check(f.feedSeconds() >= 6, "Counter includes continuous ramp and batch feed");
+        tick(f, false, 1407, 1440);
+        check(f.state() == SynchronizedFeed.State.IDLE && !f.intakeEnabled() && f.transferTarget() == 0,
+                "Release cancels immediately");
+        for (int n = 0; n < 20; n++) tick(f, true, 1300, 0);
+        check(f.state() == SynchronizedFeed.State.WAIT_FLYWHEEL && !f.intakeEnabled(),
+                "Next batch waits for flywheel recovery");
+        reachFeed(f);
+        now += .02; f.update(now, true, true, 1500, 1407, 1440);
+        check(f.state() == SynchronizedFeed.State.FEED && f.intakeEnabled(), "Target change no longer automatically interrupts feeding");
+        f.abort("operator"); tick(f, true, 1407, 1440);
+        check(f.state() == SynchronizedFeed.State.FAULT && !f.intakeEnabled(), "Latched fault");
+        f.clearFault(); check(f.state() == SynchronizedFeed.State.IDLE, "Explicit reset stays stopped");
+        reachFeed(f); now += .2; f.update(now, true, true, 1407, 1407, 1440);
+        check(f.fault().isEmpty() && f.intakeEnabled(), "Loop timing gap no longer latches a fault");
+        f.cancel(); now = 0;
+        for (int n = 0; n < 500; n++) tick(f, true, 1300, 0);
+        check(f.fault().isEmpty() && f.state() == SynchronizedFeed.State.WAIT_FLYWHEEL,
+                "Readiness still waits for speed but never times out into a fault");
+        reachFeed(f); check(f.intakeEnabled(), "Can feed after long readiness wait without reset");
+        f.cancel(); now = 0;
+        f.update(.02, true, true, 1407, 1407, Double.NaN);
+        check(f.fault().isEmpty(), "Invalid transfer measurement no longer latches fault");
+        f.cancel(); now = 0; reachFeed(f);
+        now += .02; f.update(now, true, true, 1500, 1300, 1440);
+        for (int n = 0; n < 450; n++) tick(f, true, 1300, 1440);
+        check(f.fault().isEmpty() && f.intakeEnabled(), "No automatic recovery timeout during a batch");
+        f.clearFault(); now = 0;
+        for (int n = 0; n < 100 && !f.intakeEnabled(); n++) {
+            now += .02; f.update(now, true, true, 1407 + Math.sin(n) * 2, 1407, 1440);
+        }
+        check(f.intakeEnabled(), "Small distance-model changes do not starve readiness");
+        now += .02; f.update(now, true, false, 1407, 1407, 1440);
+        check(!f.intakeEnabled() && f.transferTarget() == 0, "Flywheel off cancels feed");
+        System.out.println("Stored-batch ramp, readiness, release, explicit aborts and disabled automatic lockout checks passed");
+    }
+}

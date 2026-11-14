@@ -1,0 +1,151 @@
+# Shooting consistency experiments
+
+OpMode: **Shooting | Consistency Experiments** (Diagnostics / TeleOp).
+
+The test uses a fixed flywheel target of 1407 ticks/s, transfer target of 1440 ticks/s,
+the previously validated gains, and intake power equivalent to 85% at 12.76 V.
+Keep robot position, turret aim, launch geometry, and the centered ball start position fixed.
+This OpMode commands no drivetrain or turret motion. It sets the intake ramp servo to UP,
+matching the earlier Transfer Ball Validation setup. Check that this is the desired physical
+shooting geometry before starting. Only one ball may be loaded per attempt.
+
+## Current next step: contact/staging investigation
+
+The OpMode now defaults to CONTACT_STUDY: 10 valid shots using the 300 ms ramp,
+no boost, the 1407 ticks/s flywheel target, and the same automatic feed/recovery cycle.
+Keep robot aim/distance fixed. Reuse the same marked ball if practical and put it at
+the same centered intake starting spot for every attempt. Leave ball ID at 1 if you
+reuse one ball. If you switch balls, use G2 D-pad UP/DOWN at LOAD to select a distinct
+ID (1-99); IDs must consistently refer to the same physical balls for useful analysis.
+
+At LOAD, G2 A confirms loaded. At RESULT: X=hit, Y=overshot, B=undershot,
+D-pad LEFT=invalid/repeat. Complete 10 valid attempts, STOP and send the three
+`shooting-consistency-contact_study-TIMESTAMP*` files from the usual folder.
+
+The sample CSV now includes ball ID, elapsed feed time, measured loop interval,
+raw encoder positions, and diagnostic 100 ms position-slope velocity. Position reads
+have separate approximate midpoint timestamps; raw SDK velocity uses the loop timestamp.
+CONTACT_STUDY writes a row every loop; this observes the existing loop rate rather than
+guaranteeing a faster one. Position-slope values are delayed/smoothed and may be NaN
+until enough observations exist; they never replace controller feedback.
+Raw position/position-slope columns are collected only in CONTACT_STUDY.
+
+The trial CSV also records an estimated first sustained slowdown onset, the mean
+flywheel/transfer/intake speeds over the preceding 120 ms, the flywheel minimum
+inside that slowdown window, transfer/intake speed and voltage at the minimum, the
+integrated speed deficit, and recovery duration measured from the slowdown onset.
+The previous recovery_s column still measures recovery after the 2 s feed ends.
+Recovery from estimated contact requires speed at least baseline minus 25 ticks/s
+for 120 ms. Deficit integrates positive speed loss below pre-feed baseline during
+the estimated event; it is an approximate encoder-distance deficit in ticks, not energy.
+
+Slowdown detection requires a drop greater than 35 ticks/s relative to the preceding
+pre-feed mean for at least 40 ms. This does not prove ball contact, ball exit time,
+or ball exit velocity. No detected event remains unknown (NaN), never a measured zero.
+Diagnostic timing gaps are flagged and excluded from report slowdown averages. If a
+slowdown never recovers before RESULT, its recovery estimate stays NaN. Existing
+contact_events_estimated counts may differ because they use the original threshold
+and can split fluctuations into multiple events. Missing/double-ball attempts still
+need an INVALID mark even if a slowdown was detected.
+
+The report groups estimated event timing/speeds by HIT, UNDER and OVER, allowing us
+to look for associations with undershots. Ball ID, starting location, aim, and battery
+still matter. A run of all hits or too few misses cannot establish what causes undershots.
+
+## Focused boost comparison
+
+Select BOOST_COMPARE before START. It runs 10 valid shots alternating no boost
+and +0.6 V (five per setting), always with the 300 ms transfer ramp and a 1407 ticks/s
+flywheel target. The voltage boost starts 100 ms before feeding and lasts through the
+2 s feed. The selectable BOOST profile does not affect this routine.
+
+Use the same LOAD / G2 A / RESULT controls below. Invalid attempts repeat the current
+setting without advancing alternation. After COMPLETE, STOP and send all three
+`shooting-consistency-boost_compare-TIMESTAMP*` files from the usual flywheel-tuning
+directory. Hold position, aim, and centered ball placement constant across all shots.
+
+## Fixed-profile validation
+
+Select VALIDATE with G1 D-pad RIGHT before START. This routine runs 10 valid shots with the 300 ms
+transfer ramp and no flywheel boost, at 1407 ticks/s. The BOOST profile selector does
+not affect validation. Keep the same aim/distance as the comparison runs.
+
+Press START, load one ball at each LOAD prompt, then press G2 A. Mark results only
+after RESULT appears: G2 X=hit, Y=over, B=under, D-pad LEFT=invalid/repeat. Press STOP
+after COMPLETE. Repeat the whole run with a different battery charge, without swapping
+batteries during an active OpMode or deliberately discharging below normal team limits.
+Send the three `shooting-consistency-validate-TIMESTAMP*` files from each run.
+These records measure hit rate, not the geometric spread within the target.
+
+## First run: transfer comparison
+
+1. Build/install, select the OpMode, and press INIT. Select TRANSFER using G1 D-pad RIGHT.
+2. Press START. All motor commands remain zero until you confirm a loaded ball.
+3. In LOAD, place one ball at the intake entrance, clear of the flywheel throat.
+4. Move hands clear and press G2 A once. This authorizes one automatic shot cycle.
+5. Wait through SPINUP, optional BOOST, FEED, and RECOVER.
+6. At RESULT, confirm exactly one ball fired and mark G2 X = hit, G2 Y = overshot,
+   or G2 B = undershot. Use G2 D-pad LEFT for a sideways miss, no ball, multiple balls,
+   uncertain result, or another invalid attempt. Invalid attempts repeat the same setting.
+7. Repeat from LOAD until COMPLETE, then press STOP.
+
+The 12 valid trials compare six interleaved baseline shots with three shots at each
+transfer ramp duration (150 ms and 300 ms). Baseline transfer pre-spins before feeding;
+ramp trials start transfer from zero as intake feeding begins. Final transfer velocity
+is identical in all three profiles. Candidate order reverses in the middle repeat.
+
+Readiness requires flywheel speed within +/-25 ticks/s for 200 ms; baseline also requires
+transfer within +/-60 ticks/s. Intake feeding lasts 2 s. Flywheel recovery to its baseline
+target must stabilize before RESULT; there is at least 2 s between feed completion and RESULT.
+Waiting for loading or a shot mark has no timeout.
+
+## Second run: boost comparison
+
+Review the transfer results first. Before START, G1 D-pad RIGHT selects BOOST.
+G1 D-pad UP cycles the transfer profile used for all boost trials:
+PRESPIN, RAMP_150_MS, RAMP_300_MS. Use the profile selected from the first run.
+
+Follow the same load/start/mark process. The 24 valid trials compare:
+
+- Baseline: no boost (12 interleaved shots).
+- Extra voltage: +0.3 V or +0.6 V, beginning 100 ms before feeding (three shots each).
+- Higher speed target: +2% or +4%, beginning 150 ms before feeding (three shots each).
+
+Boost lasts through the 2 s feed. The controller returns to the original speed target
+during recovery. These are fixed experimental settings; no adaptive learning is active.
+Readiness uses the original 1407 ticks/s target before the boost is applied.
+
+## Faults and files
+
+G1 B immediately aborts all three motor commands. Velocity/battery/timing faults,
+wrong flywheel/transfer encoder direction, sustained stalls, readiness/recovery timeouts,
+and unexpected motor modes also latch a fault. With the obstruction resolved and motors
+clear, G1 X returns to LOAD; a fresh G2 A press is required to retry. Storage faults require
+restarting the OpMode so no shots continue without usable logs.
+
+The intake encoder is checked by absolute speed because its sign is not needed for
+power control. Stall detection uses a conservative near-zero threshold, not a calibrated
+ball-jam detector. Encoder dip counts are estimates and cannot establish that one ball fired.
+
+Files are saved under `Android/data/org.firstinspires.ftc.teamcode/files/flywheel-tuning/`:
+
+- `shooting-consistency-transfer-TIMESTAMP.csv` (or `boost`): sampled motor/target/phase data.
+- Matching `-trials.csv`: landing marks, settings, speed range, RMS error, recovery and voltage.
+- Matching `-report.txt`: valid/invalid counts, hit rate, and motor metrics per setting.
+
+Results are flushed after each mark and samples at least every half-second. STOP closes
+files and saves the current summary, including a fault if present. Send all three files.
+Compare actual shot results alongside speed metrics: smaller speed dips alone do not
+prove better placement. Three candidate repeats screen possibilities; repeat the best
+setting against baseline before changing competition behavior.
+
+## Controller changes
+
+The shared PI controller retains its 0.4 V integral bound, integration error band, and
+anti-windup. It now clears old integral trim for target steps greater than 50 ticks/s
+and includes added shot voltage in saturation calculations. Tiny distance-target changes
+retain the trim. No gain changes are applied by the experiment. Additional stall/readiness
+and logging safeguards are local to the experimental OpMode.
+
+Run desktop checks with `python3 tests/flywheel/run.py` and the cached-SDK compile check
+with `python3 tests/flywheel/check_compile.py`.

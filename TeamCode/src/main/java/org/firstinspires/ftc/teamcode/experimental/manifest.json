@@ -1,0 +1,873 @@
+{
+  "baseline": "5267071e36537a370943cd9891aa8d8167b77837",
+  "recovery_archive": "/private/tmp/quickstart2-before-isolation-hRRddwkf/working-tree.tar",
+  "sources": [
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Auto1.java",
+      "experimental": "Autos/Auto1.java",
+      "original_sha256": "3944c8be232889744eb8dd45d72b71cb0f9e39fd0392589491c9b039e3ef71eb",
+      "experimental_sha256": "5ccf544208d24ac74461b21ef2f3236a23b7a4b011ab36412e655f48339b8109",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1Tip.java",
+      "experimental": "Autos/Blue1Tip.java",
+      "original_sha256": "7d1d8336248016bbd277a52768f9e9975ba0c014cdb2ba07d8add780d1dfe3c9",
+      "experimental_sha256": "9fae91ca870e265d1b5e442f1a5aa6f1406640c68682d357c301b3e7ad54308e",
+      "opmodes": [
+        {
+          "original": "Blue1Tip",
+          "experimental": "EXP | Blue1Tip"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFar.java",
+      "experimental": "Autos/Blue1TipFar.java",
+      "original_sha256": "ea503db7a3a3e6b6f6d4acf4e6ee7c317125cbc37170c6da891856329af5a525",
+      "experimental_sha256": "0401fac368da8eacb4f609782c015614f12893d09d8f946d5f275b7b0fde835c",
+      "opmodes": [
+        {
+          "original": "Blue1TipFar",
+          "experimental": "EXP | Blue1TipFar"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFlower.java",
+      "experimental": "Autos/Blue1TipFlower.java",
+      "original_sha256": "458cdc4f41277c4add9699cd1b171819512ef2cb08419918a7b778fb55350c45",
+      "experimental_sha256": "417b228b601c328ccffebda0a74c71c52f969cd741642f82e32ad3dc27e22b46",
+      "opmodes": [
+        {
+          "original": "Blue1Tip + Flower",
+          "experimental": "EXP | Blue1Tip + Flower"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFlowerPark.java",
+      "experimental": "Autos/Blue1TipFlowerPark.java",
+      "original_sha256": "0e8b7523e5cb282acb2b9db34f59aba10aa24bb0e8f3e5f26fe26151ecd17a91",
+      "experimental_sha256": "94b40d3ac95d125f84337834acba850245af75a5df2eade87635da6aa3049422",
+      "opmodes": [
+        {
+          "original": "Blue1Tip + Flower + Park",
+          "experimental": "EXP | Blue1Tip + Flower + Park"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipPark.java",
+      "experimental": "Autos/Blue1TipPark.java",
+      "original_sha256": "3572cef13231435062d667618cbc00f1f33bc7b9dcc557b21271905b41a4827f",
+      "experimental_sha256": "aebefdc1424f57e1dde2e9ceab5f6cf0ce4174de5681a680e061a593586783c1",
+      "opmodes": [
+        {
+          "original": "Blue1Tip + Park",
+          "experimental": "EXP | Blue1Tip + Park"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue2Tip.java",
+      "experimental": "Autos/Blue2Tip.java",
+      "original_sha256": "b40f0467948b3a258e445f6200e69cced7795c962abdda4c3e94cf19ba8bec42",
+      "experimental_sha256": "cdb9ca67b6e4f3efeb4b07df23dfb90757b12ffe9cd045ac6cb85153169daaa9",
+      "opmodes": [
+        {
+          "original": "Blue2Tip",
+          "experimental": "EXP | Blue2Tip"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1Tip.java",
+      "experimental": "Autos/Red1Tip.java",
+      "original_sha256": "89be08e1fa3d6f170987a9ba58ce9b529c5e9413687d2b1b69ba5f91d3347324",
+      "experimental_sha256": "f7f336949caab22c70fc51082c81c939d8dd94c88fb9aec6792919ed3489bbf3",
+      "opmodes": [
+        {
+          "original": "Red1Tip",
+          "experimental": "EXP | Red1Tip"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFar.java",
+      "experimental": "Autos/Red1TipFar.java",
+      "original_sha256": "5ab77b9517ca0fd8a16371854771d994a5808a180b4832f4cdd2d59ccb57664f",
+      "experimental_sha256": "aae605384475f3ef907fa56464ff311e616c92b0c034f2d42b04bca2259d7574",
+      "opmodes": [
+        {
+          "original": "Red1TipFar",
+          "experimental": "EXP | Red1TipFar"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFlower.java",
+      "experimental": "Autos/Red1TipFlower.java",
+      "original_sha256": "55364bdeaecc3b9eeb77e3c1955f7ed71da3301475061da81f6ea3ca1f8c66bd",
+      "experimental_sha256": "60a7305c0eadbff7fd581e0f25d92ef7eeecf6cca726694e8116bd14b984b24e",
+      "opmodes": [
+        {
+          "original": "Red1Tip + Flower",
+          "experimental": "EXP | Red1Tip + Flower"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFlowerPark.java",
+      "experimental": "Autos/Red1TipFlowerPark.java",
+      "original_sha256": "61743aac4e7981d595964dbfe4aeeb8c0a5c7fc378f40409e412d208b4ac2a6e",
+      "experimental_sha256": "86db4daa17f0911c3b7ef1a95ee9a8143c0549734a79923a0094b4cdc2e5e124",
+      "opmodes": [
+        {
+          "original": "Red1Tip + Flower + Park",
+          "experimental": "EXP | Red1Tip + Flower + Park"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipPark.java",
+      "experimental": "Autos/Red1TipPark.java",
+      "original_sha256": "c9754545bab5b8f746bdb969751394fad3421b155f9a8479c470220de78f604b",
+      "experimental_sha256": "09a3bce4aab9b41181f49e6ffb51a4902a3b7c1c955bb22abd7e0f7022d24a3d",
+      "opmodes": [
+        {
+          "original": "Red1Tip + Park",
+          "experimental": "EXP | Red1Tip + Park"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red2Tip.java",
+      "experimental": "Autos/Red2Tip.java",
+      "original_sha256": "c44b45130471634d3aec47c7b50bed94e5625059e214f0a10304f142601a7e93",
+      "experimental_sha256": "65d98eae4ee6711524655694f9fbac9a62e80d35ed63502814ce159dbcf78a2b",
+      "opmodes": [
+        {
+          "original": "Red2Tip",
+          "experimental": "EXP | Red2Tip"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/TurretRotTestAuto.java",
+      "experimental": "Autos/TurretRotTestAuto.java",
+      "original_sha256": "2671d81ab6ae8eeba7087db9091c1830b0856184d25aff7eb9c6b8b4c68126e8",
+      "experimental_sha256": "2265a86cc73357a2ada0610bb53124db27dc807e2dc1efe736b21486451f2fd3",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/MainTeleOp.java",
+      "experimental": "MainTeleOp.java",
+      "original_sha256": "e56c23ba2891af21e21e2f4604c9a2bd85d21b2747cb273909c8b2a6b62fc02d",
+      "experimental_sha256": "b734dbc151b80e4ef2c8021248c4bf8709f736f40e77e5c208d8a424a0ce099c",
+      "opmodes": [
+        {
+          "original": "MainTeleOp",
+          "experimental": "EXP | MainTeleOp"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/AutoTest.java",
+      "experimental": "Tests/AutoTest.java",
+      "original_sha256": "728a5bbdb9a7e097adf3ca9a737fa833c4404ab858ae59dd0aef0348c1a6e240",
+      "experimental_sha256": "b054ae8123c3331f6b147d11a7954f4792f639e59b44f33775989c5757e7a7bd",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimAutoCalibration.java",
+      "experimental": "Tests/CoordinateAimAutoCalibration.java",
+      "original_sha256": "5a0328ab8c8d8b7925aabc8cb0385dafcafd66373e2dbca33c5ff23a08d0f371",
+      "experimental_sha256": "93de2673298912d66d8e60d96276ea87c4b43fe97843ec39c18eb8093efb4442",
+      "opmodes": [
+        {
+          "original": "Coordinate Aim | Auto Calibration",
+          "experimental": "EXP | Coordinate Aim | Auto Calibration"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimAutomatedMotionTest.java",
+      "experimental": "Tests/CoordinateAimAutomatedMotionTest.java",
+      "original_sha256": "7496a2089f66b84a8a52de6cfefc62871af6971436bc420e9bb4a31d914537e2",
+      "experimental_sha256": "351a709c68bb4fe4c05b0edf530f79cb7d4495e6637f1dc090cd0e3fad451b29",
+      "opmodes": [
+        {
+          "original": "Coordinate Aim | Automated Motion",
+          "experimental": "EXP | Coordinate Aim | Automated Motion"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimStage2Test.java",
+      "experimental": "Tests/CoordinateAimStage2Test.java",
+      "original_sha256": "70b2bad1484a24cb580ab08ecf3dae5e524ade4ea6f3ab7d5cb10dbfcd3fa818",
+      "experimental_sha256": "241d953b8a0b417b7dd9df1f1b134039f06c1022ec46a13deddeffec13142678",
+      "opmodes": [
+        {
+          "original": "Coordinate Aim - Stage 2",
+          "experimental": "EXP | Coordinate Aim - Stage 2"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimStage3Test.java",
+      "experimental": "Tests/CoordinateAimStage3Test.java",
+      "original_sha256": "3faf6db2c537f90d68bade6d544a550a10d607dacea352b9d775f155451ca833",
+      "experimental_sha256": "1227070d60c41e337af7d53d6d0dbbce1ab29fe5591f15e7acb140d1f376b7b0",
+      "opmodes": [
+        {
+          "original": "Coordinate Aim - Stage 3",
+          "experimental": "EXP | Coordinate Aim - Stage 3"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimTest.java",
+      "experimental": "Tests/CoordinateAimTest.java",
+      "original_sha256": "75d048276fb6c222bfe4c49099a707760c3550b0a51ad0d5f4015e2d3bf094cf",
+      "experimental_sha256": "b7928fedceb3dae36b705623ac2abe75605e5b5fa2a3b2b4b114a7493a6fb3b1",
+      "opmodes": [
+        {
+          "original": "Coordinate Aim - Stage 1",
+          "experimental": "EXP | Coordinate Aim - Stage 1"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/GeneralTest.java",
+      "experimental": "Tests/GeneralTest.java",
+      "original_sha256": "6f62a72929a5413e82e2b8f30e7817d034ef25797bbf806e5a7ce3948b75178f",
+      "experimental_sha256": "69ce2495f5a6514805866d0b3795d9768a1c168a9b148f9af4882dcac4084184",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/IntakeTuning.java",
+      "experimental": "Tests/IntakeTuning.java",
+      "original_sha256": "1c864d227a5bd149b7f991ab8669d49e605339b083ac4a36b13558d2829837c9",
+      "experimental_sha256": "d0a5c63be5896bb13ab795f57e4e9eda747273b55db72641a3f9a3c66c9d41ab",
+      "opmodes": [
+        {
+          "original": "Intake | Power Tuning",
+          "experimental": "EXP | Intake | Power Tuning"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/LauncherAutoTuning.java",
+      "experimental": "Tests/LauncherAutoTuning.java",
+      "original_sha256": "d39d2e5403700cf7d12b5e730983740c7fb3700597b449031e35bff1904447dc",
+      "experimental_sha256": "d2782cdf7df1298ea20f34d8e73369967c742b8d64de7e458f653641c9cc7765",
+      "opmodes": [
+        {
+          "original": "Flywheel | Automatic Retune",
+          "experimental": "EXP | Flywheel | Automatic Retune"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/LauncherPIRecoveryTest.java",
+      "experimental": "Tests/LauncherPIRecoveryTest.java",
+      "original_sha256": "13ee44f4e2be3459e4d38df0384fdeda609aee6be1a01b9e54fa0f699d733097",
+      "experimental_sha256": "02613506def79fcbf23d76551f93b672c56eacc0da2a276eca80d3de0d48531a",
+      "opmodes": [
+        {
+          "original": "Flywheel | PI Ball Recovery",
+          "experimental": "EXP | Flywheel | PI Ball Recovery"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/LauncherTuning.java",
+      "experimental": "Tests/LauncherTuning.java",
+      "original_sha256": "9a9c6dbb328e757c98f0e82228c340d8f8fa8bc36fc93e80d2b600671548623d",
+      "experimental_sha256": "e9b439155af46ffe001d15365412f741dd2c8289b3ba5c1f50da4408bbaed782",
+      "opmodes": [
+        {
+          "original": "PID Tuning | Flywheel",
+          "experimental": "EXP | PID Tuning | Flywheel"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/LimeLightTest.java",
+      "experimental": "Tests/LimeLightTest.java",
+      "original_sha256": "7611882528ae36c7087a3673f8efad18de723353146c033bbbddaf0312c478df",
+      "experimental_sha256": "f06071eaf0094d116db509f3c9f9627ba0c8ea95defcd46291faa3c7c80e15ff",
+      "opmodes": [
+        {
+          "original": "Limelight Diagnostic",
+          "experimental": "EXP | Limelight Diagnostic"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/ParallelCommandsTest.java",
+      "experimental": "Tests/ParallelCommandsTest.java",
+      "original_sha256": "9875047553e5129f7605e2e5a6033a5ae90bfa355e547e1f42de5313fd5e20a9",
+      "experimental_sha256": "057d36419d1a983ef1800254014f472333ea3b39e26d06924ec6be7616269baa",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/PedroCircleTest.java",
+      "experimental": "Tests/PedroCircleTest.java",
+      "original_sha256": "b399f31202b80b16f7f7df74c643465ce6cf6fe4fa61e3d45e280a1cc709ecde",
+      "experimental_sha256": "5dfe849bf9c05cf1b1f4c320cbb0acb3307b269ee559442caf7ff3a482c9bfc7",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/RampTuning.java",
+      "experimental": "Tests/RampTuning.java",
+      "original_sha256": "1098385007a1e76d6a935c3684df70e660b31c32394d0ddf38d8ff3c331fa6d0",
+      "experimental_sha256": "398214a21895f5d3bf325ed67e69955d4d925f1292233fd67753ea018eed7188",
+      "opmodes": [
+        {
+          "original": "Ramp Tuning",
+          "experimental": "EXP | Ramp Tuning"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/ShootingConsistencyTuning.java",
+      "experimental": "Tests/ShootingConsistencyTuning.java",
+      "original_sha256": "b6d4834176e2c9dcbb392eb7fec2c85f4a43145e23a9c31d6fa958f949b291f6",
+      "experimental_sha256": "3a701dc80a5b0c8be0cea77f1e85bc4dbaf6a0d391846b318a82d57f6beffd75",
+      "opmodes": [
+        {
+          "original": "Shooting | Consistency Experiments",
+          "experimental": "EXP | Shooting | Consistency Experiments"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/SynchronizedFeedValidation.java",
+      "experimental": "Tests/SynchronizedFeedValidation.java",
+      "original_sha256": "0687e6cd4a8c566f0a023c51dbace7c93290abf2f8210ecd6880651290d08aed",
+      "experimental_sha256": "96e5e13d58c7105dc57cda908e4d852920b654d5aba5173d1d2f37fe4c9d641a",
+      "opmodes": [
+        {
+          "original": "Shooting | Stored Batch Validation",
+          "experimental": "EXP | Shooting | Stored Batch Validation"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TeleOpTest.java",
+      "experimental": "Tests/TeleOpTest.java",
+      "original_sha256": "e74bb46673d14a523e370639fa2126064ee66d6ca196432921fc5bc65bcbcbf0",
+      "experimental_sha256": "9703e9830406a7ace4358a129cf25e6cf8977168de31794b500692a83bc1a88e",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/Test.java",
+      "experimental": "Tests/Test.java",
+      "original_sha256": "14c6b053bf147c39ef9ab56cf5279cdd9186717ccdad64815602c9d17b3e6122",
+      "experimental_sha256": "92237548f07caa13b2db68d20b7fbe722774c6ecf28038a58c6e67e2107a62c5",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TestMotors.java",
+      "experimental": "Tests/TestMotors.java",
+      "original_sha256": "47ecc0475e5496fb76b205d3bba579f0154b61d6c47b71cf89da6591c0eb6149",
+      "experimental_sha256": "9dc9e0f8115021bf3634bb260df1d105175acf795ef876dc9bddac48fbf32754",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferAutoTuning.java",
+      "experimental": "Tests/TransferAutoTuning.java",
+      "original_sha256": "6ae99e86741ccf6a12b3fbd941f0b81327676aa8793dc3052e4daddc4afdbf2a",
+      "experimental_sha256": "f15c5de3a4d4977eb12c6156fe4817a8ca403d7453e0ccee78efbd7e37e74e11",
+      "opmodes": [
+        {
+          "original": "Transfer | Automatic Retune",
+          "experimental": "EXP | Transfer | Automatic Retune"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferBallValidation.java",
+      "experimental": "Tests/TransferBallValidation.java",
+      "original_sha256": "f8c49f2fb439e3c33f2066d8ff8d3c050a5aaf012de79804f8f706e120200b92",
+      "experimental_sha256": "495754a6ba740922c651db405566719e230962a3e0da101c4c862bc8509d792a",
+      "opmodes": [
+        {
+          "original": "Transfer | Ball Validation",
+          "experimental": "EXP | Transfer | Ball Validation"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferSpeedTuning.java",
+      "experimental": "Tests/TransferSpeedTuning.java",
+      "original_sha256": "d10c1443246bc1b5b2b52d2ec92fadd8c5f883d7256f0d957ac37e86a3d399a0",
+      "experimental_sha256": "5f9e1a78b232a45ba4e4747f748c11d11cd187058cc7777815617b9877ff435a",
+      "opmodes": [
+        {
+          "original": "Transfer | Speed Tuning",
+          "experimental": "EXP | Transfer | Speed Tuning"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferTuning.java",
+      "experimental": "Tests/TransferTuning.java",
+      "original_sha256": "a1c476e1f5b773cb02ba0acec3877d3d4836da588f3755cde4b5fa72b3054984",
+      "experimental_sha256": "1679f6e84ea1a048d85b85c997865f47b645a0f438e881420835b8437e95c0cf",
+      "opmodes": [
+        {
+          "original": "Launcher Tuning",
+          "experimental": "EXP | Launcher Tuning"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TurretAutoAlignTest.java",
+      "experimental": "Tests/TurretAutoAlignTest.java",
+      "original_sha256": "b1b3e418abc8e8865c565d5b38e023666be25dc62ec82ced1a7dcf18c1d9b3a7",
+      "experimental_sha256": "afe45b67ad58907bc342fc7c8c1a78ffa020b2cb620a22794ec45bdd60b00d6a",
+      "opmodes": [
+        {
+          "original": "Turret Auto Align Test",
+          "experimental": "EXP | Turret Auto Align Test"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TurretEncoderScaleTest.java",
+      "experimental": "Tests/TurretEncoderScaleTest.java",
+      "original_sha256": "f8443eed6465669b6cba45d5553547eec336cecb30b70a97e5051a93724f02b9",
+      "experimental_sha256": "7d999ea6d6503c90d98a6713dc62742e77a0580e6f2a550b540a376206782fd0",
+      "opmodes": [
+        {
+          "original": "Turret Encoder Scale - 90 Degrees",
+          "experimental": "EXP | Turret Encoder Scale - 90 Degrees"
+        }
+      ]
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/AutoCommands.java",
+      "experimental": "methods/AutoCommands.java",
+      "original_sha256": "5612cd72efd06532925a010378504ddb9e18ec5d7490d1bbe13b761f136013e1",
+      "experimental_sha256": "2b1ab8f550cc4f926dc15f32803e5310a356138c105e70b902b4b66049a58439",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/AutoPaths.java",
+      "experimental": "methods/AutoPaths.java",
+      "original_sha256": "d6dc6d894ae8bc197d113392a0e150e977858426307fb61fda87d17a6270b7de",
+      "experimental_sha256": "036e2e717a6db1c65b693dc001facaa779d87ad2acd219e41ed6ca0db3a9a76b",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/CoordinateAim.java",
+      "experimental": "methods/CoordinateAim.java",
+      "original_sha256": "f2f2b8aa54e538f937c30e2ed9b914e70869bd1487052d3f5bd05de682902497",
+      "experimental_sha256": "708d76f2f92d4acce4ffece9d935fc782e6455d09d043eaf5223591c53220d5b",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/CoordinateMotionFeedforward.java",
+      "experimental": "methods/CoordinateMotionFeedforward.java",
+      "original_sha256": "e422f76be6da9c383e5d77e9c4a6a034f5d6754eeaa1ec84c719bc83dc230d33",
+      "experimental_sha256": "9508e6de37c296c298e54439ca43ad7ae1e5c72668f842afaa9a1176995da9f4",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/CoordinateTurretControl.java",
+      "experimental": "methods/CoordinateTurretControl.java",
+      "original_sha256": "69643292454ffeaf85b7ba971e6f36bc6d4dbd15dd184d9be8586ed11dca8cbc",
+      "experimental_sha256": "9bb2a031e0a26ac4b0cf7e9e6aff2e5a4c04dc994dbe487daf8e301c46ba8702",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/FlywheelAutoTune.java",
+      "experimental": "methods/FlywheelAutoTune.java",
+      "original_sha256": "c3f442b516f00b267dbf75644b4a56e12d2308fb5c907ab63fb3e6a4d2ee4e2e",
+      "experimental_sha256": "8ab7b831098b6b234a98294dd604d6396bc7e7d69a3f214456ee1516b8414238",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/FlywheelIntegralControl.java",
+      "experimental": "methods/FlywheelIntegralControl.java",
+      "original_sha256": "d3f97e6da384265a9abf351c984368bc57055da8edfbfe044112646926cfcc52",
+      "experimental_sha256": "ecbc2bf8748ba6eb85f8cdf00de29b04fe5eab948ae55230e0c3958e610965c1",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/FlywheelPositionVelocity.java",
+      "experimental": "methods/FlywheelPositionVelocity.java",
+      "original_sha256": "7dcc46193844673bdfb823725667adab8eb436344299dc8b231b9f485d6f501b",
+      "experimental_sha256": "e6d5260059bb688277dac7daf799144ced8cc3dd43676e1d490c8755d452bfc9",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/FlywheelVelocityControl.java",
+      "experimental": "methods/FlywheelVelocityControl.java",
+      "original_sha256": "6dedaed3f1bf3f1cd74a9656f5c28c501e48c9e738d13b0096b406158a019a61",
+      "experimental_sha256": "5c311baaf9a99aac9b0a523f75a155557347a1c499f95c06cc2ed914eb4fccb0",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/HiveRoutePlanner.java",
+      "experimental": "methods/HiveRoutePlanner.java",
+      "original_sha256": "ad081eed0ee9680d1f9f9bfc53bac7c14dd340db27399be744873565794e0df2",
+      "experimental_sha256": "1de57c4520e987f99e04987dce8d57b47292d8e1498d29ada41641f75596c9a1",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/HiveRoutes.java",
+      "experimental": "methods/HiveRoutes.java",
+      "original_sha256": "0c58c59822329558df030f130826ae907a759abd7e583863f9686d4a5e401950",
+      "experimental_sha256": "f1a33ffc8194442a11ed578161d8ae5358ec47283a2e7a8836c051c1d0831bd1",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Intake.java",
+      "experimental": "methods/Intake.java",
+      "original_sha256": "c3a0a1136b7dc1b4fa36bbb63072332345c05a2e73d43742d72e6e6791b009ec",
+      "experimental_sha256": "35b31bde0c00f91c97fe8ac645044935efe396e0b08fbb92e6ffa7272904505b",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Launcher.java",
+      "experimental": "methods/Launcher.java",
+      "original_sha256": "2932183bda4a3b6b2fef80bac3a00dc2594b0a2b4425af2e1c43d535d337d933",
+      "experimental_sha256": "196cf9d8244fdd388220ab535e74ba7e4ef1a1e4b6268a43559a9e419beb1092",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/LauncherIntakeControls.java",
+      "experimental": "methods/LauncherIntakeControls.java",
+      "original_sha256": "dbb2139635cf07fb0f662c09269abe9cfdb46eaca72bb50286e6bb902c4c0741",
+      "experimental_sha256": "a46f6e014e7f409fa00b0207c6a855f8f7f5a106f1f19059db42d018a542ee26",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/LimelightVision.java",
+      "experimental": "methods/LimelightVision.java",
+      "original_sha256": "3dc1ec971e6a05014fb9beef231f9b6a8bf7ef0faf05750f27d242912c3fff83",
+      "experimental_sha256": "6da1c7f809d509893f26aa44277d1af19b361e1e22a2b23d05f7f0f8f20470a4",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/OpModeStorage.java",
+      "experimental": "methods/OpModeStorage.java",
+      "original_sha256": "54fdace0ba147ccd457d7455efb9d50770d857049a05164a4424bdcca81abe42",
+      "experimental_sha256": "b40d6fd3b02a6ad20c7d61ff9f4ca4f68a74c2f206f20ca4db21905d61aeaaa6",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/PathVisualizer.java",
+      "experimental": "methods/PathVisualizer.java",
+      "original_sha256": "f93cdf4205e37d2d35b547c7d01965ce7b16f34316a63258b938504c7e022fb2",
+      "experimental_sha256": "ce683b0946ef365b44f13edd1eecdb456b274c2ffd4f75acdecac4a099344ff1",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/PathsMason.java",
+      "experimental": "methods/PathsMason.java",
+      "original_sha256": "1e550df3fffe6d81db37b7b5b21987c2eca98bdc59c42a09d4e3aab14b23b3eb",
+      "experimental_sha256": "d95617b15ae2eff795cc3020e07fa9e62763e0c06ae4e71bdb2c6b4ea3e60cf1",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShootingCoordinator.java",
+      "experimental": "methods/ShootingCoordinator.java",
+      "original_sha256": "03d19446a7f51c8a61697b73d149cdb801a1486f70e579ddc8ab37e9e33bc3f6",
+      "experimental_sha256": "3be97687bbc2c6e372d0b0727da3c4e42f0389f33cecbe1d1f2ac8cff7257c05",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShootingExperiment.java",
+      "experimental": "methods/ShootingExperiment.java",
+      "original_sha256": "b8a220108b24d7454371d2726f838e4f920107906d1557b6323d032301528958",
+      "experimental_sha256": "4b978119c584a86c6b3161dc21362a0f46c9456e5005c3db3692ca691ca4833b",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShotContactDiagnostics.java",
+      "experimental": "methods/ShotContactDiagnostics.java",
+      "original_sha256": "6735fd127412a5370bdf65cc960736f48e41f53b6561d4e6f272dcb7e6d39222",
+      "experimental_sha256": "c908325de63a499f57947aad9f7bd4ac012c0fdd92822092560a3b92e0f9e785",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/SynchronizedFeed.java",
+      "experimental": "methods/SynchronizedFeed.java",
+      "original_sha256": "e1b96d1085b73bc772d7ad02f3dcb0b5408df0cdc0f08e08b9b4023ab6d765dd",
+      "experimental_sha256": "840876885646a581c401a7fe77f237f9c5dcc5cdf67582b7fd8f8fa2884c3911",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/TelePathing.java",
+      "experimental": "methods/TelePathing.java",
+      "original_sha256": "cee630c3a75c45198f0d98e8856144a418654c35e5625b130b0b0534aec607bb",
+      "experimental_sha256": "69c28f01fd42ab6a662e69b0ac9ef2d99da7989c0248296bb68c528fcf65c6c9",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Transfer.java",
+      "experimental": "methods/Transfer.java",
+      "original_sha256": "4ea5f08e7e88ee39a343d83967abada480f498c40051221febf2d7a8ed823f0a",
+      "experimental_sha256": "7b77c2c1392cc82c553dc405ccbd24ecc3ca70a749a62877acc999e22568d92a",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/TransferAutoTune.java",
+      "experimental": "methods/TransferAutoTune.java",
+      "original_sha256": "51eca49361e005cff5eff6ca8dba5a35ab145a386ac7ec815f40a6dec23796a2",
+      "experimental_sha256": "f9e84684e5a9db0168c3d02fd89cd13c71747d62e29e3961534d1827244076b7",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Turret.java",
+      "experimental": "methods/Turret.java",
+      "original_sha256": "060703c64b79706ec9b65063c84763ccb8d5b5f54dc1cc1fa22879c8dddfbd1d",
+      "experimental_sha256": "f9c97faea36725caad3d78466f678002aa2c74cf95cd3097b091dd1324b9800b",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/TurretCalibration.java",
+      "experimental": "methods/TurretCalibration.java",
+      "original_sha256": "f185657c41549f5e8b3f0cbea1b83562df8f609ff19c4310b454882c2af0a657",
+      "experimental_sha256": "f4824e9a0d974800d11dd2f8441bdc8c29172149e440874c25951aee4b2e131f",
+      "opmodes": []
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/pedro/Constants.java",
+      "experimental": "pedro/Constants.java",
+      "original_sha256": "f082b50534299d7ea5685259be3f35a0aebc54a6b719faffd9a11090ad7507a8",
+      "experimental_sha256": "e87cd3074fb4f2830217e80e0c1f721763a893f0fd3d415f7814f667c4f38c66",
+      "opmodes": []
+    }
+  ],
+  "original_snapshots": [
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1Tip.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1Tip.java.snapshot",
+      "sha256": "7d1d8336248016bbd277a52768f9e9975ba0c014cdb2ba07d8add780d1dfe3c9"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFar.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFar.java.snapshot",
+      "sha256": "ea503db7a3a3e6b6f6d4acf4e6ee7c317125cbc37170c6da891856329af5a525"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFlower.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFlower.java.snapshot",
+      "sha256": "458cdc4f41277c4add9699cd1b171819512ef2cb08419918a7b778fb55350c45"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFlowerPark.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipFlowerPark.java.snapshot",
+      "sha256": "0e8b7523e5cb282acb2b9db34f59aba10aa24bb0e8f3e5f26fe26151ecd17a91"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipPark.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Blue1TipPark.java.snapshot",
+      "sha256": "3572cef13231435062d667618cbc00f1f33bc7b9dcc557b21271905b41a4827f"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1Tip.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1Tip.java.snapshot",
+      "sha256": "89be08e1fa3d6f170987a9ba58ce9b529c5e9413687d2b1b69ba5f91d3347324"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFar.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFar.java.snapshot",
+      "sha256": "5ab77b9517ca0fd8a16371854771d994a5808a180b4832f4cdd2d59ccb57664f"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFlower.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFlower.java.snapshot",
+      "sha256": "55364bdeaecc3b9eeb77e3c1955f7ed71da3301475061da81f6ea3ca1f8c66bd"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFlowerPark.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipFlowerPark.java.snapshot",
+      "sha256": "61743aac4e7981d595964dbfe4aeeb8c0a5c7fc378f40409e412d208b4ac2a6e"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipPark.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Autos/Red1TipPark.java.snapshot",
+      "sha256": "c9754545bab5b8f746bdb969751394fad3421b155f9a8479c470220de78f604b"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/MainTeleOp.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/MainTeleOp.java.snapshot",
+      "sha256": "e56c23ba2891af21e21e2f4604c9a2bd85d21b2747cb273909c8b2a6b62fc02d"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimAutoCalibration.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimAutoCalibration.java.snapshot",
+      "sha256": "5a0328ab8c8d8b7925aabc8cb0385dafcafd66373e2dbca33c5ff23a08d0f371"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimAutomatedMotionTest.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimAutomatedMotionTest.java.snapshot",
+      "sha256": "7496a2089f66b84a8a52de6cfefc62871af6971436bc420e9bb4a31d914537e2"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimStage3Test.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/CoordinateAimStage3Test.java.snapshot",
+      "sha256": "3faf6db2c537f90d68bade6d544a550a10d607dacea352b9d775f155451ca833"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/IntakeTuning.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/IntakeTuning.java.snapshot",
+      "sha256": "1c864d227a5bd149b7f991ab8669d49e605339b083ac4a36b13558d2829837c9"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/LauncherPIRecoveryTest.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/LauncherPIRecoveryTest.java.snapshot",
+      "sha256": "13ee44f4e2be3459e4d38df0384fdeda609aee6be1a01b9e54fa0f699d733097"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/ShootingConsistencyTuning.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/ShootingConsistencyTuning.java.snapshot",
+      "sha256": "b6d4834176e2c9dcbb392eb7fec2c85f4a43145e23a9c31d6fa958f949b291f6"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/SynchronizedFeedValidation.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/SynchronizedFeedValidation.java.snapshot",
+      "sha256": "0687e6cd4a8c566f0a023c51dbace7c93290abf2f8210ecd6880651290d08aed"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferAutoTuning.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferAutoTuning.java.snapshot",
+      "sha256": "6ae99e86741ccf6a12b3fbd941f0b81327676aa8793dc3052e4daddc4afdbf2a"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferBallValidation.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferBallValidation.java.snapshot",
+      "sha256": "f8c49f2fb439e3c33f2066d8ff8d3c050a5aaf012de79804f8f706e120200b92"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferSpeedTuning.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/Tests/TransferSpeedTuning.java.snapshot",
+      "sha256": "d10c1443246bc1b5b2b52d2ec92fadd8c5f883d7256f0d957ac37e86a3d399a0"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/AutoCommands.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/AutoCommands.java.snapshot",
+      "sha256": "5612cd72efd06532925a010378504ddb9e18ec5d7490d1bbe13b761f136013e1"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/FlywheelIntegralControl.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/FlywheelIntegralControl.java.snapshot",
+      "sha256": "d3f97e6da384265a9abf351c984368bc57055da8edfbfe044112646926cfcc52"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Intake.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Intake.java.snapshot",
+      "sha256": "c3a0a1136b7dc1b4fa36bbb63072332345c05a2e73d43742d72e6e6791b009ec"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Launcher.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Launcher.java.snapshot",
+      "sha256": "2932183bda4a3b6b2fef80bac3a00dc2594b0a2b4425af2e1c43d535d337d933"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShootingCoordinator.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShootingCoordinator.java.snapshot",
+      "sha256": "03d19446a7f51c8a61697b73d149cdb801a1486f70e579ddc8ab37e9e33bc3f6"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShootingExperiment.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShootingExperiment.java.snapshot",
+      "sha256": "b8a220108b24d7454371d2726f838e4f920107906d1557b6323d032301528958"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShotContactDiagnostics.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/ShotContactDiagnostics.java.snapshot",
+      "sha256": "6735fd127412a5370bdf65cc960736f48e41f53b6561d4e6f272dcb7e6d39222"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/SynchronizedFeed.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/SynchronizedFeed.java.snapshot",
+      "sha256": "e1b96d1085b73bc772d7ad02f3dcb0b5408df0cdc0f08e08b9b4023ab6d765dd"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Transfer.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/Transfer.java.snapshot",
+      "sha256": "4ea5f08e7e88ee39a343d83967abada480f498c40051221febf2d7a8ed823f0a"
+    },
+    {
+      "original": "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/TransferAutoTune.java",
+      "snapshot": "verification/originals/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods/TransferAutoTune.java.snapshot",
+      "sha256": "51eca49361e005cff5eff6ca8dba5a35ab145a386ac7ec815f40a6dec23796a2"
+    },
+    {
+      "original": "tests/flywheel/FlywheelIntegralRegression.java",
+      "snapshot": "verification/originals/tests/flywheel/FlywheelIntegralRegression.java.snapshot",
+      "sha256": "d3f69d103964141768e3d95c92ab494488feb28dcb7c0cc0fa237588cc458fde"
+    },
+    {
+      "original": "tests/flywheel/SHOOTING_EXPERIMENTS.md",
+      "snapshot": "verification/originals/tests/flywheel/SHOOTING_EXPERIMENTS.md.snapshot",
+      "sha256": "cf4175be80d902a0546a5d82863a6088b2bbc9d605983829efbd3d7b046e00a4"
+    },
+    {
+      "original": "tests/flywheel/ShootingExperimentRegression.java",
+      "snapshot": "verification/originals/tests/flywheel/ShootingExperimentRegression.java.snapshot",
+      "sha256": "b19f75eba7a5f00352b830130a95eb0189fa20ff84942fafca13f86b2200d9f8"
+    },
+    {
+      "original": "tests/flywheel/ShotContactDiagnosticsRegression.java",
+      "snapshot": "verification/originals/tests/flywheel/ShotContactDiagnosticsRegression.java.snapshot",
+      "sha256": "1d5fc8084c0964f017315b0d7aff551fbb317d784763b3ca3f57c63532399b8c"
+    },
+    {
+      "original": "tests/flywheel/check_compile.py",
+      "snapshot": "verification/originals/tests/flywheel/check_compile.py.snapshot",
+      "sha256": "5130c71cf026e87c28300ef3332cdde624a2815e7585633ddf91f96300e1e833"
+    },
+    {
+      "original": "tests/flywheel/run.py",
+      "snapshot": "verification/originals/tests/flywheel/run.py.snapshot",
+      "sha256": "b9f665561df510e0f12ccaaf753f83d3ba3b0c10b5a75ca552688150ae91cf1c"
+    },
+    {
+      "original": "tests/shooting/README.md",
+      "snapshot": "verification/originals/tests/shooting/README.md.snapshot",
+      "sha256": "d458b068b62a168dbd185c4e1dbf65666cc103aae3f25ee8a9b76b094bd24353"
+    },
+    {
+      "original": "tests/shooting/SynchronizedFeedRegression.java",
+      "snapshot": "verification/originals/tests/shooting/SynchronizedFeedRegression.java.snapshot",
+      "sha256": "e6f02b6ec07d4c66bb8499d8c4bb74521177b8414be84362830bef41ef69cb62"
+    },
+    {
+      "original": "tests/shooting/SynchronizedMechanismRegression.java",
+      "snapshot": "verification/originals/tests/shooting/SynchronizedMechanismRegression.java.snapshot",
+      "sha256": "a495679503afb86b9ba71e23a0b42a8458e236e16cd2adff3e20b3b742ec2c3b"
+    },
+    {
+      "original": "tests/shooting/check_compile.py",
+      "snapshot": "verification/originals/tests/shooting/check_compile.py.snapshot",
+      "sha256": "dff3c2fd915a495fdb5ca290783b90818ede1c91866baaf90971e2ad74b5d9b8"
+    },
+    {
+      "original": "tests/shooting/run.py",
+      "snapshot": "verification/originals/tests/shooting/run.py.snapshot",
+      "sha256": "c35fb2dd794a5b620d3d87504d849392573a006e2553600fa3a369c65002d818"
+    }
+  ],
+  "desktop_fixtures": [
+    "verification/fixtures/FlywheelAutoTuneRegression.java.fixture",
+    "verification/fixtures/FlywheelIntegralRegression.java.fixture",
+    "verification/fixtures/FlywheelPositionVelocityRegression.java.fixture",
+    "verification/fixtures/ShootingExperimentRegression.java.fixture",
+    "verification/fixtures/ShotContactDiagnosticsRegression.java.fixture",
+    "verification/fixtures/SynchronizedFeedRegression.java.fixture",
+    "verification/fixtures/SynchronizedMechanismRegression.java.fixture",
+    "verification/fixtures/CoordinateAimRegression.java.fixture",
+    "verification/fixtures/CoordinateTurretControlRegression.java.fixture",
+    "verification/fixtures/CoordinateMotionFeedforwardRegression.java.fixture"
+  ]
+}

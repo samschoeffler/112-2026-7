@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Compile all TeamCode Java against cached Android/FTC/Pedro dependencies, without Gradle writes."""
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[2]
+CACHE = Path(os.environ.get('GRADLE_USER_HOME', Path.home() / '.gradle')) / 'caches/modules-2/files-2.1'
+SDK = Path(os.environ.get('ANDROID_HOME', Path.home() / 'Library/Android/sdk'))
+with tempfile.TemporaryDirectory(prefix='shooting-compile-') as temp:
+    jars = []
+    # Higher cached versions first when multiple versions of a dependency are available.
+    for index, file in enumerate(sorted(CACHE.rglob('*'), reverse=True)):
+        if not file.is_file() or file.name.endswith(('-sources.jar', '-javadoc.jar')):
+            continue
+        if file.suffix == '.jar':
+            jars.append(str(file))
+        elif file.suffix == '.aar':
+            with zipfile.ZipFile(file) as archive:
+                if 'classes.jar' not in archive.namelist():
+                    continue
+                target = Path(temp) / f'dependency-{index}.jar'
+                target.write_bytes(archive.read('classes.jar'))
+                jars.append(str(target))
+    platforms = sorted((SDK / 'platforms').glob('android-*/android.jar'))
+    if not platforms:
+        raise SystemExit('Android SDK missing')
+    jars.insert(0, str(platforms[-1]))
+    # FTC sample imports may refer to this locally built controller library.
+    jars.extend(str(p) for p in (ROOT / 'FtcRobotController/build/intermediates/javac').glob('*/compile*/*classes'))
+    files = sorted((ROOT / 'TeamCode/src/main/java').rglob('*.java'))
+    subprocess.run(['javac', '-proc:none', '-cp', os.pathsep.join(jars),
+                    '-d', str(Path(temp) / 'classes'), *map(str, files)], check=True)
+    print(f'All {len(files)} TeamCode Java sources compile against cached dependencies')

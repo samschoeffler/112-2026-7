@@ -1,0 +1,46 @@
+package org.firstinspires.ftc.teamcode.methods;
+
+public final class ShotContactDiagnosticsRegression {
+    private static void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
+    private static void near(double a, double b, double epsilon) {
+        check(Double.isFinite(a) && Math.abs(a - b) <= epsilon, "Expected " + b + ", got " + a);
+    }
+    public static void main(String[] args) {
+        ShotContactDiagnostics d = new ShotContactDiagnostics(); d.reset();
+        for (int n = 0; n <= 160; n++) {
+            double time = n * .02;
+            double f = n >= 90 && n <= 99 ? (n == 95 ? 1280 : 1300) : 1400;
+            d.update(time, f, n == 95 ? 1100 : 1440, 600, 12,
+                    n >= 50 && n < 150, n >= 150);
+        }
+        ShotContactDiagnostics.Snapshot first = d.snapshot();
+        check(first.detected && !first.timingGap, "Clean slowdown detected");
+        near(first.contactAfterFeed, .80, .0001);
+        near(first.minimumAfterFeed, .90, .0001);
+        near(first.preF, 1400, .001); near(first.preT, 1440, .001);
+        near(first.minF, 1280, .001); near(first.transferAtMin, 1100, .001);
+        near(first.batteryAtMin, 12, .001);
+        check(first.deficitTicks > 19 && first.deficitTicks < 22, "Integrated slowdown deficit");
+        check(first.recoveryFromContact >= .3 && first.recoveryFromContact < .4, "Recovery timed from slowdown");
+        d.reset();
+        check(!d.snapshot().detected && Double.isNaN(d.snapshot().contactAfterFeed), "Reset clears attempt");
+        // Raw +/-20 tick quantization and one-frame drop must not masquerade as sustained contact.
+        for (int n = 0; n < 180; n++) {
+            double f = n < 50 ? 1400 : n == 90 ? 1280 : n % 2 == 0 ? 1400 : 1420;
+            d.update(n * .02, f, 1440, 600, 12, n >= 50, false);
+        }
+        check(!d.snapshot().detected && Double.isNaN(d.snapshot().minF), "Reject isolated noise");
+        // Never infer contact from an idle/startup slowdown before intake feeding starts.
+        d.reset();
+        for (int n = 0; n < 50; n++) d.update(n * .02, 1300, 0, 0, 12, false, false);
+        check(!d.snapshot().detected, "No contact while not feeding");
+        d.update(1.5, 1400, 0, 0, 12, false, false);
+        check(d.snapshot().timingGap, "Flag timing gap, do not silently trust window");
+        // An immutable snapshot survives a reset for the next shot.
+        near(first.minF, 1280, .001);
+        d.reset();
+        for (int n = 0; n < 150; n++) d.update(n * .02, 1400, 1440, 500, 12, n >= 50, false);
+        check(!d.snapshot().detected && Double.isNaN(d.snapshot().contactAfterFeed), "No-ball stays unknown");
+        System.out.println("Estimated contact onset, pre-contact window, minima, deficit, noise rejection, reset and missing-event checks passed");
+    }
+}

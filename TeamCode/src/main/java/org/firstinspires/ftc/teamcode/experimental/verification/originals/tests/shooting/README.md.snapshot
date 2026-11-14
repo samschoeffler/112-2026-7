@@ -1,0 +1,127 @@
+# Production synchronized transfer/intake feeding
+
+MainTeleOp and all 12 shooting autos now use `ShootingCoordinator` and `SynchronizedFeed`.
+The existing distance-to-flywheel-speed function is preserved. Launch boost and adaptive
+compensation are not part of production feeding. Transfer now uses the validated voltage
+model (kS=1.1294224, kV=.004082160, kP=.001) with a final target of 1440 ticks/s.
+
+## Sequence
+
+1. Collect and store the usual 3-4 balls in the tunnel, with transfer stopped.
+2. Flywheel remains within +/-25 ticks/s of its current target for 200 ms.
+3. Intake and transfer start together. Transfer ramps from 0 to 1440 ticks/s over
+   300 ms; intake runs at its battery-compensated calibrated 85% setting from the
+   first positive transfer-ramp command.
+4. Both feed motors continue for the entire stored batch, including ordinary shot dips.
+   There is no transfer-only pre-spin, transfer-speed gate, two-second cutoff, or
+   artificial recovery pause between balls in a batch.
+5. Trigger release or the autonomous timed command ends the batch and stops both feed motors.
+6. A new batch must pass the flywheel readiness dwell again before either feed motor starts.
+
+Without a ball sensor, software cannot verify that the tunnel is empty or count the
+balls fired. TeleOp preserves hold-trigger batch feeding; the operator releases after
+the tunnel empties. Autos use explicit durations, which must be checked with real 3-4
+ball batches. These durations are not a guarantee of emptying. The previous single-ball
+tests cannot establish timing or recovery for a whole stored batch.
+
+Releasing shoot, turning off flywheel, or STOP immediately cancels feeding. Once a batch
+is feeding, distance-target changes no longer automatically interrupt it. The next batch
+still uses the normal readiness dwell. Readiness waits have no automatic timeout.
+
+Automatic production shooting fault lockouts have been removed at the user's request.
+Encoder/battery validation, motor-mode mismatch, reverse-direction checks, stall detection,
+loop timing and readiness/recovery timeout checks no longer latch faults or shut down
+operator commands. Stalls can continue receiving motor power until the operator stops.
+
+Missing/nonpositive battery data uses the last valid positive voltage (initially 12.76 V).
+Invalid velocity samples retain the last finite measured velocity (initially zero).
+These substituted readings are not proof of valid sensor data. Motor commands remain
+finite and bounded; the flywheel PI trim and normal ready-speed synchronization remain.
+Explicit operator/test aborts and file-integrity aborts in diagnostic OpModes still work;
+these are separate from automatic production sensor/stall lockouts. Other standalone
+tuning OpModes retain their own experimental validation logic.
+
+The coordinator owns intake and transfer requests. Launcher no longer configures transfer
+hardware.
+
+The coordinator also owns Launcher.update(): forward and reverse motor updates happen
+in its corresponding branch. B flywheel reversal is set and applied directly inside
+`if (outtake || eject)` via `launcher.outtake()`. The flag setter is private;
+`launcher.stopOuttake()` handles release without disabling an already-forward launcher.
+MainTeleOp passes the Y-toggle edge to the coordinator and
+only prepares the pose-based target; AutoCommands also prepares the target without
+separately writing flywheel power. This prevents a forward update immediately before
+an outtake update. Legacy standalone tuners may continue calling Launcher.update().
+
+## MainTeleOp controls
+
+- G2 Y: flywheel toggle.
+- Hold G2 right trigger (>0.2): synchronized shooting at the full tuned transfer target.
+  Trigger depth no longer scales shooting transfer velocity.
+- G2 left trigger: manual intake collection when shoot is not requested.
+- G2 B: reverse intake, transfer and flywheel (transfer/flywheel at -40%), overriding shooting.
+  Forward flywheel requests and PI trim are cleared. Release both B and right bumper to stop reversal;
+  press Y to enable forward flywheel control again. Explicit operator stops still apply.
+- G2 right bumper: reverse all three motors, exactly like B. Either button, or both held,
+  overrides shooting, collection and a simultaneous Y-toggle request.
+- G2 BACK or G1 B: stop launcher/transfer/intake.
+- Fresh G2 BACK+X: stopped shooting-fault reset. Re-enable flywheel explicitly afterward.
+- G2 A ramp toggle and G2 X hold-balls servo control remain as before.
+
+Telemetry shows synchronized-feed state, actual feeding and the shared fault message.
+
+## Autonomous
+
+`AutoCommands.shootForMs(...)` waits for the requested **continuous batch feeding duration**.
+The simultaneous intake/transfer ramp counts as feeding; preceding flywheel warmup does
+not. Interrupted commands cancel feeding immediately. The automatic wall-time watchdog
+has been removed. A readiness wait can therefore continue until speed is ready or the
+operator stops the OpMode.
+The original requested 1500/3000/5000 ms feeding budgets are retained, but **total auto
+elapsed time can increase** due to the flywheel readiness check. Recheck autonomous timing
+on the robot before competition; path geometry is unchanged. A shooting fault ends the
+shoot command and disables all shooting motors; it does not cancel subsequent drive paths.
+
+Collection commands issue collection requests to the coordinator, so they cannot bypass
+the intake gate during a shot. All 12 shooting autos share the same Launcher instance
+owned by AutoCommands for both control and telemetry. Motion-only diagnostic autos are
+unchanged. Existing tuning OpModes continue to test their explicitly selected experiments.
+
+## First robot check / stored-batch CSV validation
+
+Use **Shooting | Stored Batch Validation** in Diagnostics after building/installing.
+Keep aim/distance fixed and test the usual stored batches of 3-4 balls.
+The intake ramp servo starts UP, matching the earlier shooting validation geometry.
+
+1. INIT then START. Motor commands remain zero until loading is confirmed.
+2. At LOAD, hold G2 left trigger to collect into the tunnel. Release it when loaded.
+   Use G2 LB/RB to set the actual loaded count (1-4; normally 3 or 4).
+3. Press G2 A once. Observe WAIT_FLYWHEEL -> RAMP_TRANSFER -> FEED. Both intake
+   and transfer must start together after readiness and stay running for the whole batch.
+4. Press G2 A again once the tunnel is visibly empty. Both feed motors stop immediately;
+   the test waits for flywheel recovery, then switches off the flywheel and shows RESULT.
+   There is no assumed automatic empty time. G1 B aborts at any time.
+5. At RESULT use G2 UP/DOWN to select how many balls hit (starts at zero), then G2 X
+   to confirm. G2 LEFT repeats an invalid batch. Mark an incomplete/uncertain batch invalid.
+6. Complete 3 valid batches, then STOP. G1 X resets a resolved fault to LOAD.
+   Storage faults require restarting the OpMode.
+
+Send all three `stored-batch-feed-TIMESTAMP*` files from
+`Android/data/org.firstinspires.ftc.teamcode/files/flywheel-tuning/`.
+Sample logs contain production state, loaded ball count, target/measured speeds, motor
+powers, intake state, battery and accumulated feed time. Trial logs contain batch hit
+counts, motor metrics and feed duration ending at the operator's empty confirmation.
+That duration includes human reaction delay and is not an exact ball exit timestamp.
+The report includes each scored batch. Loaded and hit counts are operator-reported.
+
+## Desktop verification
+
+- `python3 tests/shooting/run.py`: deterministic sequencing plus production controller tests
+  using real SDK interfaces and fake motors. Checks ramp, speed dwells, dips, release,
+  readiness, target changes, manual stops, operator priorities, and that missing sensor
+  data/zero intake velocity no longer cause automatic fault lockouts.
+- `python3 tests/shooting/check_compile.py`: compiles every TeamCode Java source against
+  cached Android/FTC/Pedro dependencies in a temporary directory without Gradle writes.
+- `python3 tests/flywheel/run.py`: existing flywheel/tuning/diagnostic regression suite.
+
+Desktop tests do not validate physical feeding or autonomous field timing.

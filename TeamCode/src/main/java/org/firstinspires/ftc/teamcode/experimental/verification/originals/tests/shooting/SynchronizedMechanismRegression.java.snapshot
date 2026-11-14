@@ -1,0 +1,145 @@
+package org.firstinspires.ftc.teamcode.methods;
+
+import com.qualcomm.robotcore.hardware.*;
+import java.lang.reflect.Proxy;
+import java.util.Collections;
+
+/** Real production controllers and coordinator, with fake SDK motors and deterministic sequencing time. */
+public final class SynchronizedMechanismRegression {
+    private static void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
+    private static final class Motor {
+        double power, velocity;
+        int forwardWrites;
+        DcMotor.RunMode mode;
+        final DcMotorEx device = (DcMotorEx) Proxy.newProxyInstance(DcMotorEx.class.getClassLoader(),
+                new Class<?>[]{DcMotorEx.class}, (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "setMode": mode = (DcMotor.RunMode) args[0]; return null;
+                        case "getMode": return mode;
+                        case "setPower": power = (double) args[0]; if (power > 0) forwardWrites++; return null;
+                        case "getPower": return power;
+                        case "getVelocity": return velocity;
+                        case "setDirection": case "setZeroPowerBehavior": return null;
+                        default: throw new AssertionError("Unexpected motor call " + method);
+                    }
+                });
+    }
+    private static final class Rig {
+        final Motor f = new Motor(), t = new Motor(), i = new Motor();
+        double battery = 12, time;
+        final VoltageSensor sensor = (VoltageSensor) Proxy.newProxyInstance(VoltageSensor.class.getClassLoader(),
+                new Class<?>[]{VoltageSensor.class}, (proxy, method, args) -> battery);
+        final Servo ramp = (Servo) Proxy.newProxyInstance(Servo.class.getClassLoader(), new Class<?>[]{Servo.class},
+                (proxy, method, args) -> null);
+        final Launcher launcher = new Launcher(f.device, Collections.singletonList(sensor));
+        final Transfer transfer = new Transfer(t.device, Collections.singletonList(sensor));
+        final Intake intake = new Intake(i.device, ramp);
+        final ShootingCoordinator shooting = new ShootingCoordinator(launcher, transfer, intake, () -> time);
+        Rig() { f.velocity = -1407; i.velocity = -2500; launcher.setTargetVelocity(1407); }
+        void tick(boolean request, boolean collect, boolean outtake, boolean eject) {
+            time += .02;
+            t.velocity = transfer.getTargetVelocity();
+            shooting.update(request, collect, outtake, eject);
+        }
+        void ready() {
+            int n = 0;
+            while (!shooting.isFeeding() && n++ < 100) tick(true, true, false, false);
+            check(shooting.isFeeding(), "Production coordinator reaches feed");
+        }
+        void stopped() { check(f.power == 0 && t.power == 0 && i.power == 0, "All motor powers stop"); }
+    }
+    public static void main(String[] args) {
+        Rig r = new Rig();
+        r.tick(false, false, false, false);
+        check(r.shooting.state() == SynchronizedFeed.State.IDLE
+                && r.shooting.getStatus().startsWith("NO SHOOT REQUEST"), "Idle explains absent trigger request");
+        r.launcher.stopAll(); r.tick(true, false, false, false);
+        check(r.shooting.getStatus().startsWith("FORWARD FLYWHEEL OFF"), "Idle explains disabled forward mode");
+        r.launcher.setTargetVelocity(1407);
+        for (int n = 0; n < 9; n++) {
+            r.tick(true, true, false, false);
+            check(r.i.power == 0, "Manual collection cannot bypass flywheel readiness");
+        }
+        r.ready(); check(r.t.power > 0 && r.i.power == .85, "Tuned transfer + calibrated intake feed");
+        check(r.shooting.getStatus().contains("SHOOT REQUEST ACCEPTED"), "Accepted request reports feed progress");
+        r.f.velocity = -1280;
+        r.tick(true, false, false, false); check(r.i.power > 0, "Shot dip preserves in-progress feed");
+        r.tick(false, false, false, false); check(r.t.power == 0 && r.i.power == 0, "Release stops feed motors");
+        r.f.velocity = -1407;
+        r.tick(false, true, false, false); check(r.i.power > 0 && r.t.power == 0, "Manual intake still collects");
+        r.f.forwardWrites = 0;
+        r.tick(true, true, true, false);
+        check(r.i.power < 0 && r.t.power == -.4 && r.f.power == -.4,
+                "B outtake reverses intake, transfer and flywheel and overrides shooting");
+        check(r.f.forwardWrites == 0, "Outtake block must not first apply forward PI power");
+        check(r.launcher.isFlywheelOuttaking() && !r.launcher.isFlywheelsOn(),
+                "Reverse cancels forward velocity control");
+        check(r.launcher.getAppliedMotorPower() == -.4, "SDK motor power confirms the reverse command");
+        r.launcher.update(56, 8, 0, 0);
+        check(r.f.power == -.4, "TeleOp distance-based update must preserve reverse mode");
+        r.f.velocity = 600; // reverse direction: signed flywheel velocity is now negative
+        for (int n = 0; n < 30; n++) {
+            r.tick(true, true, true, false);
+            check(r.f.power == -.4 && r.shooting.getFault().isEmpty(),
+                    "Holding reverse bypasses forward-direction checks and PI");
+        }
+        r.tick(true, true, false, true); check(r.i.power < 0 && r.t.power == -.4, "Explicit eject wins");
+        check(r.shooting.state() == SynchronizedFeed.State.IDLE
+                && r.shooting.getStatus().startsWith("RIGHT BUMPER EJECT"), "Eject explains idle despite trigger");
+        check(r.f.power == -.4 && r.launcher.isFlywheelOuttaking(), "Switching B to right bumper keeps flywheel reversing");
+        r.tick(false, false, false, false); check(r.i.power == 0 && r.t.power == 0, "Eject release stops");
+        check(r.f.power == 0 && !r.launcher.isFlywheelsOn(), "Release cannot resurrect old forward shooting");
+        r.f.velocity = -1407; r.launcher.setTargetVelocity(1407);
+        r.ready(); r.battery = Double.NaN; r.tick(true, true, false, false);
+        check(r.shooting.getFault().isEmpty() && r.f.power > 0 && r.i.power > 0,
+                "Missing battery sample no longer stops operator commands");
+        check(r.launcher.getBatteryVoltage() == 12 && r.transfer.getBatteryVoltage() == 12,
+                "Controllers retain last valid battery reading");
+        r.battery = 11; r.tick(true, true, false, false);
+        check(r.launcher.getBatteryVoltage() == 11 && r.shooting.isFeeding(), "Live 11V data resumes without reset");
+        r.f.velocity = Double.NaN; r.tick(true, false, false, false);
+        check(r.shooting.getFault().isEmpty() && r.f.power > 0, "Invalid encoder sample retains previous measurement");
+        r.shooting.stopAll(); r.stopped();
+        // Whole stored batches must not be split into artificial two-second windows.
+        r = new Rig(); r.ready();
+        for (int n = 0; n < 250; n++) {
+            r.tick(true, false, false, false);
+            check(r.shooting.isFeeding() && r.i.power > 0 && r.t.power > 0,
+                    "Both real controllers feed continuously until batch request ends");
+        }
+        check(r.shooting.feedSeconds() > 4.99, "Batch time has no two-second ceiling");
+        r.tick(false, false, false, false);
+        check(!r.shooting.isFeeding() && r.i.power == 0 && r.t.power == 0, "Batch release stops both motors");
+        r.shooting.stopAll(); r.stopped();
+        r = new Rig(); r.ready(); r.t.mode = DcMotor.RunMode.RUN_USING_ENCODER;
+        r.tick(true, true, false, false);
+        check(r.shooting.getFault().isEmpty() && r.i.power > 0, "Motor mode mismatch no longer latches runtime fault");
+        r = new Rig(); r.i.velocity = 0;
+        for (int n = 0; n < 100; n++) r.tick(false, true, false, false);
+        check(r.shooting.getFault().isEmpty() && r.i.power > 0, "Zero intake velocity no longer cuts collection power");
+        r = new Rig(); r.tick(false, false, true, false);
+        r.shooting.stopAll(); r.stopped();
+        check(!r.launcher.isFlywheelOuttaking(), "Emergency stop clears reverse mode");
+        r = new Rig(); r.battery = Double.NaN; r.tick(false, false, true, false);
+        check(r.shooting.getFault().isEmpty() && r.f.power == -.4 && r.t.power == -.4 && r.i.power < 0,
+                "No battery data cannot block all-motor reverse; nominal voltage fallback is usable");
+        check(r.launcher.getBatteryVoltage() == 12.76, "Initial missing voltage uses documented nominal value");
+        r = new Rig(); r.shooting.stopAll(); r.time += .02;
+        r.shooting.update(false, false, false, false, true);
+        check(r.launcher.isFlywheelsOn() && r.f.power > 0, "Y toggle starts forward control inside coordinator");
+        r.tick(false, false, true, false);
+        r.time += .02; r.shooting.update(false, false, false, false, true);
+        check(r.launcher.isFlywheelsOn() && !r.launcher.isFlywheelOuttaking() && r.f.power > 0,
+                "Releasing B and pressing Y in same frame restores forward control");
+        for (boolean[] reverse : new boolean[][]{{true, false}, {false, true}, {true, true}}) {
+            r = new Rig(); r.time += .02; r.f.forwardWrites = 0;
+            r.shooting.update(true, true, reverse[0], reverse[1], true);
+            check(r.i.power < 0 && r.t.power == -.4 && r.f.power == -.4,
+                    "Either reversal button or both must reverse all three, overriding shoot/collect/Y");
+            check(r.f.forwardWrites == 0 && !r.launcher.isFlywheelsOn(), "Reverse never briefly commands forward power");
+            r.tick(false, false, false, false); r.stopped();
+            check(!r.launcher.isFlywheelOuttaking(), "Releasing both reversal actions stops reverse mode");
+        }
+        System.out.println("Motor priorities, tuned feed, manual stops and disabled sensor/stall lockout regressions passed");
+    }
+}

@@ -1,0 +1,123 @@
+package org.firstinspires.ftc.teamcode.Tests;
+
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
+import org.firstinspires.ftc.teamcode.methods.FlywheelIntegralControl;
+import org.firstinspires.ftc.teamcode.methods.FlywheelVelocityControl;
+import org.firstinspires.ftc.teamcode.methods.Intake;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Locale;
+
+/** Single-ball validation of tuned flywheel and transfer together. */
+@TeleOp(name = "Transfer | Ball Validation", group = "Diagnostics")
+public final class TransferBallValidation extends OpMode {
+    private static final double F_TARGET = 1407, T_TARGET = 1440;
+    private static final double F_KS = .4006845, F_KV = .005114707, F_KP = .032, F_KI = .060;
+    private static final double T_KS = 1.1294224, T_KV = .004082160, T_KP = .001;
+    private static final double FEED_SECONDS = 2.0, COOLDOWN_SECONDS = 2.0;
+    private DcMotorEx wheel, transfer;
+    private Intake intake;
+    private final FlywheelIntegralControl flyController = new FlywheelIntegralControl();
+    private final ArrayList<Shot> shots = new ArrayList<>();
+    private Shot shot;
+    private double lastTime, filtered, feedUntil, nextAllowed, lastFlush;
+    private boolean enabled, saved;
+    private int shotCount;
+    private BufferedWriter log;
+    private File report;
+    private String status = "Press G1 A to spin up; G2 A feeds one ball.";
+
+    @Override public void init() {
+        wheel = hardwareMap.get(DcMotorEx.class, "fWheel");
+        transfer = hardwareMap.get(DcMotorEx.class, "LaunchMech");
+        wheel.setPower(0); transfer.setPower(0);
+        wheel.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        intake = new Intake(hardwareMap);
+        telemetry.addLine("Tuned flywheel + transfer validation; load one ball at a time.");
+        telemetry.addLine("G1 A spin/stop | G2 A feed one ball | G1 B abort | STOP saves report");
+        telemetry.update();
+    }
+
+    @Override public void loop() {
+        double now = System.nanoTime() / 1e9;
+        double dt = lastTime == 0 ? 0 : now - lastTime; lastTime = now;
+        double rawF = -wheel.getVelocity(), rawT = transfer.getVelocity(), battery = batteryVoltage();
+        if (!Double.isFinite(filtered) || dt <= 0 || dt > .1) filtered = rawF;
+        else filtered += dt / (.075 + dt) * (rawF - filtered);
+        if (gamepad1.b) { enabled = false; feedUntil = 0; status = "Stopped by G1 B"; flyController.reset(); }
+        else if (gamepad1.aWasPressed()) { enabled = !enabled; flyController.reset(); status = enabled ? "Enabled; wait for speed before feeding" : "Stopped"; }
+        if (gamepad2.aWasPressed() && enabled && now >= nextAllowed && Math.abs(F_TARGET - rawF) <= 25) {
+            feedUntil = now + FEED_SECONDS; nextAllowed = now + FEED_SECONDS + COOLDOWN_SECONDS;
+            shot = new Shot(++shotCount, now); shots.add(shot);
+            status = "Shot " + shotCount + " feeding; wait for recovery";
+        }
+        if (shot != null && !feedUntilActive(now)) {
+            if (gamepad2.xWasPressed()) shot.landing = "hit_target";
+            if (gamepad2.yWasPressed()) shot.landing = "overshot";
+            if (gamepad2.bWasPressed()) shot.landing = "undershot";
+        }
+        boolean feed = enabled && now < feedUntil;
+        double fPower = 0, tPower = 0;
+        if (enabled && dt > 0 && dt <= .1 && battery >= 9 && battery <= 16.8) {
+            double fVolts = flyController.volts(F_TARGET, rawF, dt, battery, F_KS, F_KV, F_KP, F_KI);
+            fPower = FlywheelVelocityControl.power(fVolts, battery);
+            if (enabled) {
+                double tVolts = FlywheelVelocityControl.volts(T_TARGET, rawT, T_KS, T_KV, T_KP);
+                tPower = FlywheelVelocityControl.power(tVolts, battery);
+            }
+        }
+        wheel.setPower(enabled ? fPower : 0);
+        transfer.setPower(enabled ? tPower : 0);
+        if (feed) intake.setPower(Intake.INTAKE_POWER); else intake.stop();
+        intake.update();
+        if (shot != null) shot.update(now, rawF, rawT, feed);
+        if (openLog(now, rawF, rawT, battery, fPower, tPower, feed)) flush(now);
+        telemetry.addData("Status", status);
+        telemetry.addData("Flywheel", "%.0f / %.0f (err %.0f)", F_TARGET, rawF, F_TARGET - rawF);
+        telemetry.addData("Transfer", "%.0f / %.0f (err %.0f)", T_TARGET, rawT, T_TARGET - rawT);
+        telemetry.addData("Battery / feed", "%.2f V / %b", battery, feed);
+        telemetry.addData("Shots", shotCount);
+        if (shot != null) telemetry.addData("Last shot", shot.summary());
+        telemetry.addLine("After feed: G2 X=hit target | G2 Y=overshot | G2 B=undershot");
+        telemetry.update();
+    }
+
+    private boolean openLog(double now,double f,double t,double b,double fp,double tp,boolean feed) {
+        if (log != null) { try { log.write(String.format(Locale.US,"%.6f,%.1f,%.1f,%.2f,%.1f,%.1f,%.3f,%.3f,%b,%d,%s\n",now, f,t,b,F_TARGET-f,T_TARGET-t,fp,tp,feed,shotCount,shot == null ? "unmarked" : shot.landing)); return true; } catch(IOException e){status="Log failed";return false;} }
+        if (!enabled || report != null) return false;
+        try { File base=hardwareMap.appContext.getExternalFilesDir(null); if(base==null)throw new IOException("No storage"); File dir=new File(base,"flywheel-tuning"); if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create directory"); String n="transfer-ball-"+System.currentTimeMillis(); File csv=new File(dir,n+".csv"); report=new File(dir,n+"-report.txt"); log=new BufferedWriter(new FileWriter(csv)); log.write("time_s,flywheel_ticks_s,transfer_ticks_s,battery_V,flywheel_error,transfer_error,flywheel_power,transfer_power,feed,shot_count,landing_mark\n"); return true; } catch(IOException e){status="Cannot log: "+e.getMessage();return false;}
+    }
+    private void flush(double now){ if(log!=null && now-lastFlush>=1){lastFlush=now;try{log.flush();}catch(IOException ignored){}} }
+    private boolean feedUntilActive(double now) { return enabled && now < feedUntil; }
+    private double batteryVoltage(){double m=Double.POSITIVE_INFINITY;for(VoltageSensor s:hardwareMap.voltageSensor){double v=s.getVoltage();if(Double.isFinite(v)&&v>=6&&v<=16.8)m=Math.min(m,v);}return Double.isFinite(m)?m:Double.NaN;}
+    @Override public void stop(){enabled=false;if(wheel!=null)wheel.setPower(0);if(transfer!=null)transfer.setPower(0);if(intake!=null)intake.stop();saveReport();}
+    private void saveReport(){if(saved)return;saved=true;try{if(log!=null)log.close();if(report!=null)try(BufferedWriter out=new BufferedWriter(new FileWriter(report))){out.write("Tuned flywheel + transfer ball validation; production gains unchanged.\nShots recorded: "+shots.size()+"\n");for(Shot s:shots)out.write(s.summary()+"\n");}}catch(IOException e){status="Report failed";}}
+    private static final class Shot {
+        final int n;
+        final double start;
+        double minFeedF = Double.POSITIVE_INFINITY, minPostFeedF = Double.POSITIVE_INFINITY, maxTE;
+        String landing = "unmarked";
+        Shot(int n, double start) { this.n = n; this.start = start; }
+        void update(double now, double f, double t, boolean feed) {
+            if (feed) {
+                minFeedF = Math.min(minFeedF, f);
+                maxTE = Math.max(maxTE, Math.abs(T_TARGET - t));
+            } else {
+                minPostFeedF = Math.min(minPostFeedF, f);
+            }
+        }
+        String summary() {
+            return String.format(Locale.US,
+                    "#%d landing %s, min feed flywheel %.0f, min post-feed flywheel %.0f, max transfer error during feed %.0f",
+                    n, landing, minFeedF, minPostFeedF, maxTE);
+        }
+    }
+}

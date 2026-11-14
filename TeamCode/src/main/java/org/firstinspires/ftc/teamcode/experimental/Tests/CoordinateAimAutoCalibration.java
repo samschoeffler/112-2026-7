@@ -1,0 +1,110 @@
+package org.firstinspires.ftc.teamcode.experimental.Tests;
+
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import org.firstinspires.ftc.teamcode.experimental.methods.CoordinateAim;
+import org.firstinspires.ftc.teamcode.experimental.methods.CoordinateTurretControl;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Locale;
+
+/** Automated coordinate turret calibration at the existing known pose/target. */
+@TeleOp(name = "EXP | Coordinate Aim | Auto Calibration", group = "Experimental")
+public final class CoordinateAimAutoCalibration extends OpMode {
+    private static final double ROBOT_X = 56, ROBOT_Y = 8, ROBOT_HEADING_DEG = 90;
+    private static final double TARGET_X = 57.4, TARGET_Y = 82.3;
+    private static final double[] APPROACH_OFFSETS_DEG = {20, -20, 20, -20, 20, -20, 20, -20};
+    private static final double KP = CoordinateTurretControl.KP, KS = .20;
+    // Same direction mapping used by the production coordinate turret controller:
+    // positive encoder direction is turret-left, and negative motor power produces left.
+    private static final int ENCODER_SIGN_FOR_LEFT = 1;
+    private static final int POSITIVE_POWER_ENCODER_SIGN = -1;
+    private DcMotorEx motor;
+    private int zeroTicks;
+    private boolean zeroed, sweepActive, saved;
+    private int trial, phase;
+    private double phaseSince, stableSince, targetDeg, commandedDeg, finalError;
+    private String status = "Press G2 Y while stopped to capture forward zero.";
+    private BufferedWriter log;
+    private File report;
+    private boolean lastY;
+
+    @Override public void init() {
+        motor = hardwareMap.get(DcMotorEx.class, "TurretRot");
+        motor.setPower(0); motor.setDirection(DcMotorSimple.Direction.FORWARD);
+        motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        telemetry.addLine("Known pose (56,8,90°) -> target (57.4,82.3).");
+        telemetry.addLine("G2 Y zero | G2 A starts sweep (direction preconfigured)");
+        telemetry.addLine("Eight trials will run and log automatically.");
+        telemetry.update();
+    }
+
+    @Override public void loop() {
+        double now = System.nanoTime() / 1e9;
+        double angle = angle();
+        boolean y = gamepad2.y && !lastY;
+        lastY = gamepad2.y;
+        double power = 0;
+
+        if (!zeroed && y && !gamepad2.dpad_up && Math.abs(velocity()) < 2) {
+            zeroTicks = motor.getCurrentPosition();
+            zeroed = true;
+            status = "Zero captured; press G2 A to start automated sweep.";
+        }
+
+        CoordinateAim.Result aim = CoordinateAim.calculate(ROBOT_X, ROBOT_Y,
+                Math.toRadians(ROBOT_HEADING_DEG), TARGET_X, TARGET_Y);
+        targetDeg = aim.relativeBearingDeg * ENCODER_SIGN_FOR_LEFT;
+        if (!sweepActive && zeroed && gamepad2.aWasPressed()) {
+            if (openLog()) { sweepActive = true; trial = 0; phase = 0; phaseSince = now; stableSince = Double.NaN; status = "Sweep running; trials log automatically."; }
+        }
+        if (sweepActive) {
+            double desired = phase == 0 ? targetDeg + APPROACH_OFFSETS_DEG[trial] : targetDeg;
+            commandedDeg = desired;
+            double error = desired - angle;
+            power = drive(error);
+            if (phase == 0 && Math.abs(error) <= CoordinateTurretControl.TOLERANCE_DEG) {
+                if (Double.isNaN(stableSince)) stableSince = now;
+                if (now - stableSince >= .25) { phase = 1; stableSince = Double.NaN; phaseSince = now; }
+            } else if (phase == 0) stableSince = Double.NaN;
+            if (phase == 1 && Math.abs(targetDeg - angle) <= CoordinateTurretControl.TOLERANCE_DEG) {
+                if (Double.isNaN(stableSince)) stableSince = now;
+                if (now - stableSince >= .50) {
+                    finalError = targetDeg - angle;
+                    writeTrial(now, "settled", finalError);
+                    trial++;
+                    if (trial >= APPROACH_OFFSETS_DEG.length) {
+                        sweepActive = false;
+                        status = "Sweep complete; stop to save report.";
+                    } else {
+                        phase = 0;
+                        phaseSince = now;
+                        stableSince = Double.NaN;
+                        status = "Trial logged; next trial running.";
+                    }
+                }
+            } else if (phase == 1) stableSince = Double.NaN;
+        }
+        motor.setPower(sweepActive ? power * POSITIVE_POWER_ENCODER_SIGN : 0);
+        telemetry.addData("Status", status);
+        telemetry.addData("Pose / target", "(%.1f, %.1f, %.0f°) -> (%.1f, %.1f)", ROBOT_X, ROBOT_Y, ROBOT_HEADING_DEG, TARGET_X, TARGET_Y);
+        telemetry.addData("Target / turret angle / error", "%.2f / %.2f / %.2f", targetDeg, angle, targetDeg - angle);
+        telemetry.addData("Trial / phase", "%d/%d / %s", Math.min(trial + 1, APPROACH_OFFSETS_DEG.length), APPROACH_OFFSETS_DEG.length, phase == 0 ? "approach" : "target");
+        telemetry.addData("Zero / direction", "%s / preconfigured", zeroed);
+        telemetry.addLine("Settling and trial logging are automatic.");
+        telemetry.update();
+    }
+
+    private double drive(double error) { if (Math.abs(error) <= CoordinateTurretControl.TOLERANCE_DEG) return 0; return Math.max(-CoordinateTurretControl.MAX_POWER, Math.min(CoordinateTurretControl.MAX_POWER, KP * error + Math.copySign(KS, error))); }
+    private double angle() { return zeroed ? (motor.getCurrentPosition() - (double) zeroTicks) / CoordinateTurretControl.TICKS_PER_DEGREE : 0; }
+    private double velocity() { return motor.getVelocity() / CoordinateTurretControl.TICKS_PER_DEGREE; }
+    private boolean openLog() { try { File base=hardwareMap.appContext.getExternalFilesDir(null); if(base==null)throw new IOException("No storage"); File dir=new File(base,"turret-tuning"); if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create directory"); String n="coordinate-aim-"+System.currentTimeMillis(); File csv=new File(dir,n+".csv"); report=new File(dir,n+"-report.txt"); log=new BufferedWriter(new FileWriter(csv)); log.write("trial,approach_offset_deg,commanded_deg,final_error_deg,status\n"); return true; } catch(IOException e){status="Cannot log: "+e.getMessage();return false;} }
+    private void writeTrial(double now,String mark,double error) { try { log.write(String.format(Locale.US,"%d,%.1f,%.2f,%.2f,%s\n",trial+1,APPROACH_OFFSETS_DEG[trial],targetDeg,error,mark)); log.flush(); } catch(IOException e){status="Log failed: "+e.getMessage();} }
+    @Override public void stop() { motor.setPower(0); if(log!=null)try{log.close();}catch(IOException ignored){} if(report!=null&&!saved)try(BufferedWriter out=new BufferedWriter(new FileWriter(report))){saved=true;out.write("Coordinate aim automated calibration; production constants unchanged.\nPose=(56,8,90deg), target=(57.4,82.3).\n");}catch(IOException ignored){} }
+}

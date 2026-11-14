@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Verify synchronized production shooting using real SDK interfaces and fake motors."""
+import sys
+sys.dont_write_bytecode = True
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from ftc_test_runner import run_tests
+
+run_tests(('SynchronizedFeed',), Path(__file__).with_name('SynchronizedFeedRegression.java'),
+          'SynchronizedFeedRegression')
+run_tests(('SynchronizedFeed', 'ShootingCoordinator', 'Launcher', 'Transfer', 'Intake',
+           'FlywheelIntegralControl', 'FlywheelVelocityControl'),
+          Path(__file__).with_name('SynchronizedMechanismRegression.java'), 'SynchronizedMechanismRegression')

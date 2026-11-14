@@ -1,0 +1,108 @@
+package org.firstinspires.ftc.teamcode.experimental.methods;
+
+import java.util.ArrayDeque;
+
+/** Observation only: encoder slowdown is an estimated contact window, never a firing sensor. */
+public final class ShotContactDiagnostics {
+    private static final double HISTORY_SECONDS = .12;
+    private final ArrayDeque<Sample> history = new ArrayDeque<>();
+    private double feedStarted = Double.NaN, previousTime = Double.NaN, baseline = Double.NaN;
+    private double candidate = Double.NaN, stableSince = Double.NaN;
+    private double preF, preT, preI, minimum = Double.NaN, minimumTime = Double.NaN;
+    private double transferAtMin = Double.NaN, intakeAtMin = Double.NaN, batteryAtMin = Double.NaN;
+    private double deficit, recovery = Double.NaN;
+    private boolean detected, gap;
+
+    public void reset() {
+        history.clear();
+        feedStarted = previousTime = baseline = candidate = stableSince = Double.NaN;
+        preF = preT = preI = minimum = minimumTime = transferAtMin = intakeAtMin = batteryAtMin = Double.NaN;
+        deficit = 0; recovery = Double.NaN; detected = gap = false;
+    }
+
+    public void update(double now, double f, double t, double intake, double battery,
+                       boolean feeding, boolean recovering) {
+        if (!Double.isFinite(now) || !Double.isFinite(f) || !Double.isFinite(t)
+                || !Double.isFinite(intake) || !Double.isFinite(battery)) {
+            gap = true; history.clear(); previousTime = Double.NaN; return;
+        }
+        double dt = now - previousTime;
+        if (Double.isFinite(previousTime) && (dt <= 0 || dt > .1)) {
+            gap = true; history.clear(); candidate = stableSince = Double.NaN;
+        }
+        boolean timingOK = Double.isFinite(dt) && dt > 0 && dt <= .1;
+        previousTime = now;
+        while (!history.isEmpty() && now - history.peekFirst().time > HISTORY_SECONDS)
+            history.removeFirst();
+        if (feeding && Double.isNaN(feedStarted)) {
+            feedStarted = now;
+            baseline = mean(0); // preceding pre-feed samples, excludes this sample
+            if (!Double.isFinite(baseline)) { baseline = f; gap = true; }
+        }
+        if (Double.isFinite(feedStarted) && (feeding || recovering)) {
+            if (!detected) {
+                if (f < baseline - 35) {
+                    if (Double.isNaN(candidate)) {
+                        candidate = now;
+                        preF = mean(0); preT = mean(1); preI = mean(2);
+                        minimum = Double.NaN; deficit = 0;
+                    }
+                    trackMinimum(now, f, t, intake, battery);
+                    if (timingOK) deficit += Math.max(0, baseline - f) * dt;
+                    if (now - candidate >= .04) detected = true;
+                } else {
+                    candidate = Double.NaN; minimum = Double.NaN; deficit = 0;
+                }
+            } else if (Double.isNaN(recovery)) {
+                trackMinimum(now, f, t, intake, battery);
+                if (timingOK) deficit += Math.max(0, baseline - f) * dt;
+                if (f >= baseline - 25) {
+                    if (Double.isNaN(stableSince)) stableSince = now;
+                    if (now - stableSince >= .12) recovery = now - candidate;
+                } else stableSince = Double.NaN;
+            }
+        }
+        history.addLast(new Sample(now, f, t, intake));
+    }
+
+    private void trackMinimum(double now, double f, double t, double intake, double battery) {
+        if (Double.isNaN(minimum) || f < minimum) {
+            minimum = f; minimumTime = now;
+            transferAtMin = t; intakeAtMin = intake; batteryAtMin = battery;
+        }
+    }
+    private double mean(int channel) {
+        if (history.isEmpty()) return Double.NaN;
+        double sum = 0;
+        for (Sample s : history) sum += channel == 0 ? s.f : channel == 1 ? s.t : s.i;
+        return sum / history.size();
+    }
+    public double feedElapsed(double now) { return Double.isFinite(feedStarted) ? now - feedStarted : Double.NaN; }
+    public Snapshot snapshot() {
+        return new Snapshot(detected, gap, detected ? candidate - feedStarted : Double.NaN,
+                detected ? minimumTime - feedStarted : Double.NaN, baseline,
+                detected ? preF : Double.NaN, detected ? preT : Double.NaN, detected ? preI : Double.NaN,
+                detected ? minimum : Double.NaN, detected ? transferAtMin : Double.NaN,
+                detected ? intakeAtMin : Double.NaN, detected ? batteryAtMin : Double.NaN,
+                detected ? deficit : Double.NaN, recovery);
+    }
+
+    public static final class Snapshot {
+        public final boolean detected, timingGap;
+        public final double contactAfterFeed, minimumAfterFeed, baseline, preF, preT, preI;
+        public final double minF, transferAtMin, intakeAtMin, batteryAtMin, deficitTicks, recoveryFromContact;
+        Snapshot(boolean detected, boolean gap, double contact, double minimumTime, double baseline,
+                 double preF, double preT, double preI, double minF, double tAtMin, double iAtMin,
+                 double bAtMin, double deficit, double recovery) {
+            this.detected = detected; timingGap = gap; contactAfterFeed = contact;
+            minimumAfterFeed = minimumTime; this.baseline = baseline;
+            this.preF = preF; this.preT = preT; this.preI = preI; this.minF = minF;
+            transferAtMin = tAtMin; intakeAtMin = iAtMin; batteryAtMin = bAtMin;
+            deficitTicks = deficit; recoveryFromContact = recovery;
+        }
+    }
+    private static final class Sample {
+        final double time, f, t, i;
+        Sample(double time, double f, double t, double i) { this.time = time; this.f = f; this.t = t; this.i = i; }
+    }
+}

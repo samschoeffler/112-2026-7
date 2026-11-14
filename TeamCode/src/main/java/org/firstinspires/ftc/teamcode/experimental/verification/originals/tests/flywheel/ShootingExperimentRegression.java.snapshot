@@ -1,0 +1,163 @@
+package org.firstinspires.ftc.teamcode.methods;
+
+import org.firstinspires.ftc.teamcode.methods.ShootingExperiment.*;
+
+public final class ShootingExperimentRegression {
+    private static void check(boolean ok, String message) { if (!ok) throw new AssertionError(message); }
+    private static void stopped(ShootingExperiment e) {
+        check(e.flywheelPower() == 0 && e.transferPower() == 0 && e.intakePower() == 0,
+                "Every output must stop in " + e.state());
+    }
+    private static double time;
+    private static void tick(ShootingExperiment e, double f, double t, double i, double battery) {
+        time += .02; e.update(time, f, t, i, battery);
+        check(e.flywheelPower() >= 0 && e.flywheelPower() <= 1, "Flywheel bounds");
+        check(e.transferPower() >= 0 && e.transferPower() <= 1, "Transfer bounds");
+        check(e.intakePower() >= 0 && e.intakePower() <= 1, "Intake bounds");
+    }
+    private static ShootingExperiment fresh(Routine routine, Profile p) {
+        time = 0;
+        ShootingExperiment e = new ShootingExperiment(routine, p);
+        e.update(time, 0, 0, 0, 12);
+        stopped(e); e.confirmLoaded(time); return e;
+    }
+    private static void runShot(ShootingExperiment e) {
+        int steps = 0; boolean fed = false;
+        while (e.state() != State.RESULT && steps++ < 800) {
+            State previous = e.state();
+            tick(e, ShootingExperiment.F_TARGET, ShootingExperiment.T_TARGET, 500, 12);
+            if (e.intakePower() > 0) { fed = true; check(previous == State.FEED, "Only feed runs intake"); }
+            check(e.state() != State.FAULT, e.fault());
+        }
+        check(e.state() == State.RESULT && fed, "Trial must finish feeding/recovery"); stopped(e);
+    }
+    public static void main(String[] args) {
+        ShootingExperiment contactStudy = fresh(Routine.CONTACT_STUDY, Profile.PRESPIN);
+        check(contactStudy.totalTrials() == 10, "Contact study plan length");
+        for (int n = 0; n < 10; n++) {
+            if (contactStudy.state() == State.LOAD) contactStudy.confirmLoaded(time);
+            check(contactStudy.setting().profile == Profile.RAMP_300_MS
+                    && contactStudy.setting().voltageBoost == 0 && contactStudy.setting().targetBoost == 0,
+                    "Contact study keeps baseline controller settings");
+            runShot(contactStudy); contactStudy.mark(Landing.HIT);
+        }
+        check(contactStudy.state() == State.COMPLETE, "Contact study completes"); stopped(contactStudy);
+        ShootingExperiment comparison = fresh(Routine.BOOST_COMPARE, Profile.PRESPIN);
+        check(comparison.totalTrials() == 10, "Focused comparison plan length");
+        for (int n = 0; n < 10; n++) {
+            if (comparison.state() == State.LOAD) comparison.confirmLoaded(time);
+            check(comparison.setting().profile == Profile.RAMP_300_MS
+                    && comparison.setting().targetBoost == 0
+                    && comparison.setting().voltageBoost == (n % 2 == 0 ? 0 : .6)
+                    && comparison.setting().lead == (n % 2 == 0 ? 0 : .10), "Alternating fixed-ramp comparison");
+            runShot(comparison);
+            if (n == 1) {
+                comparison.mark(Landing.INVALID);
+                check(comparison.trial() == 2 && comparison.setting().voltageBoost == .6,
+                        "Invalid boost shot repeats without advancing alternation");
+                comparison.confirmLoaded(time); runShot(comparison);
+            }
+            comparison.mark(Landing.HIT);
+        }
+        check(comparison.state() == State.COMPLETE && comparison.results().size() == 11,
+                "Five valid trials per setting plus invalid retained"); stopped(comparison);
+        ShootingExperiment validation = fresh(Routine.VALIDATE, Profile.PRESPIN);
+        check(validation.totalTrials() == 10, "Validation plan length");
+        for (int n = 0; n < 10; n++) {
+            if (validation.state() == State.LOAD) validation.confirmLoaded(time);
+            check(validation.setting().profile == Profile.RAMP_300_MS
+                    && validation.setting().targetBoost == 0 && validation.setting().voltageBoost == 0
+                    && validation.setting().lead == 0, "Validation profile must stay fixed");
+            runShot(validation); validation.mark(Landing.HIT);
+        }
+        check(validation.state() == State.COMPLETE && validation.results().size() == 10, "Validation completes");
+        validation.abort("Abort after completion"); validation.resetFault();
+        check(validation.state() == State.COMPLETE, "Cannot restart beyond the trial plan"); stopped(validation);
+        ShootingExperiment transfer = fresh(Routine.TRANSFER, Profile.PRESPIN);
+        check(transfer.totalTrials() == 12, "Transfer plan length");
+        runShot(transfer);
+        transfer.mark(Landing.INVALID);
+        check(transfer.trial() == 1 && transfer.attempt() == 2, "Invalid must repeat setting");
+        for (int n = 0; n < 12; n++) {
+            transfer.confirmLoaded(time);
+            runShot(transfer);
+            transfer.mark(Landing.HIT);
+        }
+        check(transfer.state() == State.COMPLETE && transfer.results().size() == 13, "Complete only valid shots");
+        check(transfer.results().get(0).landing == Landing.INVALID, "Retain invalid record");
+        for (Result r : transfer.results()) {
+            check(r.rmsError == 0 && r.recoverySeconds >= .20, "Metrics");
+            check(r.minBattery == 12 && r.contactEvents == 0, "No invented contact event");
+        }
+        for (Profile profile : Profile.values()) {
+            ShootingExperiment boost = fresh(Routine.BOOST, profile);
+            check(boost.totalTrials() == 24, "Boost plan length");
+            boolean sawVoltage = false, sawTarget = false;
+            while (boost.state() != State.COMPLETE) {
+                if (boost.state() == State.LOAD) boost.confirmLoaded(time);
+                int steps = 0;
+                while (boost.state() != State.RESULT && steps++ < 800) {
+                    tick(boost, ShootingExperiment.F_TARGET, ShootingExperiment.T_TARGET, 500, 12);
+                    sawVoltage |= boost.extraVolts() > 0;
+                    sawTarget |= boost.flywheelTarget() > ShootingExperiment.F_TARGET;
+                    check(boost.state() != State.FAULT, boost.fault());
+                }
+                check(boost.state() == State.RESULT, "All profiles finish");
+                boost.mark(Landing.HIT);
+            }
+            check(sawVoltage && sawTarget, "Test both boost types"); stopped(boost);
+        }
+        // A ramp starts at zero and rises monotonically; pre-spin remains off during spin-up.
+        eRampCheck();
+        // Stable-speed dwell rejects a single lucky sample.
+        ShootingExperiment e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+        tick(e, 1407, 1440, 0, 12); tick(e, 1300, 1440, 0, 12);
+        for (int n = 0; n < 9; n++) tick(e, 1407, 1440, 0, 12);
+        check(e.state() == State.SPINUP, "Readiness dwell resets");
+        // Sensor, battery and timing faults latch and stop every output.
+        for (int mode = 0; mode < 4; mode++) {
+            e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+            if (mode == 0) tick(e, Double.NaN, 1440, 0, 12);
+            if (mode == 1) tick(e, 1407, 1440, 0, 8);
+            if (mode == 2) { time += .2; e.update(time, 1407, 1440, 0, 12); }
+            if (mode == 3) e.abort("Operator abort");
+            check(e.state() == State.FAULT, "Fault latch"); stopped(e);
+            tick(e, 1407, 1440, 500, 12); stopped(e);
+            e.resetFault(); check(e.state() == State.LOAD, "Reset returns to idle load"); stopped(e);
+        }
+        for (int motor = 0; motor < 3; motor++) {
+            e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+            for (int n = 0; n < 200 && e.state() != State.FAULT; n++)
+                tick(e, motor == 0 ? 0 : 1407, motor == 1 ? 0 : 1440, motor == 2 ? 0 : 500, 12);
+            check(e.state() == State.FAULT && e.fault().contains("stall"), "Stall motor " + motor); stopped(e);
+        }
+        e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+        for (int n = 0; n < 20 && e.state() != State.FAULT; n++) tick(e, -100, 1440, 500, 12);
+        check(e.state() == State.FAULT && e.fault().contains("direction"), "Reverse direction fault");
+        e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+        for (int n = 0; n < 420 && e.state() != State.FAULT; n++) tick(e, 1300, 1440, 500, 12);
+        check(e.state() == State.FAULT && e.fault().contains("Spin-up"), "Unreachable speed timeout");
+        e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+        while (e.state() != State.RECOVER) tick(e, 1407, 1440, 500, 12);
+        for (int n = 0; n < 320 && e.state() != State.FAULT; n++) tick(e, 1300, 1440, 500, 12);
+        check(e.state() == State.FAULT && e.fault().contains("Recovery"), "Recovery timeout"); stopped(e);
+        System.out.println("Shooting plans, dwell, boost types, ramps, invalid repeats, results and fault cutoffs passed");
+    }
+
+    private static void eRampCheck() {
+        ShootingExperiment e = fresh(Routine.TRANSFER, Profile.PRESPIN);
+        runShot(e); e.mark(Landing.HIT); // second trial is the first ramp candidate
+        e.confirmLoaded(time);
+        while (e.state() == State.SPINUP) {
+            tick(e, 1407, 0, 0, 12);
+            check(e.transferPower() == 0, "Ramp trial must not pre-spin transfer");
+        }
+        double previous = 0;
+        for (int n = 0; n < 20; n++) {
+            tick(e, 1407, previous, 500, 12);
+            check(e.transferTarget() >= previous && e.transferTarget() <= 1440, "Monotonic ramp bounds");
+            previous = e.transferTarget();
+        }
+        check(previous == 1440, "Ramp reaches final speed");
+    }
+}

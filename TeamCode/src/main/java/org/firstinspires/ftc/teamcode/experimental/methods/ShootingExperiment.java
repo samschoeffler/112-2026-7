@@ -1,0 +1,232 @@
+package org.firstinspires.ftc.teamcode.experimental.methods;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/** Hardware-independent, single-ball trial sequencing. No adaptive compensation. */
+public final class ShootingExperiment {
+    public enum Routine { TRANSFER, BOOST, VALIDATE, BOOST_COMPARE, CONTACT_STUDY }
+    public enum State { LOAD, SPINUP, BOOST, FEED, RECOVER, RESULT, COMPLETE, FAULT }
+    public enum Landing { HIT, OVER, UNDER, INVALID }
+    public enum Profile { PRESPIN, RAMP_150_MS, RAMP_300_MS }
+    public static final double F_TARGET = 1407, T_TARGET = 1440;
+    public static final double F_KS = .4006845, F_KV = .005114707, F_KP = .032, F_KI = .060;
+    public static final double T_KS = 1.1294224, T_KV = .004082160, T_KP = .001;
+    public static final double READY_ERROR = 25, READY_DWELL = .20;
+    public static final double FEED_SECONDS = 2, COOLDOWN_SECONDS = 2;
+
+    public static final class Setting {
+        public final String name;
+        public final Profile profile;
+        public final double voltageBoost, targetBoost, lead;
+        Setting(String name, Profile profile, double voltageBoost, double targetBoost, double lead) {
+            this.name = name; this.profile = profile; this.voltageBoost = voltageBoost;
+            this.targetBoost = targetBoost; this.lead = lead;
+        }
+    }
+
+    public static final class Result {
+        public final int trial, attempt;
+        public final Setting setting;
+        public final Landing landing;
+        public final double preFeedSpeed, minFeedSpeed, maxFeedSpeed, rmsError, recoverySeconds;
+        public final double minBattery, maxTransferError, saturationSeconds;
+        public final int contactEvents;
+        Result(int trial, int attempt, Setting setting, Landing landing, ShootingExperiment e) {
+            this.trial = trial; this.attempt = attempt; this.setting = setting; this.landing = landing;
+            preFeedSpeed = e.preFeedSpeed; minFeedSpeed = e.minFeedSpeed; maxFeedSpeed = e.maxFeedSpeed;
+            rmsError = e.feedSamples == 0 ? Double.NaN : Math.sqrt(e.feedErrorSq / e.feedSamples);
+            recoverySeconds = e.recoverySeconds; minBattery = e.minBattery;
+            maxTransferError = e.maxTransferError; saturationSeconds = e.saturationSeconds;
+            contactEvents = e.contactEvents;
+        }
+    }
+
+    private final List<Setting> plan = new ArrayList<>();
+    private final List<Result> results = new ArrayList<>();
+    private final FlywheelIntegralControl controller = new FlywheelIntegralControl();
+    private State state = State.LOAD;
+    private int index, attempt = 1, feedSamples, contactEvents;
+    private double phaseStart, lastTime = Double.NaN, stableSince = Double.NaN;
+    private double lowFlySince = Double.NaN, lowTransferSince = Double.NaN, lowIntakeSince = Double.NaN;
+    private double reverseSince = Double.NaN, contactSince = Double.NaN;
+    private boolean inContact;
+    private double preFeedSpeed, minFeedSpeed, maxFeedSpeed, feedErrorSq, recoverySeconds;
+    private double minBattery, maxTransferError, saturationSeconds;
+    private double flywheelPower, transferPower, intakePower, requestedVolts;
+    private double flywheelTarget, transferTarget, extraVolts;
+    private String fault = "";
+
+    public ShootingExperiment(Routine routine, Profile boostProfile) {
+        if (routine == Routine.BOOST_COMPARE) {
+            Setting baseline = new Setting("baseline_ramp300", Profile.RAMP_300_MS, 0, 0, 0);
+            Setting boost = new Setting("voltage_0p6V_ramp300", Profile.RAMP_300_MS, .6, 0, .10);
+            for (int n = 0; n < 5; n++) { plan.add(baseline); plan.add(boost); }
+            return;
+        }
+        if (routine == Routine.VALIDATE || routine == Routine.CONTACT_STUDY) {
+            Setting selected = new Setting(routine == Routine.CONTACT_STUDY
+                    ? "contact_study_ramp300" : "validate_ramp300_no_boost", Profile.RAMP_300_MS, 0, 0, 0);
+            for (int n = 0; n < 10; n++) plan.add(selected);
+            return;
+        }
+        Profile p = routine == Routine.TRANSFER ? Profile.PRESPIN : boostProfile;
+        Setting baseline = new Setting("baseline", p, 0, 0, 0);
+        Setting[] candidates = routine == Routine.TRANSFER ? new Setting[]{
+                new Setting("ramp_150ms", Profile.RAMP_150_MS, 0, 0, 0),
+                new Setting("ramp_300ms", Profile.RAMP_300_MS, 0, 0, 0)
+        } : new Setting[]{
+                new Setting("voltage_0p3V_lead100ms", p, .3, 0, .10),
+                new Setting("voltage_0p6V_lead100ms", p, .6, 0, .10),
+                new Setting("target_2pct_lead150ms", p, 0, .02, .15),
+                new Setting("target_4pct_lead150ms", p, 0, .04, .15)
+        };
+        // Three repeats; reverse candidate order in repeat two to reduce order bias.
+        for (int repeat = 0; repeat < 3; repeat++) {
+            for (int j = 0; j < candidates.length; j++) {
+                plan.add(baseline);
+                plan.add(candidates[repeat == 1 ? candidates.length - 1 - j : j]);
+            }
+        }
+    }
+
+    public State state() { return state; }
+    public int trial() { return Math.min(index + 1, plan.size()); }
+    public int attempt() { return attempt; }
+    public int totalTrials() { return plan.size(); }
+    public Setting setting() { return plan.get(Math.min(index, plan.size() - 1)); }
+    public List<Result> results() { return Collections.unmodifiableList(results); }
+    public String fault() { return fault; }
+    public double flywheelPower() { return flywheelPower; }
+    public double transferPower() { return transferPower; }
+    public double intakePower() { return intakePower; }
+    public double flywheelTarget() { return flywheelTarget; }
+    public double transferTarget() { return transferTarget; }
+    public double extraVolts() { return extraVolts; }
+    public double integralVolts() { return controller.integralVolts(); }
+    public double requestedVolts() { return requestedVolts; }
+
+    public void confirmLoaded(double now) {
+        if (state != State.LOAD) return;
+        if (!Double.isFinite(now)) { abort("Invalid start time"); return; }
+        preFeedSpeed = recoverySeconds = Double.NaN;
+        minFeedSpeed = minBattery = Double.POSITIVE_INFINITY;
+        maxFeedSpeed = Double.NEGATIVE_INFINITY;
+        feedErrorSq = maxTransferError = saturationSeconds = 0;
+        feedSamples = contactEvents = 0; inContact = false;
+        lowFlySince = lowTransferSince = lowIntakeSince = reverseSince = contactSince = Double.NaN;
+        controller.reset(); lastTime = now;
+        transition(State.SPINUP, now);
+    }
+
+    /** Called only after feeding and recovery. INVALID repeats this setting. */
+    public void mark(Landing landing) {
+        if (state != State.RESULT || landing == null) return;
+        results.add(new Result(index + 1, attempt, setting(), landing, this));
+        if (landing == Landing.INVALID) attempt++;
+        else { index++; attempt = 1; }
+        transition(index >= plan.size() ? State.COMPLETE : State.LOAD, 0);
+    }
+
+    public void abort(String reason) {
+        fault = reason;
+        transition(State.FAULT, 0);
+        zeroOutputs(); controller.reset();
+    }
+
+    /** Explicit reset repeats the interrupted trial, leaving all motors off until load confirmation. */
+    public void resetFault() {
+        if (state != State.FAULT) return;
+        fault = ""; attempt++;
+        transition(index >= plan.size() ? State.COMPLETE : State.LOAD, 0);
+    }
+
+    public void update(double now, double f, double t, double intakeSpeed, double battery) {
+        zeroOutputs();
+        if (!active()) { lastTime = Double.NaN; controller.reset(); return; }
+        double dt = now - lastTime; lastTime = now;
+        if (!Double.isFinite(now) || !Double.isFinite(f) || !Double.isFinite(t)
+                || !Double.isFinite(intakeSpeed) || !Double.isFinite(battery)
+                || battery < 9 || battery > 16.8 || dt <= 0 || dt > .1) {
+            abort("Invalid velocity, battery, or loop timing; explicit reset required"); return;
+        }
+        Setting s = setting();
+        double elapsed = now - phaseStart;
+        boolean boosted = state == State.BOOST || state == State.FEED;
+        flywheelTarget = F_TARGET * (boosted ? 1 + s.targetBoost : 1);
+        extraVolts = boosted ? s.voltageBoost : 0;
+        double required = F_KS + F_KV * flywheelTarget + extraVolts;
+        if (required > battery * .97) { abort("Insufficient voltage headroom for trial"); return; }
+        requestedVolts = controller.volts(flywheelTarget, f, dt, battery, F_KS, F_KV, F_KP, F_KI, extraVolts);
+        flywheelPower = FlywheelVelocityControl.power(requestedVolts, battery);
+        boolean prespin = s.profile == Profile.PRESPIN;
+        if ((prespin && (state == State.SPINUP || state == State.BOOST)) || state == State.FEED) {
+            double ramp = s.profile == Profile.RAMP_150_MS ? .15 : .30;
+            transferTarget = T_TARGET * (prespin ? 1 : Math.min(1, elapsed / ramp));
+            if (transferTarget > 0)
+                transferPower = FlywheelVelocityControl.power(FlywheelVelocityControl.volts(
+                        transferTarget, t, T_KS, T_KV, T_KP), battery);
+        }
+        if (state == State.FEED) intakePower = Math.min(1, .85 * 12.76 / battery);
+
+        // Sustained encoder-based faults; brief ball contact and motor startup are allowed.
+        lowFlySince = since(flywheelPower >= .25 && Math.abs(f) < 15, lowFlySince, now);
+        lowTransferSince = since(transferPower >= .25 && Math.abs(t) < 15, lowTransferSince, now);
+        lowIntakeSince = since(intakePower >= .25 && Math.abs(intakeSpeed) < 15, lowIntakeSince, now);
+        reverseSince = since(f < -50 || (transferTarget > 0 && t < -50), reverseSince, now);
+        if (held(lowFlySince, now, 1.5) || held(lowTransferSince, now, 1.0)
+                || held(lowIntakeSince, now, 1.0)) {
+            abort("Sustained stall or missing encoder; inspect flywheel/intake/transfer"); return;
+        }
+        if (held(reverseSince, now, .20)) { abort("Encoder direction disagrees with tuned signs"); return; }
+        minBattery = Math.min(minBattery, battery);
+        if (state == State.SPINUP) {
+            boolean ready = Math.abs(F_TARGET - f) <= READY_ERROR
+                    && (!prespin || Math.abs(T_TARGET - t) <= 60);
+            stableSince = since(ready, stableSince, now);
+            if (held(stableSince, now, READY_DWELL)) transition(s.lead > 0 ? State.BOOST : State.FEED, now);
+            else if (elapsed >= 8) abort("Spin-up timeout; requested speeds did not stabilize");
+        } else if (state == State.BOOST) {
+            if (elapsed >= s.lead) transition(State.FEED, now);
+        } else if (state == State.FEED) {
+            if (feedSamples == 0) preFeedSpeed = f;
+            minFeedSpeed = Math.min(minFeedSpeed, f); maxFeedSpeed = Math.max(maxFeedSpeed, f);
+            double error = F_TARGET - f; feedErrorSq += error * error; feedSamples++;
+            maxTransferError = Math.max(maxTransferError, Math.abs(transferTarget - t));
+            if (requestedVolts >= battery) saturationSeconds += dt;
+            // Heuristic only: no sensor exists to prove that exactly one ball fired.
+            boolean dip = f < preFeedSpeed - 35;
+            contactSince = since(dip, contactSince, now);
+            if (!inContact && held(contactSince, now, .04)) { contactEvents++; inContact = true; }
+            if (f >= preFeedSpeed - 15) inContact = false;
+            if (elapsed >= FEED_SECONDS) {
+                transition(State.RECOVER, now);
+                // Stop feeding immediately at the transition, including the intake.
+                transferPower = intakePower = 0;
+            }
+        } else if (state == State.RECOVER) {
+            stableSince = since(Math.abs(F_TARGET - f) <= READY_ERROR, stableSince, now);
+            if (held(stableSince, now, READY_DWELL)) {
+                if (Double.isNaN(recoverySeconds)) recoverySeconds = elapsed;
+                if (elapsed >= COOLDOWN_SECONDS) { transition(State.RESULT, now); zeroOutputs(); controller.reset(); }
+            } else recoverySeconds = Double.NaN;
+            if (state == State.RECOVER && elapsed >= 6) abort("Recovery timeout; feeding stopped");
+        }
+    }
+
+    private boolean active() {
+        return state == State.SPINUP || state == State.BOOST || state == State.FEED || state == State.RECOVER;
+    }
+    private void transition(State next, double now) { state = next; phaseStart = now; stableSince = Double.NaN; }
+    private void zeroOutputs() {
+        flywheelPower = transferPower = intakePower = requestedVolts = 0;
+        flywheelTarget = transferTarget = extraVolts = 0;
+    }
+    private static double since(boolean condition, double start, double now) {
+        return condition ? (Double.isNaN(start) ? now : start) : Double.NaN;
+    }
+    private static boolean held(double start, double now, double seconds) {
+        return !Double.isNaN(start) && now - start >= seconds;
+    }
+}
