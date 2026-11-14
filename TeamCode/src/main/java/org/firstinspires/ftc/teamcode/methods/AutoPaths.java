@@ -31,16 +31,16 @@ public final class AutoPaths {
                 poseFactory.of(47, 120, 60);
 
         public static final Pose flowerClose =
-                poseFactory.of(11.5, 48.5, 180);
+                poseFactory.of(12, 48.5, 180);
 
         public static final Pose flowerFar =
-                poseFactory.of(47, 129, 90);
+                poseFactory.of(47, 128.5, 90);
 
         public static final Pose jiggle =
-                poseFactory.of(47, 128.8, 90);
+                poseFactory.of(47, 128.3, 90);
 
         public static final Pose jiggleC =
-                poseFactory.of(12, 48.5, 170);
+                poseFactory.of(11.7, 48.5, 170);
 
 
         // ---------- PATHS ----------
@@ -115,10 +115,10 @@ public final class AutoPaths {
                 poseFactory.of(34.5, 50, 0);
 
         public static final Pose point2=
-                poseFactory.of(30, 10, 180);
+                poseFactory.of(30, 11, 180);
 
         public static final Pose pointwall=
-                poseFactory.of(9, 8, 180);
+                poseFactory.of(9, 8.5, 180);
 
         public static final Pose point3 =
                 poseFactory.of(60, 130, 270);
@@ -323,7 +323,7 @@ public final class AutoPaths {
                 poseFactory.of(36, 12, 180);
 
         public static final Pose wall =
-                poseFactory.of(9, 8, 180);
+                poseFactory.of(9, 8.5, 180);
 
         public static final Pose park =
                 poseFactory.of(10, 90, 270);

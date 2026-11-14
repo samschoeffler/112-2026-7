@@ -90,6 +90,7 @@ public class Red3Tip extends OpMode {
                 autoCommand.shooterTogg,
                 Commands.waitMs(1500),
                 autoCommand.shooterTogg,
+                autoCommand.rampTogg,
                 follow(follower, AutoPaths.TweaTip.WallTo()),
                 autoCommand.shooterTogg,
                 autoCommand.waitForFeedMs(50),
