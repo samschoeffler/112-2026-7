@@ -106,6 +106,7 @@ public class Red2Tip extends OpMode {
                 autoCommand.toggleAuto,
                 follow(follower, AutoPaths.Tip.path4()),
                 autoCommand.flowerCollectFarShoot(follower),
+                autoCommand.rampTogg,
                 follow(
                         follower, AutoPaths.Tip.path5()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))

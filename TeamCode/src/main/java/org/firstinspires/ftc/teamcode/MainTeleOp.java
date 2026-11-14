@@ -211,13 +211,16 @@ public class MainTeleOp extends OpMode {
         if(gamepad1.aWasPressed() && gamepad1.dpad_up) {
             Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(0));
             follower.setPose(resetPose);
-        } else if(gamepad1.aWasPressed() && gamepad1.dpad_right) {
+        }
+        if(gamepad1.aWasPressed() && gamepad1.dpad_right) {
             Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(90));
             follower.setPose(resetPose);
-        } else if(gamepad1.aWasPressed() && gamepad1.dpad_down) {
+        }
+        if(gamepad1.aWasPressed() && gamepad1.dpad_down) {
             Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(180));
             follower.setPose(resetPose);
-        } else if(gamepad1.aWasPressed() && gamepad1.dpad_left) {
+        }
+        if(gamepad1.aWasPressed() && gamepad1.dpad_left) {
             Pose resetPose = new Pose(follower.pose().x(), follower.pose().y(), Math.toRadians(270));
             follower.setPose(resetPose);
         }

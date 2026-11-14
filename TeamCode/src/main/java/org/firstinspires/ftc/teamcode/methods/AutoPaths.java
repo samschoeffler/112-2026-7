@@ -28,7 +28,7 @@ public final class AutoPaths {
                 poseFactory.of(33, 46.5, 180);
 
         public static final Pose flowerWaitFar =
-                poseFactory.of(47, 110, 60);
+                poseFactory.of(47, 120, 60);
 
         public static final Pose flowerClose =
                 poseFactory.of(11.5, 48.5, 180);
@@ -142,7 +142,10 @@ public final class AutoPaths {
                 poseFactory.of(26, 130, 90);
 
         public static final Pose point7 =
-                poseFactory.of(10, 100, 90);
+                poseFactory.of(10, 122, 90);
+
+        public static final Pose point7Control1=
+                poseFactory.of(5,135,0);
 
         // ---------- PATHS ----------
 
@@ -206,8 +209,11 @@ public final class AutoPaths {
         }
 
         public static Path path5() {
-            return Paths.line(GeneralPaths.flowerWaitFar, point7)
-                    .linear(GeneralPaths.flowerWaitFar, point7);
+            return Paths.curve(
+                    GeneralPaths.flowerWaitFar,
+                    point7Control1,
+                    point7
+            ).linear(GeneralPaths.flowerWaitFar, point7);
         }
 
         public static Path path6() {
