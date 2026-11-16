@@ -137,7 +137,14 @@ public final class VolleyConsistencySim {
     }
 
     public static void main(String[] args) throws Exception {
-        File dir = Files.createTempDirectory("volley-sim").toFile();
+        pacedVsContinuous();
+        ballId();
+    }
+
+    /** Fresh OpMode with simulated hardware; spins the flywheel up and leaves it in LOAD. */
+    static Sim startOp(File dir, int planPresses) throws Exception {
+        fPower = tPower = iPower = f = dipRemaining = 0;
+        balls.clear(); contactSpeeds.clear(); ledPositions.clear();
         Map2 map = new Map2();
         map.add("fWheel", motor("fWheel", () -> -Math.round(f / 20.0) * 20.0, p -> fPower = p));
         map.add("LaunchMech", motor("LaunchMech", () -> Math.round(transferSpeed() / 20.0) * 20.0, p -> tPower = p));
@@ -166,26 +173,52 @@ public final class VolleyConsistencySim {
                 new Class<?>[]{Telemetry.class}, (proxy, m, a) -> defaultFor(m.getReturnType()));
 
         op.init();
-        for (int i = 0; i < 3; i++) { op.init_loop(); }
+        for (int i = 0; i < planPresses; i++) {
+            pad1.dpad_right = true; op.gamepad1.copy(pad1); op.init_loop();
+            pad1.dpad_right = false; op.gamepad1.copy(pad1); op.init_loop();
+        }
+        op.init_loop();
         op.start();
         lastNs = System.nanoTime();
         f = 0;
         // Spin up
         for (int i = 0; i < 300 && f < 1380; i++) tick(op);
         check(f > 1350, "Flywheel spins up in simulation: " + f);
+        return op;
+    }
 
+    static File[] outputs(File dir) {
+        File[] files = dir.listFiles();
+        check(files != null && files.length == 3, "Three output files written");
+        File ballsCsv = null, report = null, samples = null;
+        for (File file : files) {
+            if (file.getName().endsWith("-balls.csv")) ballsCsv = file;
+            else if (file.getName().endsWith("-report.txt")) report = file;
+            else samples = file;
+        }
+        return new File[]{ballsCsv, report, samples};
+    }
+
+    /** Fires one volley; returns the true contact speeds. Leaves the OpMode in LABEL. */
+    static List<Double> fire(Sim op) throws Exception {
+        check(phase(op).equals("LOAD"), "Expected LOAD before volley, got " + phase(op));
+        balls.clear();
+        for (int i = 0; i < 4; i++) balls.add(80.0 + 274.0 * i);   // tightly packed tunnel
+        int before = contactSpeeds.size();
+        press(op, "a");
+        int loops = 0;
+        while (phase(op).equals("FEEDING") && loops++ < 800) tick(op);
+        check(phase(op).equals("LABEL"), "Volley ends by itself and asks for labels, got " + phase(op));
+        return new ArrayList<>(contactSpeeds.subList(before, contactSpeeds.size()));
+    }
+
+    static void pacedVsContinuous() throws Exception {
+        File dir = Files.createTempDirectory("volley-sim").toFile();
+        Sim op = startOp(dir, 0);
         int volleys = 0;
         List<List<Double>> perVolley = new ArrayList<>();
         while (!phase(op).equals("COMPLETE") && volleys < 20) {
-            check(phase(op).equals("LOAD"), "Expected LOAD before volley, got " + phase(op));
-            balls.clear();
-            for (int i = 0; i < 4; i++) balls.add(80.0 + 274.0 * i);   // tightly packed tunnel
-            int before = contactSpeeds.size();
-            press(op, "a");
-            int loops = 0;
-            while (phase(op).equals("FEEDING") && loops++ < 800) tick(op);
-            check(phase(op).equals("LABEL"), "Volley ends by itself and asks for labels, got " + phase(op));
-            perVolley.add(new ArrayList<>(contactSpeeds.subList(before, contactSpeeds.size())));
+            perVolley.add(fire(op));
             press(op, "a"); press(op, "dpad_down"); press(op, "a");
             press(op, "b"); press(op, "left_bumper");                     // undo the MISS
             press(op, "dpad_right");
@@ -195,14 +228,8 @@ public final class VolleyConsistencySim {
         check(volleys == 12, "Default plan runs 12 volleys, ran " + volleys);
         op.stop();
 
-        File[] files = dir.listFiles();
-        check(files != null && files.length == 3, "Three output files written");
-        File ballsCsv = null, report = null, samples = null;
-        for (File file : files) {
-            if (file.getName().endsWith("-balls.csv")) ballsCsv = file;
-            else if (file.getName().endsWith("-report.txt")) report = file;
-            else samples = file;
-        }
+        File[] out = outputs(dir);
+        File ballsCsv = out[0], report = out[1], samples = out[2];
         List<String> rows = Files.readAllLines(ballsCsv.toPath());
         check(rows.size() == 1 + 48, "48 labeled ball rows, got " + (rows.size() - 1));
         check(rows.get(1).contains(",HIT,") && rows.get(2).contains(",SHORT,") && rows.get(4).contains(",RIGHT,"),
@@ -234,5 +261,45 @@ public final class VolleyConsistencySim {
                 worstCont, worstPaced);
         check(worstPaced > worstCont, "Paced keeps later balls faster than continuous");
         System.out.println("Volley Consistency Test simulation: 12 volleys, labels, undo, LED cues and files passed");
+    }
+
+    /** Independent copy of the documented load order: entry k = ball number that fires k-th. */
+    static final int[][] ORDER = {{1, 2, 4, 3}, {2, 3, 1, 4}, {3, 4, 2, 1}, {4, 1, 3, 2}};
+
+    /** BALL ID plan: ball #3 always lands SHORT; every other ball hits. */
+    static void ballId() throws Exception {
+        File dir = Files.createTempDirectory("volley-sim-id").toFile();
+        Sim op = startOp(dir, 2);   // D-pad RIGHT twice selects BALL ID
+        int volleys = 0;
+        while (!phase(op).equals("COMPLETE") && volleys < 20) {
+            List<Double> speeds = fire(op);
+            check(speeds.size() == 4, "Four balls fired");
+            int[] order = ORDER[volleys % 4];
+            for (int k = 0; k < 4; k++) press(op, order[k] == 3 ? "dpad_down" : "a");
+            press(op, "y");
+            volleys++;
+        }
+        check(volleys == 12, "BALL ID plan runs 12 volleys, ran " + volleys);
+        op.stop();
+        File[] out = outputs(dir);
+        List<String> rows = Files.readAllLines(out[0].toPath());
+        check(rows.get(0).endsWith(",ball_id"), "ball_id column appended last: " + rows.get(0));
+        int[][] positionCount = new int[5][4];
+        for (String r : rows.subList(1, rows.size())) {
+            String[] c = r.split(",");
+            int id = Integer.parseInt(c[c.length - 1]), pos = Integer.parseInt(c[5]) - 1;
+            positionCount[id][pos]++;
+            check(c[6].equals(id == 3 ? "SHORT" : "HIT"), "Ball number matches its label: " + r);
+        }
+        for (int id = 1; id <= 4; id++)
+            for (int pos = 0; pos < 4; pos++)
+                check(positionCount[id][pos] == 3, "Ball #" + id + " fires 3x from position " + (pos + 1));
+        String rep = new String(Files.readAllBytes(out[1].toPath()));
+        check(rep.contains("#3, 0/12, 12, 0") && rep.contains("#1, 12/12, 0, 0") && rep.contains("#4, 12/12, 0, 0"),
+                "Report blames ball #3:\n" + rep);
+        check(rep.contains("CONT-1440, 9/12, 9/12, 9/12, 9/12, 36/48"),
+                "Report shows no position effect when one ball is bad:\n" + rep);
+        System.out.println(rep.substring(rep.indexOf("By ball number"), rep.indexOf("Per-ball rows")).trim());
+        System.out.println("BALL ID plan simulation: balanced load order, per-ball attribution and report passed");
     }
 }

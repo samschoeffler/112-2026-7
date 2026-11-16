@@ -22,7 +22,26 @@ recover, and then feeds the next ball. Every ball gets its own label, so the res
 | G1 D-pad RIGHT | Choose the plan: **PACED VS CONTINUOUS** (run this first) or **SPACING SWEEP** |
 | G1 D-pad UP / DOWN | Flywheel target ±10 ticks/s (default 1407) |
 
-Both plans run 12 volleys of 4 balls. The order alternates to cancel out battery drain.
+| Plan | What it compares |
+| --- | --- |
+| PACED VS CONTINUOUS | The original back-to-back feed vs one ball at a time |
+| SPACING SWEEP | Continuous feed at transfer speeds 1440 / 1000 / 720, plus paced |
+| BALL ID | Whether misses follow a particular **ball** or a particular **tunnel position** |
+
+Each plan runs 12 volleys of 4 balls, in an order that cancels out battery drain.
+
+### BALL ID plan
+
+1. Number your four balls 1–4 with a marker, somewhere you can read while loading.
+2. Before each volley, the Driver Station shows **LOAD ORDER**, for example `#2 then #3 then #1 then #4`.
+   Collect the balls in that order. The first ball loaded is the one closest to the flywheel,
+   so it fires first. If your tunnel works the other way round, tell us before running.
+3. Label the balls in **firing order**, as in the other plans.
+
+The order rotates, so every ball fires from every position 3 times. The report adds a
+**By ball number** table (hits, shorts, longs and average flywheel dip for each ball). The
+`CONT-1440` row still shows hits by firing position. If one ball misses much more than the
+others, that ball is the problem. If one position misses more, look at the mechanism.
 
 ## Each volley
 

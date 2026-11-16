@@ -30,6 +30,10 @@ import java.util.Locale;
  * Plans (choose in INIT with G1 D-pad RIGHT):
  *   PACED VS CONTINUOUS - 12 volleys, order C P P C C P P C C P P C, transfer 1440.
  *   SPACING SWEEP       - 12 volleys: continuous at 1440 / 1000 / 720 and paced 1440, 3 each.
+ *   BALL ID             - 12 volleys, competition (continuous) feed, balls numbered 1-4.
+ *                         The load order rotates (balanced Latin square) so every ball fires
+ *                         from every tunnel position 3 times. Shows whether misses follow a
+ *                         particular BALL or a particular POSITION.
  *
  * The LED changes color at feed start and at every DETECTED ball contact, so the video
  * shows whether detection matched the real balls:
@@ -56,11 +60,29 @@ public class VolleyConsistencyTest extends OpMode {
     private static final Condition C720 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 720);
     private static final Condition P1440 = new Condition(SynchronizedFeed.Mode.PACED, 1440);
 
-    private static final String[] PLAN_NAMES = {"PACED VS CONTINUOUS", "SPACING SWEEP"};
+    private static final String[] PLAN_NAMES = {"PACED VS CONTINUOUS", "SPACING SWEEP", "BALL ID"};
     private static final Condition[][] PLANS = {
             {C1440, P1440, P1440, C1440, C1440, P1440, P1440, C1440, C1440, P1440, P1440, C1440},
             {C1440, P1440, C720, C1000, C1000, C720, P1440, C1440, C720, C1440, C1000, P1440},
+            {C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440},
     };
+    private static final int BALL_ID_PLAN = 2;
+    /**
+     * Balanced 4x4 Latin square: each ball fires once from each position per 4 volleys, and
+     * each ball follows every other ball once. Entry k = ball number that fires k-th.
+     */
+    private static final int[][] BALL_ID_ORDER = {{1, 2, 4, 3}, {2, 3, 1, 4}, {3, 4, 2, 1}, {4, 1, 3, 2}};
+
+    /** Ball number (1-4) firing at position (0-3) in volley v (1-based), or 0 outside the BALL ID plan. */
+    private int ballIdFor(int v, int position) {
+        return planIndex == BALL_ID_PLAN ? BALL_ID_ORDER[(v - 1) % BALL_ID_ORDER.length][position] : 0;
+    }
+
+    private String loadOrderText(int v) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < BALLS; i++) sb.append(i == 0 ? "#" : "  then #").append(ballIdFor(v, i));
+        return sb.toString();
+    }
     private int planIndex = 0;
 
     // ---------- Settings ----------
@@ -112,6 +134,11 @@ public class VolleyConsistencyTest extends OpMode {
     private final double[] volleySecondsSum = new double[4];
     private final int[] volleysByCond = new int[4];
     private final List<String> ballRows = new ArrayList<>();
+    // BALL ID plan, indexed by ball number 1-4
+    private final int[] hitsById = new int[BALLS + 1], countById = new int[BALLS + 1];
+    private final int[] shortById = new int[BALLS + 1], longById = new int[BALLS + 1];
+    private final double[] dipSumById = new double[BALLS + 1];
+    private final int[] dipNById = new int[BALLS + 1];
 
     // ---------- Files ----------
     private BufferedWriter samples, balls;
@@ -138,7 +165,8 @@ public class VolleyConsistencyTest extends OpMode {
         if (gamepad1.dpadDownWasPressed()) flywheelTarget -= 10;
         flywheelTarget = Math.max(1000, Math.min(1800, flywheelTarget));
         telemetry.addData("Plan (G1 D-pad RIGHT)", PLAN_NAMES[planIndex]);
-        telemetry.addData("Order", planOrder());
+        telemetry.addData("Order", planIndex == BALL_ID_PLAN
+                ? "12 volleys, competition feed; numbered balls, rotating load order" : planOrder());
         telemetry.addData("Flywheel target (G1 D-pad UP/DOWN)", "%.0f ticks/s", flywheelTarget);
         telemetry.addLine("Keep the robot STATIONARY at one marked spot for the whole test.");
         telemetry.addLine("Use a charged battery. Recorder: film the hive AND the robot LED.");
@@ -167,7 +195,7 @@ public class VolleyConsistencyTest extends OpMode {
                     + "flywheel_requested_V,flywheel_integral_V,loop_dt_s,feed_elapsed_s,shot_detected,shot_count\n");
             balls.write("volley,attempt,condition,mode,transfer_setpoint,ball,label,hit,detected,contact_s,"
                     + "gap_from_prev_s,speed_before_contact,dip_min,dip_depth,recover_to_25_s,paced_recover_s,"
-                    + "battery_V,volley_s,shots_detected,recover_timeouts,loop_dt_median_ms,loop_dt_p90_ms\n");
+                    + "battery_V,volley_s,shots_detected,recover_timeouts,loop_dt_median_ms,loop_dt_p90_ms,ball_id\n");
             samples.flush(); balls.flush();
             saveReport();
         } catch (IOException e) { storageFault(e); }
@@ -296,20 +324,28 @@ public class VolleyConsistencyTest extends OpMode {
                 Shot s = detected ? shots.get(i) : null;
                 double gap = detected && i > 0 ? s.time - shots.get(i - 1).time : Double.NaN;
                 String row = String.format(Locale.US,
-                        "%d,%d,%s,%s,%.0f,%d,%s,%b,%b,%.4f,%.4f,%.1f,%.1f,%.1f,%.4f,%.4f,%.3f,%.4f,%d,%d,%.1f,%.1f",
+                        "%d,%d,%s,%s,%.0f,%d,%s,%b,%b,%.4f,%.4f,%.1f,%.1f,%.1f,%.4f,%.4f,%.3f,%.4f,%d,%d,%.1f,%.1f,%d",
                         volley, attempt, active.name, active.mode, active.transfer, i + 1, LABEL_NAMES[label], hit, detected,
                         detected ? s.time - feedStart : Double.NaN, gap,
                         detected ? s.preSpeed : Double.NaN, detected ? s.dipMin : Double.NaN,
                         detected ? s.preSpeed - s.dipMin : Double.NaN,
                         detected ? s.recoverS : Double.NaN, detected ? s.pacedRecoverS : Double.NaN,
                         detected ? s.battery : Double.NaN, volleyS, shots.size(), shooting.recoverTimeouts(),
-                        lt[0] * 1000, lt[1] * 1000);
+                        lt[0] * 1000, lt[1] * 1000, ballIdFor(volley, i));
                 balls.write(row + "\n");
                 ballRows.add(row);
                 if (cond >= 0) {
                     countByCondBall[cond][i]++;
                     if (hit) hitsByCondBall[cond][i]++;
                     if (detected && Double.isFinite(s.preSpeed)) { preSpeedSum[cond][i] += s.preSpeed; preSpeedN[cond][i]++; }
+                }
+                int id = ballIdFor(volley, i);
+                if (id > 0) {
+                    countById[id]++;
+                    if (hit) hitsById[id]++;
+                    if (label == 1) shortById[id]++;
+                    if (label == 2) longById[id]++;
+                    if (detected && Double.isFinite(s.preSpeed - s.dipMin)) { dipSumById[id] += s.preSpeed - s.dipMin; dipNById[id]++; }
                 }
             }
             balls.flush();
@@ -370,6 +406,10 @@ public class VolleyConsistencyTest extends OpMode {
         telemetry.addData("Loop time median / p90", "%.1f / %.1f ms", lt[0] * 1000, lt[1] * 1000);
         switch (phase) {
             case LOAD:
+                if (planIndex == BALL_ID_PLAN) {
+                    telemetry.addData("LOAD ORDER (first loaded fires first)", loadOrderText(volley));
+                    telemetry.addLine("Check the numbers on the balls before pressing A.");
+                }
                 telemetry.addLine("LOAD 4 balls: hold G2 LEFT TRIGGER. Then G2 A to fire.");
                 telemetry.addLine("Recorder: say the volley number out loud before A.");
                 break;
@@ -393,6 +433,12 @@ public class VolleyConsistencyTest extends OpMode {
             int hits = 0, n = 0;
             for (int i = 0; i < BALLS; i++) { hits += hitsByCondBall[c][i]; n += countByCondBall[c][i]; }
             if (n > 0) telemetry.addData(ALL[c].name + " hits", "%d / %d", hits, n);
+        }
+        if (planIndex == BALL_ID_PLAN) {
+            StringBuilder ids = new StringBuilder();
+            for (int id = 1; id <= BALLS; id++)
+                ids.append('#').append(id).append(' ').append(hitsById[id]).append('/').append(countById[id]).append("   ");
+            telemetry.addData("Hits by ball", ids.toString().trim());
         }
         if (!ioFault.isEmpty()) telemetry.addData("STORAGE FAULT", ioFault);
         telemetry.addData("Files", fileName);
@@ -443,6 +489,15 @@ public class VolleyConsistencyTest extends OpMode {
                 if (n == 0) continue;
                 out.write(ALL[c].name + ", " + perBall + hits + "/" + n + ", " + speeds.toString().trim() + ", "
                         + (volleysByCond[c] == 0 ? "NaN" : fmt(volleySecondsSum[c] / volleysByCond[c], 2)) + "\n");
+            }
+            if (planIndex == BALL_ID_PLAN) {
+                out.write("\nBy ball number (each ball fires from every position equally often):\n");
+                out.write("ball, hits, short, long, mean_dip_ticks_s\n");
+                for (int id = 1; id <= BALLS; id++) {
+                    out.write(String.format(Locale.US, "#%d, %d/%d, %d, %d, %s%n", id, hitsById[id], countById[id],
+                            shortById[id], longById[id], dipNById[id] == 0 ? "NaN" : fmt(dipSumById[id] / dipNById[id], 0)));
+                }
+                out.write("By tunnel position: see the CONT-1440 row above (ball1..ball4 = firing position).\n");
             }
             out.write("\nPer-ball rows:\n");
             for (String row : ballRows) out.write(row + "\n");
