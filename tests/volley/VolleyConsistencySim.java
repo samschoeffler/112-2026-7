@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +140,56 @@ public final class VolleyConsistencySim {
     public static void main(String[] args) throws Exception {
         pacedVsContinuous();
         ballId();
+        speedSweep();
+    }
+
+    static int column(List<String> rows, String name) {
+        int i = Arrays.asList(rows.get(0).split(",")).indexOf(name);
+        check(i >= 0, "balls.csv has column " + name + ": " + rows.get(0));
+        return i;
+    }
+
+    static double appliedTarget(Sim op) throws Exception {
+        Field fld = VolleyConsistencyTest.class.getDeclaredField("launcher");
+        fld.setAccessible(true);
+        return ((Launcher) fld.get(op)).getTargetVelocity();
+    }
+
+    /** SPEED SWEEP: base target always SHORT, +20 always HIT, +40 always LONG. */
+    static void speedSweep() throws Exception {
+        File dir = Files.createTempDirectory("volley-sim-speed").toFile();
+        Sim op = startOp(dir, 3);   // D-pad RIGHT three times selects SPEED SWEEP
+        int volleys = 0;
+        int[] perTarget = new int[3];
+        while (!phase(op).equals("COMPLETE") && volleys < 20) {
+            fire(op);
+            double target = appliedTarget(op);
+            int k = (int) Math.round((target - 1407) / 20);
+            check(k >= 0 && k <= 2 && Math.abs(target - (1407 + 20 * k)) < 1e-9, "Target is base, +20 or +40: " + target);
+            perTarget[k]++;
+            String label = k == 0 ? "dpad_down" : k == 1 ? "a" : "dpad_up";
+            for (int b = 0; b < 4; b++) press(op, label);
+            press(op, "y");
+            volleys++;
+        }
+        check(volleys == 12, "SPEED SWEEP runs 12 volleys, ran " + volleys);
+        check(perTarget[0] == 4 && perTarget[1] == 4 && perTarget[2] == 4,
+                "Each target used 4 times: " + Arrays.toString(perTarget));
+        op.stop();
+        File[] out = outputs(dir);
+        List<String> rows = Files.readAllLines(out[0].toPath());
+        int tcol = column(rows, "flywheel_target"), lcol = column(rows, "label");
+        for (String r : rows.subList(1, rows.size())) {
+            String[] c = r.split(",");
+            String expected = c[tcol].equals("1407") ? "SHORT" : c[tcol].equals("1427") ? "HIT" : "LONG";
+            check(c[lcol].equals(expected), "flywheel_target column matches the applied target: " + r);
+        }
+        String rep = new String(Files.readAllBytes(out[1].toPath()));
+        check(rep.contains("TARGET+0, 1407, 0/16, 16, 0, 0, 0") && rep.contains("TARGET+20, 1427, 16/16, 0, 0, 0, 0")
+                        && rep.contains("TARGET+40, 1447, 0/16, 0, 16, 0, 0"),
+                "Report shows outcome by target:\n" + rep);
+        System.out.println(rep.substring(rep.indexOf("Outcome by condition"), rep.indexOf("Per-ball rows")).trim());
+        System.out.println("SPEED SWEEP plan simulation: balanced targets, pre-spin, per-target outcomes and report passed");
     }
 
     /** Fresh OpMode with simulated hardware; spins the flywheel up and leaves it in LOAD. */
@@ -283,11 +334,11 @@ public final class VolleyConsistencySim {
         op.stop();
         File[] out = outputs(dir);
         List<String> rows = Files.readAllLines(out[0].toPath());
-        check(rows.get(0).endsWith(",ball_id"), "ball_id column appended last: " + rows.get(0));
+        int idcol = column(rows, "ball_id");
         int[][] positionCount = new int[5][4];
         for (String r : rows.subList(1, rows.size())) {
             String[] c = r.split(",");
-            int id = Integer.parseInt(c[c.length - 1]), pos = Integer.parseInt(c[5]) - 1;
+            int id = Integer.parseInt(c[idcol]), pos = Integer.parseInt(c[5]) - 1;
             positionCount[id][pos]++;
             check(c[6].equals(id == 3 ? "SHORT" : "HIT"), "Ball number matches its label: " + r);
         }

@@ -30,6 +30,9 @@ import java.util.Locale;
  * Plans (choose in INIT with G1 D-pad RIGHT):
  *   PACED VS CONTINUOUS - 12 volleys, order C P P C C P P C C P P C, transfer 1440.
  *   SPACING SWEEP       - 12 volleys: continuous at 1440 / 1000 / 720 and paced 1440, 3 each.
+ *   SPEED SWEEP         - 12 volleys, competition (continuous) feed, flywheel target at
+ *                         base, base+20 and base+40 ticks/s (base = INIT setting, default 1407),
+ *                         4 volleys each in a balanced order. Finds where shorts and longs balance.
  *   BALL ID             - 12 volleys, competition (continuous) feed, balls numbered 1-4.
  *                         The load order rotates (balanced Latin square) so every ball fires
  *                         from every tunnel position 3 times. Shows whether misses follow a
@@ -50,21 +53,30 @@ public class VolleyConsistencyTest extends OpMode {
     // ---------- Plans ----------
     private static final class Condition {
         final SynchronizedFeed.Mode mode; final double transfer; final String name;
+        /** Added to the INIT flywheel target for this condition. */
+        final double targetOffset;
         Condition(SynchronizedFeed.Mode mode, double transfer) {
-            this.mode = mode; this.transfer = transfer;
-            name = (mode == SynchronizedFeed.Mode.PACED ? "PACED-" : "CONT-") + (int) transfer;
+            this(mode, transfer, 0, (mode == SynchronizedFeed.Mode.PACED ? "PACED-" : "CONT-") + (int) transfer);
+        }
+        Condition(SynchronizedFeed.Mode mode, double transfer, double targetOffset, String name) {
+            this.mode = mode; this.transfer = transfer; this.targetOffset = targetOffset; this.name = name;
         }
     }
     private static final Condition C1440 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 1440);
     private static final Condition C1000 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 1000);
     private static final Condition C720 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 720);
     private static final Condition P1440 = new Condition(SynchronizedFeed.Mode.PACED, 1440);
+    private static final Condition S0 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 1440, 0, "TARGET+0");
+    private static final Condition S20 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 1440, 20, "TARGET+20");
+    private static final Condition S40 = new Condition(SynchronizedFeed.Mode.CONTINUOUS, 1440, 40, "TARGET+40");
 
-    private static final String[] PLAN_NAMES = {"PACED VS CONTINUOUS", "SPACING SWEEP", "BALL ID"};
+    private static final String[] PLAN_NAMES = {"PACED VS CONTINUOUS", "SPACING SWEEP", "BALL ID", "SPEED SWEEP"};
     private static final Condition[][] PLANS = {
             {C1440, P1440, P1440, C1440, C1440, P1440, P1440, C1440, C1440, P1440, P1440, C1440},
             {C1440, P1440, C720, C1000, C1000, C720, P1440, C1440, C720, C1440, C1000, P1440},
             {C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440, C1440},
+            // Every target appears 4 times, in each third of the run, and before/after each other.
+            {S0, S20, S40, S40, S20, S0, S20, S40, S0, S0, S40, S20},
     };
     private static final int BALL_ID_PLAN = 2;
     /**
@@ -128,11 +140,13 @@ public class VolleyConsistencyTest extends OpMode {
     }
 
     // ---------- Results ----------
-    private final int[][] hitsByCondBall = new int[4][BALLS], countByCondBall = new int[4][BALLS];
-    private final double[][] preSpeedSum = new double[4][BALLS];
-    private final int[][] preSpeedN = new int[4][BALLS];
-    private final double[] volleySecondsSum = new double[4];
-    private final int[] volleysByCond = new int[4];
+    private final int[][] hitsByCondBall = new int[ALL.length][BALLS], countByCondBall = new int[ALL.length][BALLS];
+    private final double[][] preSpeedSum = new double[ALL.length][BALLS];
+    private final int[][] preSpeedN = new int[ALL.length][BALLS];
+    private final double[] volleySecondsSum = new double[ALL.length];
+    private final int[] volleysByCond = new int[ALL.length];
+    private final int[] shortByCond = new int[ALL.length], longByCond = new int[ALL.length];
+    private final int[] sideByCond = new int[ALL.length], otherMissByCond = new int[ALL.length];
     private final List<String> ballRows = new ArrayList<>();
     // BALL ID plan, indexed by ball number 1-4
     private final int[] hitsById = new int[BALLS + 1], countById = new int[BALLS + 1];
@@ -195,7 +209,8 @@ public class VolleyConsistencyTest extends OpMode {
                     + "flywheel_requested_V,flywheel_integral_V,loop_dt_s,feed_elapsed_s,shot_detected,shot_count\n");
             balls.write("volley,attempt,condition,mode,transfer_setpoint,ball,label,hit,detected,contact_s,"
                     + "gap_from_prev_s,speed_before_contact,dip_min,dip_depth,recover_to_25_s,paced_recover_s,"
-                    + "battery_V,volley_s,shots_detected,recover_timeouts,loop_dt_median_ms,loop_dt_p90_ms,ball_id\n");
+                    + "battery_V,volley_s,shots_detected,recover_timeouts,loop_dt_median_ms,loop_dt_p90_ms,ball_id,"
+                    + "flywheel_target\n");
             samples.flush(); balls.flush();
             saveReport();
         } catch (IOException e) { storageFault(e); }
@@ -222,6 +237,8 @@ public class VolleyConsistencyTest extends OpMode {
         boolean shoot = false, collect = false, startedThisLoop = false;
         switch (phase) {
             case LOAD:
+                // Pre-spin to the upcoming volley's target while the operator loads.
+                launcher.setTargetVelocity(targetFor(plan[volley - 1]));
                 collect = gamepad2.left_trigger > .1;
                 if (a && ioFault.isEmpty()) { beginVolley(plan[volley - 1], now); startedThisLoop = true; shoot = true; }
                 break;
@@ -261,7 +278,7 @@ public class VolleyConsistencyTest extends OpMode {
         active = c;
         shooting.setFeedMode(c.mode);
         shooting.setTransferSetpoint(c.transfer);
-        launcher.setTargetVelocity(flywheelTarget);
+        launcher.setTargetVelocity(targetFor(c));   // feed still waits for this speed
         shots.clear(); loopDts.clear(); labels.clear();
         feedStart = now;
         phase = Phase.FEEDING;
@@ -324,20 +341,24 @@ public class VolleyConsistencyTest extends OpMode {
                 Shot s = detected ? shots.get(i) : null;
                 double gap = detected && i > 0 ? s.time - shots.get(i - 1).time : Double.NaN;
                 String row = String.format(Locale.US,
-                        "%d,%d,%s,%s,%.0f,%d,%s,%b,%b,%.4f,%.4f,%.1f,%.1f,%.1f,%.4f,%.4f,%.3f,%.4f,%d,%d,%.1f,%.1f,%d",
+                        "%d,%d,%s,%s,%.0f,%d,%s,%b,%b,%.4f,%.4f,%.1f,%.1f,%.1f,%.4f,%.4f,%.3f,%.4f,%d,%d,%.1f,%.1f,%d,%.0f",
                         volley, attempt, active.name, active.mode, active.transfer, i + 1, LABEL_NAMES[label], hit, detected,
                         detected ? s.time - feedStart : Double.NaN, gap,
                         detected ? s.preSpeed : Double.NaN, detected ? s.dipMin : Double.NaN,
                         detected ? s.preSpeed - s.dipMin : Double.NaN,
                         detected ? s.recoverS : Double.NaN, detected ? s.pacedRecoverS : Double.NaN,
                         detected ? s.battery : Double.NaN, volleyS, shots.size(), shooting.recoverTimeouts(),
-                        lt[0] * 1000, lt[1] * 1000, ballIdFor(volley, i));
+                        lt[0] * 1000, lt[1] * 1000, ballIdFor(volley, i), targetFor(active));
                 balls.write(row + "\n");
                 ballRows.add(row);
                 if (cond >= 0) {
                     countByCondBall[cond][i]++;
                     if (hit) hitsByCondBall[cond][i]++;
                     if (detected && Double.isFinite(s.preSpeed)) { preSpeedSum[cond][i] += s.preSpeed; preSpeedN[cond][i]++; }
+                    if (label == 1) shortByCond[cond]++;
+                    else if (label == 2) longByCond[cond]++;
+                    else if (label == 3 || label == 4) sideByCond[cond]++;
+                    else if (!hit) otherMissByCond[cond]++;
                 }
                 int id = ballIdFor(volley, i);
                 if (id > 0) {
@@ -358,9 +379,14 @@ public class VolleyConsistencyTest extends OpMode {
     }
 
     private static int conditionIndex(Condition c) {
-        return c == C1440 ? 0 : c == P1440 ? 1 : c == C1000 ? 2 : c == C720 ? 3 : -1;
+        for (int i = 0; i < ALL.length; i++) if (ALL[i] == c) return i;
+        return -1;
     }
-    private static final Condition[] ALL = {C1440, P1440, C1000, C720};
+    private static final Condition[] ALL = {C1440, P1440, C1000, C720, S0, S20, S40};
+
+    private double targetFor(Condition c) {
+        return flywheelTarget + (c == null ? 0 : c.targetOffset);
+    }
 
     private static double[] percentiles(List<Double> values) {
         if (values.isEmpty()) return new double[]{Double.NaN, Double.NaN};
@@ -398,8 +424,9 @@ public class VolleyConsistencyTest extends OpMode {
         Condition[] plan = PLANS[planIndex];
         double[] lt = percentiles(allLoopDts);
         telemetry.addData("Volley", "%d of %d  (attempt %d)", Math.min(volley, plan.length), plan.length, attempt);
-        telemetry.addData("Condition", phase == Phase.COMPLETE ? "-" :
-                (phase == Phase.LOAD ? plan[volley - 1] : active).name);
+        Condition shown = phase == Phase.COMPLETE ? null : phase == Phase.LOAD ? plan[volley - 1] : active;
+        telemetry.addData("Condition", shown == null ? "-" : shown.name);
+        if (shown != null) telemetry.addData("Flywheel target this volley", "%.0f ticks/s", targetFor(shown));
         telemetry.addData("Phase / feed state", "%s / %s", phase, shooting.state());
         telemetry.addData("Flywheel", "%.0f / %.0f ticks/s", f, launcher.getTargetVelocity());
         telemetry.addData("Shots detected", shooting.shotCount());
@@ -489,6 +516,15 @@ public class VolleyConsistencyTest extends OpMode {
                 if (n == 0) continue;
                 out.write(ALL[c].name + ", " + perBall + hits + "/" + n + ", " + speeds.toString().trim() + ", "
                         + (volleysByCond[c] == 0 ? "NaN" : fmt(volleySecondsSum[c] / volleysByCond[c], 2)) + "\n");
+            }
+            out.write("\nOutcome by condition (aim for shorts ~= longs with the most hits):\n");
+            out.write("condition, flywheel_target, hits, short, long, left_or_right, other_miss\n");
+            for (int c = 0; c < ALL.length; c++) {
+                int hits = 0, n = 0;
+                for (int i = 0; i < BALLS; i++) { hits += hitsByCondBall[c][i]; n += countByCondBall[c][i]; }
+                if (n == 0) continue;
+                out.write(String.format(Locale.US, "%s, %.0f, %d/%d, %d, %d, %d, %d%n", ALL[c].name, targetFor(ALL[c]),
+                        hits, n, shortByCond[c], longByCond[c], sideByCond[c], otherMissByCond[c]));
             }
             if (planIndex == BALL_ID_PLAN) {
                 out.write("\nBy ball number (each ball fires from every position equally often):\n");

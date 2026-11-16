@@ -27,8 +27,20 @@ recover, and then feeds the next ball. Every ball gets its own label, so the res
 | PACED VS CONTINUOUS | The original back-to-back feed vs one ball at a time |
 | SPACING SWEEP | Continuous feed at transfer speeds 1440 / 1000 / 720, plus paced |
 | BALL ID | Whether misses follow a particular **ball** or a particular **tunnel position** |
+| SPEED SWEEP | Flywheel target at base, base+20 and base+40, to centre shots in the hive |
 
 Each plan runs 12 volleys of 4 balls, in an order that cancels out battery drain.
+
+### SPEED SWEEP plan
+
+Select it with G1 D-pad RIGHT pressed **three times** in INIT. The base target is the INIT
+setting (default 1407; G1 D-pad UP/DOWN changes it by 10). The Driver Station shows
+**Flywheel target this volley**. While you load, the flywheel already spins up to that target.
+
+Load, fire and label as usual. Labeling SHORT and LONG carefully matters most in this plan.
+The report's **Outcome by condition** table lists hits, shorts and longs for each target.
+The best target has the most hits, with shorts and longs roughly balanced. If the best
+target is at the top (+40) and balls still land short, raise the base in INIT and run again.
 
 ### BALL ID plan
 
