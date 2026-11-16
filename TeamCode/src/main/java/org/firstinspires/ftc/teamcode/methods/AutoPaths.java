@@ -9,7 +9,58 @@ public final class AutoPaths {
     private AutoPaths() {}
     private static final PoseFactory poseFactory = PoseFactory.degrees();
 
-    // GENERAL PATHS
+    public static final class GeneralPoints {
+        private GeneralPoints() {}
+
+        public static final Pose shooterStart =
+                poseFactory.of(56, 12, 90);
+
+        public static final Pose flowerWaitClose =
+                poseFactory.of(33, 46.5, 180);
+
+        public static final Pose flowerWaitFar =
+                poseFactory.of(47, 120, 80);
+
+        public static final Pose flowerClose =
+                poseFactory.of(12, 48.5, 180);
+
+        public static final Pose flowerFar =
+                poseFactory.of(47, 128.5, 90);
+
+        public static final Pose jiggle =
+                poseFactory.of(47, 128.3, 90);
+
+        public static final Pose jiggleC =
+                poseFactory.of(11.7, 48.5, 170);
+
+        public static final Pose startClose =
+                poseFactory.of(56, 8, 90);
+
+        public static final Pose shootClose =
+                poseFactory.of(56, 12, 90);
+
+        public static final Pose cornerWait=
+                poseFactory.of(30, 11, 180);
+
+        public static final Pose cornerCollect=
+                poseFactory.of(9, 8.5, 180);
+
+        public static final Pose parkFar =
+                poseFactory.of(26, 130, 90);
+
+        public static final Pose startFar =
+                poseFactory.of(59, 135, 270);
+
+        public static final Pose shootFar =
+                poseFactory.of(57, 130, 270);
+
+        public static final Pose farFlowerVia =
+                poseFactory.of(60, 130, 270);
+
+
+    }
+
+        // GENERAL PATHS
     public static final class GeneralPaths {
 
         private GeneralPaths() {}
@@ -28,7 +79,7 @@ public final class AutoPaths {
                 poseFactory.of(33, 46.5, 180);
 
         public static final Pose flowerWaitFar =
-                poseFactory.of(47, 120, 60);
+                poseFactory.of(47, 120, 80);
 
         public static final Pose flowerClose =
                 poseFactory.of(12, 48.5, 180);
@@ -187,8 +238,6 @@ public final class AutoPaths {
                     point2, point3
             ).linear(point2,point3);
         }
-
-
 
         public static Path path3() {
             return Paths.curve(
@@ -460,11 +509,11 @@ public final class AutoPaths {
                 poseFactory.of(59, 135, 270);
 
         public static final Pose point1 =
-                poseFactory.of(57, 131, 270);
+                poseFactory.of(57, 130, 270);
 
         // same as Tip.point3
         public static final Pose point2 =
-                poseFactory.of(60, 130, 270);
+                poseFactory.of(57, 130, 270);
 
         // same as Tip.point4Control1
         public static final Pose point3Control1 =
