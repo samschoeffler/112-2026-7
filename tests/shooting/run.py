@@ -12,3 +12,6 @@ run_tests(('Launcher', 'Transfer', 'Intake', 'BatteryVoltage', 'FlywheelVelocity
 
 run_tests(('SynchronizedFeed', 'BatteryVoltage'),
           Path(__file__).with_name('PacedFeedRegression.java'), 'PacedFeedRegression')
+
+run_tests(('Launcher', 'BatteryVoltage', 'FlywheelVelocityControl', 'FlywheelIntegralControl'),
+          Path(__file__).with_name('DistanceCurveRegression.java'), 'DistanceCurveRegression')

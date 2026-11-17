@@ -20,7 +20,7 @@ recover, and then feeds the next ball. Every ball gets its own label, so the res
 | Control | Action |
 | --- | --- |
 | G1 D-pad RIGHT | Choose the plan: **PACED VS CONTINUOUS** (run this first) or **SPACING SWEEP** |
-| G1 D-pad UP / DOWN | Flywheel target ±10 ticks/s (default 1407) |
+| G1 D-pad UP / DOWN | Flywheel target ±10 ticks/s (default 1427, the centred match speed) |
 
 | Plan | What it compares |
 | --- | --- |
@@ -34,7 +34,7 @@ Each plan runs 12 volleys of 4 balls, in an order that cancels out battery drain
 ### SPEED SWEEP plan
 
 Select it with G1 D-pad RIGHT pressed **three times** in INIT. The base target is the INIT
-setting (default 1407; G1 D-pad UP/DOWN changes it by 10). The Driver Station shows
+setting (default 1427; G1 D-pad UP/DOWN changes it by 10). The Driver Station shows
 **Flywheel target this volley**. While you load, the flywheel already spins up to that target.
 
 Load, fire and label as usual. Labeling SHORT and LONG carefully matters most in this plan.
@@ -97,3 +97,10 @@ Please include the video. It lets us check that the detected balls (LED colors) 
 - Autos set the LED once in `init()` instead of writing a random color every loop.
 - `Launcher.getFlywheelVelo()` / `ballWasShot()` now use the sign-corrected speed. Before, they
   read the raw negative encoder value, so `ballWasShot()` could never be true.
+
+## Speed centring result
+
+The SPEED SWEEP at targets 1397 / 1417 / 1437 gave shorts 5 / 3 / 2 and longs 0 / 0 / 2. With
+earlier runs at 1407 (15 short, 3 long out of 72), this showed shots centred too short. The match
+distance curve (`Launcher.DISTANCE_CURVE_OFFSET`) was raised from 1407 to **1427**. This moves
+the whole curve up by 20 at every distance. The test OpMode now uses 1427 as its default base.

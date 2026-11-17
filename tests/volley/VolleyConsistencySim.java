@@ -164,8 +164,8 @@ public final class VolleyConsistencySim {
         while (!phase(op).equals("COMPLETE") && volleys < 20) {
             fire(op);
             double target = appliedTarget(op);
-            int k = (int) Math.round((target - 1407) / 20);
-            check(k >= 0 && k <= 2 && Math.abs(target - (1407 + 20 * k)) < 1e-9, "Target is base, +20 or +40: " + target);
+            int k = (int) Math.round((target - 1427) / 20);
+            check(k >= 0 && k <= 2 && Math.abs(target - (1427 + 20 * k)) < 1e-9, "Target is base, +20 or +40: " + target);
             perTarget[k]++;
             String label = k == 0 ? "dpad_down" : k == 1 ? "a" : "dpad_up";
             for (int b = 0; b < 4; b++) press(op, label);
@@ -181,12 +181,12 @@ public final class VolleyConsistencySim {
         int tcol = column(rows, "flywheel_target"), lcol = column(rows, "label");
         for (String r : rows.subList(1, rows.size())) {
             String[] c = r.split(",");
-            String expected = c[tcol].equals("1407") ? "SHORT" : c[tcol].equals("1427") ? "HIT" : "LONG";
+            String expected = c[tcol].equals("1427") ? "SHORT" : c[tcol].equals("1447") ? "HIT" : "LONG";
             check(c[lcol].equals(expected), "flywheel_target column matches the applied target: " + r);
         }
         String rep = new String(Files.readAllBytes(out[1].toPath()));
-        check(rep.contains("TARGET+0, 1407, 0/16, 16, 0, 0, 0") && rep.contains("TARGET+20, 1427, 16/16, 0, 0, 0, 0")
-                        && rep.contains("TARGET+40, 1447, 0/16, 0, 16, 0, 0"),
+        check(rep.contains("TARGET+0, 1427, 0/16, 16, 0, 0, 0") && rep.contains("TARGET+20, 1447, 16/16, 0, 0, 0, 0")
+                        && rep.contains("TARGET+40, 1467, 0/16, 0, 16, 0, 0"),
                 "Report shows outcome by target:\n" + rep);
         System.out.println(rep.substring(rep.indexOf("Outcome by condition"), rep.indexOf("Per-ball rows")).trim());
         System.out.println("SPEED SWEEP plan simulation: balanced targets, pre-spin, per-target outcomes and report passed");
@@ -308,7 +308,7 @@ public final class VolleyConsistencySim {
             }
         }
         System.out.println(rep.substring(0, rep.indexOf("Per-ball rows")).trim());
-        System.out.printf("Worst true contact speed for balls 2-4: continuous %.0f, paced %.0f (target 1407)%n",
+        System.out.printf("Worst true contact speed for balls 2-4: continuous %.0f, paced %.0f (target 1427)%n",
                 worstCont, worstPaced);
         check(worstPaced > worstCont, "Paced keeps later balls faster than continuous");
         System.out.println("Volley Consistency Test simulation: 12 volleys, labels, undo, LED cues and files passed");

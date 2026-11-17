@@ -31,7 +31,7 @@ import java.util.Locale;
  *   PACED VS CONTINUOUS - 12 volleys, order C P P C C P P C C P P C, transfer 1440.
  *   SPACING SWEEP       - 12 volleys: continuous at 1440 / 1000 / 720 and paced 1440, 3 each.
  *   SPEED SWEEP         - 12 volleys, competition (continuous) feed, flywheel target at
- *                         base, base+20 and base+40 ticks/s (base = INIT setting, default 1407),
+ *                         base, base+20 and base+40 ticks/s (base = INIT setting, default 1427),
  *                         4 volleys each in a balanced order. Finds where shorts and longs balance.
  *   BALL ID             - 12 volleys, competition (continuous) feed, balls numbered 1-4.
  *                         The load order rotates (balanced Latin square) so every ball fires
@@ -99,7 +99,7 @@ public class VolleyConsistencyTest extends OpMode {
 
     // ---------- Settings ----------
     private static final int BALLS = 4;
-    private double flywheelTarget = 1407;
+    private double flywheelTarget = Launcher.DISTANCE_CURVE_OFFSET;   // 1427: centred by SPEED SWEEP
     /** Auto-end a volley this long after the 4th detected contact. */
     private static final double END_AFTER_LAST_SHOT_S = 0.5;
     private static final double MAX_FEED_S = 6.0;

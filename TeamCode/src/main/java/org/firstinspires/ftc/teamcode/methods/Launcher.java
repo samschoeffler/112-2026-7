@@ -163,6 +163,18 @@ public class Launcher {
         update();
     }
 
+    /**
+     * Vertical offset of the distance-to-speed curve, ticks/s. Changing it raises or lowers the
+     * whole curve equally at every distance. Was 1407; SPEED SWEEP (targets 1397/1417/1437, plus
+     * earlier runs at 1407) showed shots landing mostly short, balanced near 1427-1437, so +20.
+     */
+    public static final double DISTANCE_CURVE_OFFSET = 1427;
+
+    /** Flywheel target for a distance (inches) to the closer hive. */
+    public static double distanceVelocity(double distanceInches) {
+        return -70.3 * Math.cos(1.0 / 22 * distanceInches + 11.0 / 21) + DISTANCE_CURVE_OFFSET;
+    }
+
     /** Prepare the distance target without writing motor power; coordinator performs the update. */
     public void updateDistanceTarget(double robotX, double robotY) {
         //distance to the closer hive target by pose
@@ -170,7 +182,7 @@ public class Launcher {
         double d2 = Math.hypot(robotX - 58, robotY - 90);
         distanceFromHive = Math.min(d1, d2);
 
-        SHOOTING_VELOCITY = -70.3 * Math.cos(1.0 / 22 * distanceFromHive + 11.0 / 21) + 1407;
+        SHOOTING_VELOCITY = distanceVelocity(distanceFromHive);
 
         //updating the speed
         if (flywheelsOn)
