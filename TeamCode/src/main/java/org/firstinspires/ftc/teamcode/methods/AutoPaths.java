@@ -32,7 +32,7 @@ public final class AutoPaths {
         public static final Pose cornerCollect =
                 poseFactory.of(9, 8.5, 180);
 
-        public static final Pose parkCorner =
+        public static final Pose waitCorner =
                 poseFactory.of(12, 10, 180);
 
         public static final Pose parkUp =
@@ -193,28 +193,6 @@ public final class AutoPaths {
                     parkControl,
                     park
             ).linear(GeneralPoints.flowerWaitFar, park);
-        }
-    }
-
-    // CORNER (1Tip)
-    public static final class Corner {
-
-        private Corner() {}
-
-        public static Path park() {
-            return Paths.line(GeneralPoints.shootClose, GeneralPoints.parkCorner)
-                    .linear(GeneralPoints.shootClose, GeneralPoints.parkCorner);
-        }
-    }
-
-    // FLOWER (1Tip + Flower)
-    public static final class Flower {
-
-        private Flower() {}
-
-        public static Path park() {
-            return Paths.line(GeneralPoints.flowerWaitClose, GeneralPoints.parkCorner)
-                    .linear(GeneralPoints.flowerWaitClose, GeneralPoints.parkCorner);
         }
     }
 
