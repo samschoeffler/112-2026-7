@@ -87,15 +87,18 @@ public class AutoCommands {
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
                 shooterTogg,
-                Commands.waitMs(1500),
+                Commands.waitMs(200),
                 shooterTogg,
+                Commands.waitMs(300),
                 flowerFarJiggle(follower),
-                Commands.waitMs(500),
+                Commands.waitMs(200),
                 flowerFaHalfJiggle(follower),
+                follow(follower, AutoPaths.GeneralPaths.flowerFarFro()),
+                follow(follower, AutoPaths.GeneralPaths.flower2shootFar()),
                 shooterTogg,
                 Commands.waitMs(2000),
-                follow(follower, AutoPaths.GeneralPaths.flowerFarFro())
-        );
+                shooterTogg
+                );
     }
 
     //(.)(.)    <-- titties hehe

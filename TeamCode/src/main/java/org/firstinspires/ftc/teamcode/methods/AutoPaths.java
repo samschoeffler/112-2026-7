@@ -58,10 +58,14 @@ public final class AutoPaths {
                 poseFactory.of(47, 128.3, 90);
 
         public static final Pose midBack =
-                poseFactory.of(47, 127.75, 90);
+                poseFactory.of(47, 125, 90);
 
         public static final Pose parkFar =
                 poseFactory.of(26, 130, 90);
+
+        public static final Pose shootFar2 =
+                poseFactory.of(30, 130, 0);
+
     }
 
     // GENERAL PATHS (shared by more than one auto)
@@ -130,6 +134,12 @@ public final class AutoPaths {
             return Paths.line(GeneralPoints.jiggleC, GeneralPoints.flowerClose)
                     .linear(GeneralPoints.jiggleC, GeneralPoints.flowerClose);
         }
+
+        public static Path flower2shootFar() {
+            return Paths.line(GeneralPoints.flowerWaitFar, GeneralPoints.shootFar2)
+                    .linear(GeneralPoints.flowerWaitFar, GeneralPoints.shootFar2);
+        }
+
     }
 
     // TIP (2Tip)
@@ -191,11 +201,10 @@ public final class AutoPaths {
 
         // far flower wait -> park (was path5, unchanged)
         public static Path park() {
-            return Paths.curve(
-                    GeneralPoints.flowerWaitFar,
-                    parkControl,
+            return Paths.line(
+                    GeneralPoints.shootFar2,
                     park
-            ).linear(GeneralPoints.flowerWaitFar, park);
+            ).linear(GeneralPoints.shootFar2, park);
         }
     }
 
