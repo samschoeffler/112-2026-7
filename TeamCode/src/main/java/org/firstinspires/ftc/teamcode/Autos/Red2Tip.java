@@ -75,7 +75,7 @@ public class Red2Tip extends OpMode {
                 autoCommand.toggleAuto,
                 autoCommand.fWheelTogg,
                 follow(follower, AutoPaths.GeneralPaths.startToShootClose()),
-                Commands.waitMs(750),
+                Commands.waitMs(1000),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(1500),

@@ -58,7 +58,7 @@ public final class AutoPaths {
                 poseFactory.of(47, 128.3, 90);
 
         public static final Pose midBack =
-                poseFactory.of(47, 125, 90);
+                poseFactory.of(47, 127.75, 90);
 
         public static final Pose parkFar =
                 poseFactory.of(26, 130, 90);
@@ -116,7 +116,10 @@ public final class AutoPaths {
                     .linear(GeneralPoints.flowerFar, GeneralPoints.midBack);
         }
 
-
+        public static Path jiggleHalf() {
+            return Paths.line(GeneralPoints.midBack, GeneralPoints.flowerFar)
+                    .linear(GeneralPoints.midBack, GeneralPoints.flowerFar);
+        }
 
         public static Path flowerJiggleC() {
             return Paths.line(GeneralPoints.flowerClose, GeneralPoints.jiggleC)

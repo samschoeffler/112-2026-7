@@ -87,13 +87,13 @@ public class AutoCommands {
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
                 shooterTogg,
-                Commands.waitMs(1000),
+                Commands.waitMs(1500),
                 shooterTogg,
                 flowerFarJiggle(follower),
                 Commands.waitMs(500),
                 flowerFaHalfJiggle(follower),
                 shooterTogg,
-                Commands.waitMs(1000),
+                Commands.waitMs(2000),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro())
         );
     }
@@ -108,7 +108,9 @@ public class AutoCommands {
 
     public Command flowerFaHalfJiggle(Follower follower) {
         return sequential(
-                follow(follower, AutoPaths.GeneralPaths.halfJiggle())
+                follow(follower, AutoPaths.GeneralPaths.halfJiggle()),
+                follow(follower, AutoPaths.GeneralPaths.jiggleHalf())
+
         );
     }
 
