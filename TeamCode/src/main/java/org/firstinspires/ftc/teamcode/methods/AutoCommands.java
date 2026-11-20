@@ -132,7 +132,17 @@ public class AutoCommands {
     }
 
     public void otherUpdate(Follower follower) {
-        launcher.updateDistanceTarget(follower.pose().x(), follower.pose().y());
+        otherUpdate(follower, null);
+    }
+
+    /** Red2Tip supplies its latched solution; other autos retain distance-based speed. */
+    public void otherUpdate(Follower follower, ShootingWaypoints.Point point) {
+        if (point == null) {
+            launcher.updateDistanceTarget(follower.pose().x(), follower.pose().y());
+        } else {
+            launcher.SHOOTING_VELOCITY = point.velocityTicksPerSecond;
+            if (launcher.isFlywheelsOn()) launcher.setTargetVelocity(point.velocityTicksPerSecond);
+        }
         shooting.update(shootRequested, collectRequested, false);
     }
 

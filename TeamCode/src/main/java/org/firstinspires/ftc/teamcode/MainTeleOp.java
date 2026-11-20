@@ -97,7 +97,7 @@ public class MainTeleOp extends OpMode {
     }
 
     private void showInit() {
-        telemetry.addData("Waypoint bank", "6 recorded RED_SCORING points; tags 30-33 only");
+        telemetry.addData("Waypoint bank", ShootingWaypoints.ALL.size() + " recorded RED_SCORING points; tags 30-33 only");
         telemetry.addData("Field/turret reference", standaloneStart ? "Standalone setup: forward zero captured at START"
                 : referenceConfirmed ? "RED Auto pose and forward-zero handoff"
                 : "NOT CONFIRMED: waypoint movement/shooting disabled");
@@ -149,7 +149,6 @@ public class MainTeleOp extends OpMode {
             else if (waypoint.select(now, pose.x(), pose.y(), Math.toDegrees(pose.heading()))) {
                 volley.cancelFeed("Cancelled: new waypoint selected");
                 turretControl.reset();
-                if (!intake.isRampUp()) intake.toggleRamp(); // Recorded UP state for all six samples.
                 beginWaypoint(pose, waypoint.selected());
             } else actionStatus = "NOT SELECTED: invalid Pinpoint pose";
         } else if (select && takeover) actionStatus = "Release drive sticks, then tap D-pad RIGHT again";
@@ -267,7 +266,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Volley active / contacts / feed", "%s / %d / %s", volley.active(), volley.shots(), shooting.state());
         telemetry.addData("Last volley", volley.outcome());
         telemetry.addData("Ramp / reverse", "%s / %s", intake.getRampState(), reverse);
-        telemetry.addLine("RED SCORING only: six recorded solutions, no vision or coordinate aiming");
+        telemetry.addLine("RED SCORING only: twelve recorded solutions, no vision or coordinate aiming");
         telemetry.addLine("GP1 RIGHT: nearest waypoint + hold | sticks or B: manual | OPTIONS: driver reference");
         telemetry.addLine("GP2 hold LT: intake only | hold RT: transfer only | tap Y: paced volley / tap again: stop feed");
         telemetry.addLine("GP2 BACK: cancel all | B/RB: reverse | A: ramp | X: hold balls");

@@ -14,10 +14,29 @@ Promoted configuration:
   then start together, transfer ramps for 100 ms, and both feed continuously
   through shot dips until the request ends.
 
-Autonomous retains the distance-to-flywheel-speed formula. MainTeleOp now uses
-six fixed, operator-approved RED_SCORING waypoints from calibration data entries
-1-6. See [recorded waypoint shooting](doc/waypoint-shooting.md) for the exact bank,
+Other autonomous modes retain the distance-to-flywheel-speed formula. MainTeleOp uses
+twelve fixed, operator-approved RED_SCORING waypoints covering both sides of
+the red hive. See [recorded waypoint shooting](doc/waypoint-shooting.md) for the exact bank,
 startup reference, controls and verification procedure.
+
+Red2Tip also reads its shooting solutions directly from `ShootingWaypoints`:
+opening shots use ID 1 (-1.7573 degrees, 1430 ticks/s), corner shots use ID 2
+(-36.4017 degrees, 1467 ticks/s), and both far-side windows use ID 10
+(1.0042 degrees, 1423 ticks/s). `AutoPaths.Red2TipPoints` and `Red2TipPaths`
+use their exact recorded X/Y and robot headings without changing shared paths.
+Place Red2Tip at waypoint 1's starting pose (approximately 56, 8, 90.3334 degrees)
+with the turret physically forward before INIT. It captures the forward encoder
+reference as before and retains the RED pose/reference handoff to MainTeleOp.
+
+The selected solution is latched before each leg, so the turret and flywheel
+prepare for the upcoming shooting stop during travel. Red2Tip uses the same
+recorded-angle feedback settings as MainTeleOp (minimum power 0.140, stop/restart
+error 1 degree, brake time 0.150 s, velocity damping 0.00075), encoder scale,
+motor sign and software travel limits. There is no coordinate or vision aiming,
+robot-yaw compensation, nearest-point switching, or distance speed override in
+Red2Tip. Its four shooting windows remain 3000 ms with the existing paced feed
+readiness/recovery behavior; no extra turret-settle gate is added. Ramp commands
+remain independent and retain their places in the routine.
 
 ## Controls and autonomous integration
 
@@ -30,7 +49,8 @@ the automatic PACED-1440 volley; an early tap is ignored, never queued. G2 LT
 holds intake only, RT holds transfer only, BACK cancels all, B/RB reverses, and
 A/X retain ramp controls. Y no longer toggles the flywheel. Arrival
 alone cannot fire. Autonomous feeding retains its existing continuous behavior.
-Ramp position does not block the Y volley. Automatic volley completion or its
+Ramp control is independent: waypoint selection and shooting do not change or
+require a ramp position. Automatic volley completion or its
 six-second timeout stops the flywheel and both feed motors in MainTeleOp and
 Shooting Field Calibration.
 
@@ -39,7 +59,7 @@ remain latched as before; while shooting waits for readiness they cannot bypass
 the wait and push a stored ball. One shared Launcher instance supplies control
 and telemetry in each auto.
 
-The short pulses in Blue2Tip, Red2Tip, Blue3Tip, and Red3Tip now wait for readiness
+The short pulses in Blue2Tip, Blue3Tip, and Red3Tip wait for readiness
 and ramp completion before their 50 ms full-speed timer starts. This adds time
 relative to the old wall-clock pulse. Paths, turret targets, other waits, and
 autonomous handoff coordinates are unchanged. Longer shooting windows retain
@@ -52,7 +72,9 @@ cancel navigation; failed arrival times out after 12 seconds without firing.
 
 1. Build/install and test MainTeleOp's waypoint travel/hold without balls first.
    Confirm driver stick takeover, GP1 B, BACK, early/held Y, independent RT/LT and STOP.
-2. Check the exact turret/heading/speed at all six RED waypoints, then four-ball
+2. Check Red2Tip at all four shooting windows (IDs 1, 2, 10, 10), including
+   physical heading alignment, fixed flywheel target during travel and STOP.
+   Check the exact turret/heading/speed at all twelve RED waypoints, then four-ball
    paced volleys. Verify reference handoff or standalone INIT A setup.
 3. Rehearse each Red/Blue auto you will use, including the short wall pulses.
    Check that batches empty, collection works, and the routine fits the match

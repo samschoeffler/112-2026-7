@@ -1,6 +1,6 @@
 # Recorded waypoint shooting in MainTeleOp
 
-MainTeleOp uses six approved RED_SCORING shooting solutions (tags 30-33). GP1
+MainTeleOp uses twelve approved RED_SCORING shooting solutions (tags 30-33). GP1
 D-pad RIGHT reads the current Pedro/Pinpoint pose, selects the nearest recorded
 X/Y by Euclidean distance, and latches that exact entry. Pedro drives a direct
 line to its X/Y and recorded robot heading, then holds there. A new D-pad press
@@ -17,7 +17,14 @@ hold. The motor controller uses feedback to reach the recorded turret angle.
 
 The bank is `methods/ShootingWaypoints.java`, copied at full CSV precision from
 **data entries 1-6 only** of
-`shooting-red-scoring-1795144118301-1410421162.csv`. No later entries were used.
+`shooting-red-scoring-1795144118301-1410421162.csv` (IDs 1-6) and all six rows of
+`shooting-red-scoring-1795206115920-1898172247 (1).csv` (IDs 7-12).
+Both sets target the red hive from opposite sides. The second session claimed a
+start of (56, 8, 90 degrees), physically (85.5, 133.5, 270 degrees) in the
+existing field frame. Its points are converted once into that frame with
+`x = 141.5 - captured_x`, `y = 141.5 - captured_y`, and
+`heading = (turret_capture_heading_deg + 180) % 360`. Robot-relative turret
+angles and target flywheel speeds are unchanged. The original six points are unchanged.
 The table below is rounded for display; compiled values are not rounded.
 
 | ID | X inches | Y inches | Robot heading degrees | Turret degrees | Flywheel ticks/s |
@@ -28,11 +35,18 @@ The table below is rounded for display; compiled values are not rounded.
 | 4 | 82.7257 | 12.9418 | 91.4315 | 29.3724 | 1441 |
 | 5 | 106.7381 | 13.6177 | 94.6296 | 47.4477 | 1475 |
 | 6 | 130.4997 | 17.4643 | 98.5289 | 58.7448 | 1610 |
+| 7 | 128.9154 | 129.5602 | 271.6748 | -48.4519 | 1600 |
+| 8 | 103.9254 | 128.4256 | 271.2178 | -35.8996 | 1483 |
+| 9 | 79.8212 | 128.3580 | 275.3800 | -20.8368 | 1432 |
+| 10 | 58.3880 | 128.3522 | 271.8551 | 1.0042 | 1423 |
+| 11 | 32.8552 | 129.6455 | 273.1604 | 26.8619 | 1431 |
+| 12 | 10.5938 | 126.0541 | 272.6595 | 44.9372 | 1465 |
 
 X/Y are the A snapshots. Robot heading is **turret_capture_heading_deg**, taken
-with B, so it corresponds to the captured turret angle. All six ramp states
-were UP (servo command 0.62); selecting a waypoint restores UP. Raw turret zero
-ticks from the test are not reused. No CSV file is needed on the robot at runtime.
+with B, so it corresponds to the captured turret angle; IDs 7-12 apply the
+field-frame transform above. Ramp control is completely independent: selecting
+a waypoint or shooting does not change or require a ramp position. Raw turret
+zero ticks from either test are not reused. No CSV file is needed on the robot at runtime.
 
 ## Startup reference
 
@@ -72,7 +86,7 @@ and another press. A Y press before READY is consumed, **never queued**; release
 and tap again after READY. Arrival alone cannot launch a volley.
 
 Changing turret angle or flywheel speed with D-pad controls is not supported in
-MainTeleOp: the six recorded solutions are authoritative. Continue using
+MainTeleOp: the twelve recorded solutions are authoritative. Continue using
 `Shooting | Field Calibration` for manual adjustment and additional measurements.
 
 ## Arrival and hold
@@ -125,7 +139,7 @@ the reference, select a nearby waypoint, verify motion/heading/turret direction,
 and interrupt both travel and hold with each drive stick. Verify an early/held
 Y cannot fire. Verify RT alone runs only transfer and LT alone only intake.
 Then load four balls, confirm READY, and tap Y. Repeat at all
-six points before match use.
+twelve points before match use.
 
 Pinpoint cannot detect obstacles or correct unobserved localization drift.
 The direct route needs to be clear. The saved data had up to about 0.34 inches
@@ -134,5 +148,7 @@ because the wheel was off. These are operator-approved setpoints, not proof of
 measured at-shot speed or scoring reliability; the distant 1610-ticks/s point
 still benefits from repeat volleys. Only one RED scoring target is supported.
 
-This change affects MainTeleOp. Autonomous behavior, vision tuning diagnostics,
-and the calibration OpMode's independent velocity editing remain available.
+MainTeleOp and Red2Tip use this bank. Red2Tip uses IDs 1, 2 and 10 at its
+shooting stops with the same turret feedback settings and fixed flywheel targets;
+see [competition shooting integration](../COMPETITION_SHOOTING.md). Other autos,
+vision tuning diagnostics and calibration velocity editing retain their behavior.

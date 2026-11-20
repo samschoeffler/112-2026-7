@@ -23,6 +23,7 @@ sources = ROOT / 'TeamCode/src/main/java/org/firstinspires/ftc/teamcode/methods'
 with tempfile.TemporaryDirectory(prefix='waypoint-pedro-') as tmp:
     subprocess.run([java_tool('javac'), '-cp', str(pedro), '-d', tmp,
                     str(sources / 'ShootingWaypoints.java'), str(sources / 'WaypointDrive.java'),
+                    str(sources / 'AutoPaths.java'),
                     str(Path(__file__).with_name('WaypointDriveRegression.java'))], check=True)
     subprocess.run([java_tool('java'), '-cp', tmp + os.pathsep + str(pedro),
                     'org.firstinspires.ftc.teamcode.methods.WaypointDriveRegression'], check=True)

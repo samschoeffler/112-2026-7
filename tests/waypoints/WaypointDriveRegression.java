@@ -35,6 +35,10 @@ public final class WaypointDriveRegression {
         @Override public boolean holding() { return holding; }
         @Override public void setPose(Pose p) { throw new AssertionError("Navigation must never reset localization"); }
     }
+    private static void checkPose(Pose pose, ShootingWaypoints.Point point) {
+        near(pose.x(), point.x); near(pose.y(), point.y);
+        near(Math.toDegrees(pose.heading()), point.headingDeg);
+    }
     public static void main(String[] args) {
         Drive drive = new Drive(); RecordingFollower f = new RecordingFollower(drive);
         ShootingWaypoints.Point point = ShootingWaypoints.ALL.get(3);
@@ -59,6 +63,30 @@ public final class WaypointDriveRegression {
         f.following = false; f.holding = false;
         WaypointDrive.maintain(f, point, false);
         check(f.holding(), "Early Pedro path completion still corrects the recorded endpoint");
-        System.out.println("Pedro path endpoints, heading, turn-only moves, hold persistence and immediate release passed");
+        for (ShootingWaypoints.Point recorded : ShootingWaypoints.ALL) {
+            WaypointDrive.begin(f, start, recorded);
+            Pose endpoint = f.path.endPose();
+            near(endpoint.x(), recorded.x); near(endpoint.y(), recorded.y);
+            near(Math.toDegrees(endpoint.heading()), recorded.headingDeg);
+        }
+        check(AutoPaths.Red2TipPoints.close == ShootingWaypoints.ALL.get(0)
+                && AutoPaths.Red2TipPoints.corner == ShootingWaypoints.ALL.get(1)
+                && AutoPaths.Red2TipPoints.far == ShootingWaypoints.ALL.get(9),
+                "Red2Tip shares the authoritative shooting solutions 1, 2 and 10");
+        checkPose(AutoPaths.Red2TipPoints.startClose, ShootingWaypoints.ALL.get(0));
+        checkPose(AutoPaths.Red2TipPaths.lilShoot().endPose(), ShootingWaypoints.ALL.get(1));
+        checkPose(AutoPaths.Red2TipPaths.cornerToFarShoot().endPose(), ShootingWaypoints.ALL.get(9));
+        checkPose(AutoPaths.Red2TipPaths.park().endPose(), ShootingWaypoints.ALL.get(9));
+        Pose cornerEnd = AutoPaths.Red2TipPaths.shootCloseToCorner().endPose();
+        near(cornerEnd.x(), AutoPaths.GeneralPoints.cornerCollect.x());
+        near(cornerEnd.y(), AutoPaths.GeneralPoints.cornerCollect.y());
+        near(Math.toDegrees(cornerEnd.heading()), 180);
+        Pose flowerEnd = AutoPaths.Red2TipPaths.farShootToFlowerWait().endPose();
+        near(flowerEnd.x(), AutoPaths.GeneralPoints.flowerWaitFar.x());
+        near(flowerEnd.y(), AutoPaths.GeneralPoints.flowerWaitFar.y());
+        near(Math.toDegrees(flowerEnd.heading()), 80);
+        near(Math.toDegrees(AutoPaths.GeneralPoints.startClose.heading()), 90);
+        near(Math.toDegrees(AutoPaths.GeneralPoints.aimAssist.heading()), 86.75819664890419);
+        System.out.println("Pedro path endpoints, heading, turn-only moves, hold persistence immediate release and Red2Tip recorded shooting endpoints passed");
     }
 }

@@ -18,7 +18,9 @@ public final class AutoPaths {
                 poseFactory.of(56, 8, 90);
 
         public static final Pose shootClose =
-                poseFactory.of(56, 12, 90);
+                poseFactory.of(56, 8, 90);
+
+        public static final Pose aimAssist = poseFactory.of(11.34150467519685, 13.251726045383244, 86.75819664890419);
 
         public static final Pose flowerWaitClose =
                 poseFactory.of(33, 46.5, 180);
@@ -46,7 +48,7 @@ public final class AutoPaths {
                 poseFactory.of(57, 130, 270);
 
         public static final Pose farFlowerVia =
-                poseFactory.of(60, 130, 270);
+                poseFactory.of(58.387975978100386, 128.35222355399546, 271.8550682226753);
 
         public static final Pose flowerWaitFar =
                 poseFactory.of(47, 120, 80);
@@ -116,7 +118,9 @@ public final class AutoPaths {
                     .linear(GeneralPoints.flowerFar, GeneralPoints.midBack);
         }
 
-
+        public static Path lilShoot() {
+            return Paths.line(GeneralPoints.cornerCollect, GeneralPoints.aimAssist);
+        }
 
         public static Path flowerJiggleC() {
             return Paths.line(GeneralPoints.flowerClose, GeneralPoints.jiggleC)
@@ -150,7 +154,7 @@ public final class AutoPaths {
                 poseFactory.of(49, 112, 0);
 
         public static final Pose park =
-                poseFactory.of(61, 131, 0);
+                poseFactory.of(58.387975978100386, 128.35222355399546, 271.8550682226753);
 
         public static final Pose parkControl =
                 poseFactory.of(5, 135, 0);
@@ -169,15 +173,15 @@ public final class AutoPaths {
         // Holds 180 until the robot is ~30" off both walls, then turns to 270.
         public static Path cornerToFarShoot() {
             return Paths.curve(
-                    GeneralPoints.cornerCollect,
+                    GeneralPoints.aimAssist,
                     farControl1,
                     farControl2,
                     farControl3,
                     farControl4,
                     GeneralPoints.farFlowerVia
             ).heading(Interpolator.piecewise()
-                    .until(0.2, Interpolator.constant(GeneralPoints.cornerCollect))
-                    .until(1.0, Interpolator.linear(GeneralPoints.cornerCollect, GeneralPoints.farFlowerVia)));
+                    .until(0.2, Interpolator.constant(GeneralPoints.aimAssist))
+                    .until(1.0, Interpolator.linear(GeneralPoints.aimAssist, GeneralPoints.farFlowerVia)));
         }
 
         // far shoot spot -> far flower wait (was path4, which had a hairpin)
@@ -193,6 +197,53 @@ public final class AutoPaths {
                     //parkControl,
                     park
             ).linear(GeneralPoints.flowerWaitFar, park);
+        }
+    }
+
+    /** Red2Tip alone uses the exact recorded shooting poses; shared auto routes stay unchanged. */
+    public static final class Red2TipPoints {
+        private Red2TipPoints() {}
+        public static final ShootingWaypoints.Point close = ShootingWaypoints.ALL.get(0); // ID 1
+        public static final ShootingWaypoints.Point corner = ShootingWaypoints.ALL.get(1); // ID 2
+        public static final ShootingWaypoints.Point far = ShootingWaypoints.ALL.get(9); // ID 10
+        public static final Pose startClose = recordedPose(close);
+        public static final Pose aimAssist = recordedPose(corner);
+        public static final Pose farShoot = recordedPose(far);
+
+        private static Pose recordedPose(ShootingWaypoints.Point point) {
+            return poseFactory.of(point.x, point.y, point.headingDeg);
+        }
+    }
+
+    public static final class Red2TipPaths {
+        private Red2TipPaths() {}
+
+        public static Path shootCloseToCorner() {
+            return Paths.line(Red2TipPoints.startClose, GeneralPoints.cornerCollect)
+                    .linear(Red2TipPoints.startClose, GeneralPoints.cornerCollect, 0.55);
+        }
+
+        public static Path lilShoot() {
+            return Paths.line(GeneralPoints.cornerCollect, Red2TipPoints.aimAssist)
+                    .linear(GeneralPoints.cornerCollect, Red2TipPoints.aimAssist);
+        }
+
+        public static Path cornerToFarShoot() {
+            return Paths.curve(Red2TipPoints.aimAssist, Tip.farControl1, Tip.farControl2,
+                    Tip.farControl3, Tip.farControl4, Red2TipPoints.farShoot)
+                    .heading(Interpolator.piecewise()
+                            .until(0.2, Interpolator.constant(Red2TipPoints.aimAssist))
+                            .until(1.0, Interpolator.linear(Red2TipPoints.aimAssist, Red2TipPoints.farShoot)));
+        }
+
+        public static Path farShootToFlowerWait() {
+            return Paths.line(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar)
+                    .linear(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar);
+        }
+
+        public static Path park() {
+            return Paths.line(GeneralPoints.flowerWaitFar, Red2TipPoints.farShoot)
+                    .linear(GeneralPoints.flowerWaitFar, Red2TipPoints.farShoot);
         }
     }
 
