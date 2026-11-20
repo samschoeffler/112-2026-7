@@ -55,7 +55,7 @@ public final class WaypointDriveRegression {
         check(f.holds == 1, "Hold controller is not reset each loop");
         WaypointDrive.release(f);
         check(f.manuals == 1 && !f.holding() && !f.following() && drive.stops == 1,
-                "Takeover cancels path/hold and stops stale drivetrain output immediately");
+                "Fault/STOP release cancels path/hold and stops drivetrain output immediately");
         WaypointDrive.begin(f, PoseFactory.degrees().of(point.x, point.y, 0), point);
         check(f.follows == 1 && f.holds == 2, "Same X/Y with different heading uses turn-only pose hold");
         near(Math.toDegrees(f.held.heading()), point.headingDeg);
