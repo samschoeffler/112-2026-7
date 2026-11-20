@@ -60,20 +60,25 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(SHOOTING_WINDOW_MS),
                 autoCommand.shooterTogg,
                 selectShootingPoint(AutoPaths.Red2TipPoints.corner),
-                follow(follower, AutoPaths.Red2TipPaths.shootCloseToCorner()),
+                follow(follower, AutoPaths.Red2TipPaths.startToCornerWait()),
+                follow(follower, AutoPaths.Red2TipPaths.cornerWaitToCorner()),
                 follow(follower, AutoPaths.Red2TipPaths.lilShoot()),
                 autoCommand.shooterTogg,
-                Commands.waitMs(SHOOTING_WINDOW_MS),
-                autoCommand.shooterTogg,
                 Commands.waitMs(500),
+                autoCommand.shooterTogg,
                 selectShootingPoint(AutoPaths.Red2TipPoints.far),
                 parallel(
-                        follow(
-                                follower, AutoPaths.Red2TipPaths.cornerToFarShoot()
-                                        .with(Constants.foresightConfig.brakeAggression.at(0.5)).with(Constants.foresightConfig.maxPathSpeed.at(0.8))
+                        sequential(
+                                follow(follower, AutoPaths.Red2TipPaths.aimAssistToCornerWait()),
+                                follow(
+                                        follower, AutoPaths.Red2TipPaths.flowerWaitToFarShoot()
+                                                .with(Constants.foresightConfig.brakeAggression.at(0.5)).with(Constants.foresightConfig.maxPathSpeed.at(0.8))
+                                )
                         ),
                         sequential(
                                 Commands.waitMs(500),
+                                autoCommand.rampTogg,
+                                Commands.waitMs(2000),
                                 autoCommand.rampTogg
                         )
                 ),

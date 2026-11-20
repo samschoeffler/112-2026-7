@@ -18,7 +18,7 @@ public final class AutoPaths {
                 poseFactory.of(56, 8, 90);
 
         public static final Pose shootClose =
-                poseFactory.of(56, 8, 90);
+                poseFactory.of(56, 12, 90);
 
         public static final Pose aimAssist = poseFactory.of(11.34150467519685, 13.251726045383244, 86.75819664890419);
 
@@ -215,32 +215,79 @@ public final class AutoPaths {
         }
     }
 
+    /**
+     * Red2Tip: the old (pre-optimization) route shapes, ending each shooting leg on
+     * its recorded waypoint so the recorded turret angle / flywheel speed are valid.
+     */
     public static final class Red2TipPaths {
         private Red2TipPaths() {}
 
-        public static Path shootCloseToCorner() {
-            return Paths.line(Red2TipPoints.startClose, GeneralPoints.cornerCollect)
-                    .linear(Red2TipPoints.startClose, GeneralPoints.cornerCollect, 0.55);
+        // ---------- POSES ----------
+
+        public static final Pose cornerWait =
+                poseFactory.of(30, 11, 180);
+
+        // old path3 controls (flower wait -> far shoot, up the left side of the hive)
+        public static final Pose farControl1 =
+                poseFactory.of(47, 44, 0);
+
+        public static final Pose farControl2 =
+                poseFactory.of(6, 107, 0);
+
+        public static final Pose farControl3 =
+                poseFactory.of(35, 109, 0);
+
+        // old path4 control (far shoot -> far flower wait)
+        public static final Pose flowerWaitControl =
+                poseFactory.of(45, 113, 0);
+
+        // ---------- PATHS ----------
+
+        // old path2wall (now starts at the start pose, where the first volley is recorded)
+        public static Path startToCornerWait() {
+            return Paths.line(Red2TipPoints.startClose, cornerWait)
+                    .linear(Red2TipPoints.startClose, cornerWait);
         }
 
+        // old path21
+        public static Path cornerWaitToCorner() {
+            return Paths.line(cornerWait, GeneralPoints.cornerCollect)
+                    .linear(cornerWait, GeneralPoints.cornerCollect);
+        }
+
+        // corner -> recorded corner shooting spot
         public static Path lilShoot() {
             return Paths.line(GeneralPoints.cornerCollect, Red2TipPoints.aimAssist)
                     .linear(GeneralPoints.cornerCollect, Red2TipPoints.aimAssist);
         }
 
-        public static Path cornerToFarShoot() {
-            return Paths.curve(Red2TipPoints.aimAssist, Tip.farControl1, Tip.farControl2,
-                    Tip.farControl3, Tip.farControl4, Red2TipPoints.farShoot)
-                    .heading(Interpolator.piecewise()
-                            .until(0.2, Interpolator.constant(Red2TipPoints.aimAssist))
-                            .until(1.0, Interpolator.linear(Red2TipPoints.aimAssist, Red2TipPoints.farShoot)));
+        // old path22 (now starts at the corner shooting spot)
+        public static Path aimAssistToCornerWait() {
+            return Paths.line(Red2TipPoints.aimAssist, cornerWait)
+                    .linear(Red2TipPoints.aimAssist, cornerWait);
         }
 
+        // old path3, ending on the recorded far shooting spot
+        public static Path flowerWaitToFarShoot() {
+            return Paths.curve(
+                    GeneralPoints.flowerWaitClose,
+                    farControl1,
+                    farControl2,
+                    farControl3,
+                    Red2TipPoints.farShoot
+            ).linear(GeneralPoints.flowerWaitClose, Red2TipPoints.farShoot);
+        }
+
+        // old path4, starting from the recorded far shooting spot
         public static Path farShootToFlowerWait() {
-            return Paths.line(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar)
-                    .linear(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar);
+            return Paths.curve(
+                    Red2TipPoints.farShoot,
+                    flowerWaitControl,
+                    GeneralPoints.flowerWaitFar
+            ).linear(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar);
         }
 
+        // back to the far shooting spot for the last volley
         public static Path park() {
             return Paths.line(GeneralPoints.flowerWaitFar, Red2TipPoints.farShoot)
                     .linear(GeneralPoints.flowerWaitFar, Red2TipPoints.farShoot);
