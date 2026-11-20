@@ -26,6 +26,10 @@ import org.firstinspires.ftc.teamcode.methods.Launcher;
 import org.firstinspires.ftc.teamcode.methods.Turret;
 import org.firstinspires.ftc.teamcode.methods.CoordinateAim;
 import org.firstinspires.ftc.teamcode.methods.CoordinateTurretControl;
+import org.firstinspires.ftc.teamcode.methods.CoordinateVisionCorrection;
+import org.firstinspires.ftc.teamcode.methods.TurretVisionAssist;
+import org.firstinspires.ftc.teamcode.methods.TurretVisionConfig;
+import org.firstinspires.ftc.teamcode.methods.TuningTurretControl;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous(name = "Red2Tip", group="Red")
@@ -33,6 +37,12 @@ public class Red2Tip extends OpMode {
 
     //private PathVisualizer visualizer;
 
+    // Same target as holding D-pad DOWN in Coordinate Vision - Tune.
+    private static final double TARGET_X = 58.0;
+    private static final double TARGET_Y = 56.7;
+    private static final int VISION_PIPELINE = 4;
+    private final TurretVisionAssist visionAssist = new TurretVisionAssist();
+    private final TuningTurretControl aimMotor = new TuningTurretControl();
     private Follower follower;
     private AutoCommands autoCommand;
     private LimelightVision vision;
@@ -43,8 +53,6 @@ public class Red2Tip extends OpMode {
     private Servo led;
     private BulkReads bulk;
     //private Transfer transfer;
-
-    boolean started = false;
 
     private double kP = 0.02;
     private double kD = 0.0;
@@ -80,7 +88,7 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(1500),
+                Commands.waitMs(2000),
                 //autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Tip.shootCloseToCorner()),
@@ -99,7 +107,6 @@ public class Red2Tip extends OpMode {
                         )
                 ),
                 autoCommand.shooterTogg,
-                autoCommand.startVis,
                 Commands.waitMs(2500),
                 autoCommand.shooterTogg,
                 autoCommand.toggleAuto,
@@ -108,8 +115,9 @@ public class Red2Tip extends OpMode {
                 autoCommand.rampTogg,
                 follow(
                         follower, AutoPaths.Tip.park()
-                                .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
-                )
+                                //.with(Constants.foresightConfig.maxPathSpeed.at(0.4))
+                ),
+                autoCommand.shooterTogg
         );
     }
 
@@ -134,7 +142,7 @@ public class Red2Tip extends OpMode {
         OpModeStorage.turretForwardZeroTicks = turretZeroTicks;
         OpModeStorage.turretForwardZeroConfirmed = true;
 
-        vision = new LimelightVision(hardwareMap, 4);
+        vision = new LimelightVision(hardwareMap, VISION_PIPELINE);
         follower.setPose(AutoPaths.GeneralPoints.startClose);
 
        // transfer = new Transfer(hardwareMap);
@@ -157,7 +165,9 @@ public class Red2Tip extends OpMode {
     }
 @Override
     public void start() {
-        //vision.start();
+        visionAssist.reset();
+        aimMotor.reset();
+        vision.start();
         schedule(autoRoutine());
         turret.mainPD.reset();
         haveLastHeading = false;
@@ -189,12 +199,8 @@ public class Red2Tip extends OpMode {
         readYaw(follower.pose().heading());
         vision.update();
 
-        if (LimelightVision.shouldStart && !started) {
-            vision.start();
-            started = true;
-        }
-
-        telemetry.addData("Started Vision?", LimelightVision.shouldStart);
+        telemetry.addData("Started Vision?", vision.isRunning());
+        telemetry.addData("Vision pipeline", vision.getPipeline());
 
 
         /*if (!launcher.getFault().isEmpty()) {
@@ -206,19 +212,32 @@ public class Red2Tip extends OpMode {
 
         CoordinateAim.Result aim = CoordinateAim.calculate(
                 follower.pose().x(), follower.pose().y(), follower.pose().heading(),
-                62.4, 82.3);
+                TARGET_X, TARGET_Y);
         double turretAngleDeg = (turretMotor.getCurrentPosition() - (double) turretZeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
+        double now = System.nanoTime() / 1e9;
+        double turretSpeed = turretMotor.getVelocity() / CoordinateTurretControl.TICKS_PER_DEGREE;
+        double visionCorrection = visionAssist.update(vision, now,
+                follower.pose().x(), follower.pose().y(), follower.pose().heading(),
+                turretAngleDeg, turretSpeed, yawRateDegPerSec, TARGET_X, TARGET_Y,
+                aim.valid && OpModeStorage.turretForwardZeroConfirmed, TurretVisionConfig.ENABLED);
+        double correctedBearing = CoordinateVisionCorrection.correctedTarget(
+                aim.relativeBearingDeg, visionCorrection);
         CoordinateTurretControl.Result control = CoordinateTurretControl.calculate(
-                aim.relativeBearingDeg, turretAngleDeg, 1, 0.04);
-        if (aim.valid && control.reachable) {
-            double power = CoordinateTurretControl.motorPower(turretAngleDeg, control.power, -1);
-            turret.setRotationPower(power);
-        } else {
-            turret.stopRotation();
-        }
+                correctedBearing, turretAngleDeg, 1, 0.04);
+        boolean canAim = aim.valid && control.reachable && OpModeStorage.turretForwardZeroConfirmed;
+        double encoderPower = aimMotor.calculate(now, control.errorDeg, turretSpeed, canAim);
+        double power = CoordinateTurretControl.motorPower(turretAngleDeg, encoderPower, -1);
+        if (canAim) turret.setRotationPower(power);
+        else turret.stopRotation();
+        telemetry.addData("Shooting target X/Y", "%.2f / %.2f", TARGET_X, TARGET_Y);
         telemetry.addData("Coordinate target bearing", aim.relativeBearingDeg);
         telemetry.addData("Coordinate turret error", control.errorDeg);
+        telemetry.addData("Vision applied correction deg", correctedBearing - aim.relativeBearingDeg);
+        telemetry.addData("Turret settle state", aimMotor.status);
+        telemetry.addData("Turret kP / kD", "%.4f / %.4f", TuningTurretControl.KP, TuningTurretControl.KD);
+        telemetry.addData("Turret speed / commanded power", "%.2f / %.3f", turretSpeed, power);
+        visionAssist.addTelemetry(telemetry);
 
         autoCommand.otherUpdate(follower);
 
@@ -235,13 +254,17 @@ public class Red2Tip extends OpMode {
         telemetry.addData("Target Velo", launcher.getTargetVelocity());
         telemetry.addData("Shooting feed state", autoCommand.getFeedState());
 
-        turret.addTelemetry(telemetry);
+        // The legacy Turret telemetry uses a different degree scale/controller state.
+        telemetry.addData("Turret angle deg", turretAngleDeg);
+        telemetry.addData("Turret forward zero confirmed", OpModeStorage.turretForwardZeroConfirmed);
         telemetry.update();
     }
 
     @Override
     public void stop() {
-        //turret.stop();
+        aimMotor.reset();
+        visionAssist.reset();
+        turret.stopRotation();
         vision.stop();
         OpModeStorage.autonomousEndPose = follower.pose(); //saves your position in that file
         OpModeStorage.LastAllegiance = "RED";

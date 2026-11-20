@@ -319,6 +319,12 @@ public class LimelightVision {
     }
 
     // Temporary bridge for existing Turret code.
+    /** Tag-assist access without the wrapper's age filter; pipeline/result validity still apply. */
+    public LLResult getDetectedTagResult() {
+        return latestResult!=null && latestResult.isValid()
+                && latestResult.getPipelineIndex()==pipeline ? latestResult : null;
+    }
+
     public LLResult getRawResult() {
         return validFrame ? latestResult : null;
     }

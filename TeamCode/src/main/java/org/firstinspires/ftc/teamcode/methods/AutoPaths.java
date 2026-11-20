@@ -150,7 +150,7 @@ public final class AutoPaths {
                 poseFactory.of(49, 112, 0);
 
         public static final Pose park =
-                poseFactory.of(10, 122, 90);
+                poseFactory.of(61, 131, 0);
 
         public static final Pose parkControl =
                 poseFactory.of(5, 135, 0);
@@ -188,9 +188,9 @@ public final class AutoPaths {
 
         // far flower wait -> park (was path5, unchanged)
         public static Path park() {
-            return Paths.curve(
+            return Paths.line(
                     GeneralPoints.flowerWaitFar,
-                    parkControl,
+                    //parkControl,
                     park
             ).linear(GeneralPoints.flowerWaitFar, park);
         }

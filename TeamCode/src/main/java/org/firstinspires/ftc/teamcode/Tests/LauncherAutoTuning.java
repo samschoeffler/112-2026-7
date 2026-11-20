@@ -22,7 +22,7 @@ import java.util.Locale;
 @TeleOp(name = "Flywheel | Automatic Retune", group = "Diagnostics")
 public final class LauncherAutoTuning extends OpMode {
     // Measured run flywheel-1794516956815: experimental baseline, not production settings.
-    private static final double PI_BASE_KS = .4006845, PI_BASE_KV = .005114707, PI_BASE_KP = .032;
+    private static final double PI_BASE_KS = .605774, PI_BASE_KV = .00533013, PI_BASE_KP = .032;
     private final FlywheelAutoTune tune = new FlywheelAutoTune();
     private DcMotorEx wheel, intake, transfer;
     private java.util.List<LynxModule> hubs;

@@ -6,8 +6,11 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.hardware.lynx.LynxModule;
 
 import org.firstinspires.ftc.teamcode.methods.FlywheelIntegralControl;
+import org.firstinspires.ftc.teamcode.methods.Launcher;
+import org.firstinspires.ftc.teamcode.methods.FlywheelPositionVelocity;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -20,7 +23,8 @@ import java.util.Locale;
 @TeleOp(name = "Flywheel | PI Ball Recovery", group = "Diagnostics")
 public final class LauncherPIRecoveryTest extends OpMode {
     private static final double TARGET = 1407.0;
-    private static final double KS = .4006845, KV = .005114707, KP = .032, KI = .060;
+    // Snapshot production gains when the test class loads; report records this exact set.
+    private static final double KS = Launcher.KS, KV = Launcher.KV, KP = Launcher.KP, KI = Launcher.KI;
     private static final double ENCODER_SIGN = -1.0, MOTOR_SIGN = 1.0;
     private static final double FEED_POWER = .65;
     private static final double FEED_PULSE_SECONDS = 3.0;
@@ -33,6 +37,10 @@ public final class LauncherPIRecoveryTest extends OpMode {
 
     private DcMotorEx wheel, intake, transfer;
     private final FlywheelIntegralControl controller = new FlywheelIntegralControl();
+    private final FlywheelPositionVelocity positionEstimate = new FlywheelPositionVelocity(.100);
+    private java.util.List<LynxModule> hubs;
+    private int encoderPosition;
+    private double positionVelocity=Double.NaN, sdkVelocity, positionTime, positionReadMs;
     private double lastTime, lastVelocity, filteredVelocity = Double.NaN, lastPower;
     private double lastFlush;
     private boolean enabled;
@@ -46,6 +54,9 @@ public final class LauncherPIRecoveryTest extends OpMode {
     private boolean saved;
 
     @Override public void init() {
+        hubs=hardwareMap.getAll(LynxModule.class);
+        telemetry.setMsTransmissionInterval(100);
+        positionEstimate.reset();
         wheel = hardwareMap.get(DcMotorEx.class, "fWheel");
         intake = hardwareMap.get(DcMotorEx.class, "Intake");
         transfer = hardwareMap.get(DcMotorEx.class, "LaunchMech");
@@ -61,10 +72,19 @@ public final class LauncherPIRecoveryTest extends OpMode {
     }
 
     @Override public void loop() {
+        // Fresh reads even if a hub is configured for MANUAL bulk caching.
+        for(LynxModule hub:hubs) hub.clearBulkCache();
         double now = System.nanoTime() / 1e9;
         double dt = lastTime == 0 ? 0 : now - lastTime;
         lastTime = now;
-        double raw = ENCODER_SIGN * wheel.getVelocity();
+        double positionStart=System.nanoTime()/1e9;
+        encoderPosition=wheel.getCurrentPosition();
+        double positionEnd=System.nanoTime()/1e9;
+        positionTime=(positionStart+positionEnd)/2;
+        positionReadMs=(positionEnd-positionStart)*1000;
+        positionVelocity=ENCODER_SIGN*positionEstimate.update(positionTime,encoderPosition);
+        sdkVelocity=wheel.getVelocity();
+        double raw = ENCODER_SIGN * sdkVelocity;
         if (!Double.isFinite(filteredVelocity) || dt <= 0 || dt > .1) filteredVelocity = raw;
         else {
             double alpha = dt / (VELOCITY_FILTER_TIME_CONSTANT_SECONDS + dt);
@@ -108,7 +128,13 @@ public final class LauncherPIRecoveryTest extends OpMode {
         lastPower = power;
 
         telemetry.addData("Status", status);
-        telemetry.addData("Target / velocity / error", "%.0f / %.1f / %.1f", TARGET, raw, TARGET - raw);
+        telemetry.addData("Target / velocity / error (ticks/s)", "%.0f / %.1f / %.1f", TARGET, raw, TARGET - raw);
+        telemetry.addData("SDK raw / corrected velocity (ticks/s)","%.1f / %.1f",sdkVelocity,raw);
+        telemetry.addData("Encoder position / pos-derived speed","%d ticks / %.1f ticks/s",encoderPosition,positionVelocity);
+        telemetry.addData("Position window / sample center age","%.1f / %.1f ms",
+                positionEstimate.spanSeconds()*1000,positionEstimate.centerAgeSeconds()*1000);
+        telemetry.addData("Loop / encoder read ms","%.2f / %.2f",dt*1000,positionReadMs);
+        telemetry.addData("Control timing valid",dt>0 && dt<=.1);
         telemetry.addData("Filtered velocity / error", "%.1f / %.1f", filteredVelocity, TARGET - filteredVelocity);
         telemetry.addData("PI gains KS/KV/KP/KI", "%.4f / %.7f / %.4f / %.4f", KS, KV, KP, KI);
         telemetry.addData("Integral volts / motor power", "%.3f / %.3f", controller.integralVolts(), power);
@@ -117,6 +143,8 @@ public final class LauncherPIRecoveryTest extends OpMode {
         if (shot != null) telemetry.addData("Last recovery", shot.summary());
         telemetry.addData("Results", report == null ? "Starting log..." : report.getParent());
         telemetry.addLine("Press G2 A once per ball; 3-second trial, then 2-second delay.");
+        telemetry.addLine("Velocity is ENCODER TICKS/SECOND, not RPM or ball speed.");
+        telemetry.addLine("Position-derived/filtered traces have lag; diagnostics only, feedback still SDK velocity.");
         telemetry.addLine("This is an experiment; no competition gains are changed.");
         telemetry.update();
     }
@@ -125,10 +153,12 @@ public final class LauncherPIRecoveryTest extends OpMode {
                                double volts, double power, boolean feed) {
         if (log != null) {
             try {
-            log.write(String.format(Locale.US, "%.6f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%b,%d\n",
+            log.write(String.format(Locale.US, "%.6f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%b,%d,%d,%.3f,%.6f,%.3f,%.3f,%.3f\n",
                         now, dt * 1000, TARGET, velocity, TARGET - velocity,
                         filteredVelocity, TARGET - filteredVelocity, battery,
-                        volts, power, feed, shotCount));
+                        volts, power, feed, shotCount, encoderPosition, positionVelocity,
+                        positionTime,positionReadMs,positionEstimate.spanSeconds()*1000,
+                        positionEstimate.centerAgeSeconds()*1000));
                 return true;
             } catch (IOException ex) {
                 status = "Log write failed: " + ex.getMessage();
@@ -146,7 +176,7 @@ public final class LauncherPIRecoveryTest extends OpMode {
             File csv = new File(dir, name + ".csv");
             report = new File(dir, name + "-report.txt");
             log = new BufferedWriter(new FileWriter(csv));
-            log.write("time_s,loop_ms,target_ticks_s,velocity_ticks_s,error_ticks_s,filtered_velocity_ticks_s,filtered_error_ticks_s,battery_V,requested_V,power,feed,shot_count\n");
+            log.write("time_s,loop_ms,target_ticks_s,velocity_ticks_s,error_ticks_s,filtered_velocity_ticks_s,filtered_error_ticks_s,battery_V,requested_V,power,feed,shot_count,encoder_position_ticks,position_velocity_ticks_s,position_time_s,position_read_ms,position_window_ms,position_center_age_ms\n");
             status = "PI run logging to " + csv.getAbsolutePath();
             return true;
         } catch (IOException ex) {
@@ -185,6 +215,7 @@ public final class LauncherPIRecoveryTest extends OpMode {
         try (BufferedWriter out = new BufferedWriter(new FileWriter(report))) {
             out.write(String.format(Locale.US, "TARGET=%.1f KS=%.7f KV=%.9f KP=%.7f KI=%.7f\n",
                     TARGET, KS, KV, KP, KI));
+            out.write("Velocities are encoder ticks/s, not RPM or ball exit speed. Position slope uses the same encoder, is delayed and is diagnostic only.\n");
             out.write("No production gains changed. Each trial is one G2 A command with a 3.0 s feed pulse followed by a 2.0 s delay.\n");
             out.write("Recovery timing starts after feeding stops: raw velocity must remain within +/-15 or +/-20 ticks/s for 0.10 s; filtered velocity is also checked at +/-10.\n");
             if (shotCount == 0) out.write("No shots recorded.\n");

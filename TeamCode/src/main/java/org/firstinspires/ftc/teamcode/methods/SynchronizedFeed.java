@@ -18,7 +18,7 @@ public final class SynchronizedFeed {
     public enum Mode { CONTINUOUS, PACED }
 
     public static final double TRANSFER_TARGET = 1440, RAMP_SECONDS = .100;
-    public static final double FLYWHEEL_TOLERANCE = 25, FLYWHEEL_DWELL = .200;
+    public static final double FLYWHEEL_TOLERANCE = 50, FLYWHEEL_DWELL = .100;
 
     // Shot detection. Logged dips were 60-150 ticks/s; steady-state noise is about +/-20.
     /** A drop this far below min(recent peak, target) counts as a ball contact. */

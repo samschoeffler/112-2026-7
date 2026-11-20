@@ -49,6 +49,26 @@ public final class CompetitionShootingRegression {
         void stopped() { check(f.power == 0 && t.power == 0 && i.power == 0, "All motor powers stop"); }
     }
     public static void main(String[] args) {
+        for (double error : new double[]{-40, 40, -50, 50}) {
+            SynchronizedFeed gate = new SynchronizedFeed();
+            gate.update(0, true, true, 1407, 1407 + error, 0);
+            gate.update(.09, true, true, 1407, 1407 + error, 0);
+            check(gate.state() == SynchronizedFeed.State.WAIT_FLYWHEEL,
+                    "Autonomous must still require 100 ms continuous readiness");
+            gate.update(.100001, true, true, 1407, 1407 + error, 0);
+            check(gate.state() == SynchronizedFeed.State.RAMP_TRANSFER,
+                    "Within +/-50 ticks/s must start ramp after 100 ms");
+        }
+        SynchronizedFeed interrupted = new SynchronizedFeed();
+        interrupted.update(0, true, true, 1407, 1407, 0);
+        interrupted.update(.05, true, true, 1407, 1356, 0);
+        interrupted.update(.06, true, true, 1407, 1407, 0);
+        interrupted.update(.15, true, true, 1407, 1407, 0);
+        check(interrupted.state() == SynchronizedFeed.State.WAIT_FLYWHEEL,
+                "A 51 ticks/s error must reset the continuous readiness dwell");
+        interrupted.update(.160001, true, true, 1407, 1407, 0);
+        check(interrupted.state() == SynchronizedFeed.State.RAMP_TRANSFER,
+                "Readiness must resume after another 100 ms inside tolerance");
         Rig r = new Rig();
         r.f.velocity = -1300;
         for (int n = 0; n < 30; n++) r.tick(true, true, false, false);

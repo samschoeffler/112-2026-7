@@ -88,13 +88,13 @@ public class AutoCommands {
         return sequential(
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
-                shooterTogg,
+                //shooterTogg,
                 Commands.waitMs(1000),
-                shooterTogg,
+                //shooterTogg,
                 flowerFarJiggle(follower),
                 Commands.waitMs(500),
                 flowerFaHalfJiggle(follower),
-                shooterTogg,
+                //shooterTogg,
                 Commands.waitMs(1000),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro())
         );
