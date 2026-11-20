@@ -143,6 +143,12 @@ public class AutoCommands {
     public Launcher getLauncher() { return launcher; }
     public SynchronizedFeed.State getFeedState() { return shooting.state(); }
 
+    /** Opt in before shooting: same feed speed and recovery defaults as MainTeleOp. */
+    public void enablePacedShooting() {
+        shooting.setFeedMode(SynchronizedFeed.Mode.PACED);
+        shooting.setTransferSetpoint(1440);
+    }
+
     /** Preserve a short full-speed pulse instead of cancelling it during readiness/ramp. */
     public Command waitForFeedMs(double milliseconds) {
         return sequential(Commands.waitUntil(() -> shooting.state() == SynchronizedFeed.State.FEED),

@@ -46,6 +46,34 @@ public final class TuningTurretControlRegression {
         // Symmetric response, including damping: encoder signs must not change the gain behavior.
         TuningTurretControl left=new TuningTurretControl(),right=new TuningTurretControl();
         near(left.calculate(0,4,20,true),-right.calculate(0,-4,-20,true));
+        // MainTeleOp's validated configuration settles at one degree and resumes outside it.
+        TuningTurretControl teleop=new TuningTurretControl(.140,1,1,.150);
+        check(teleop.setVelocityDamping(.00075),"Validated damping must be accepted");
+        near(teleop.calculate(0,10,0,true),.34);
+        near(teleop.calculate(.02,2,0,true),.18);
+        near(teleop.calculate(.03,2,20,true),.165);
+        near(teleop.calculate(.04,1,0,true),0);
+        near(teleop.calculate(.10,1.1,0,true),0); // Retain the braking interval.
+        near(teleop.calculate(.20,1,0,true),0);
+        check(teleop.calculate(.22,1.1,0,true)>0,"Correct positive drift outside one degree");
+        near(teleop.calculate(.24,-1.1,0,true),0);
+        near(teleop.calculate(.40,-1.1,0,true),-.162);
+        near(teleop.calculate(.42,-1,0,true),0);
+        near(teleop.calculate(.60,0,0,true),0);
+        near(teleop.calculate(.62,20,0,true),.4);
+        near(teleop.calculate(.64,20,0,false),0);
+        // Braking is per instance; tuning cannot change the competition interval.
+        TuningTurretControl shortBrake=new TuningTurretControl(.03,1,1,.075);
+        TuningTurretControl defaultBrake=new TuningTurretControl(.03,1,1);
+        shortBrake.calculate(0,5,0,true); defaultBrake.calculate(0,5,0,true);
+        near(shortBrake.calculate(.02,-5,0,true),0);
+        near(defaultBrake.calculate(.02,-5,0,true),0);
+        check(shortBrake.calculate(.10,-5,0,true)<0,"Custom short brake should resume sooner");
+        near(defaultBrake.calculate(.10,-5,0,true),0);
+        boolean rejected=false;
+        try { new TuningTurretControl(.03,1,1,Double.NaN); }
+        catch (IllegalArgumentException expected) { rejected=true; }
+        check(rejected,"Invalid custom braking interval must be rejected");
         System.out.println("Tapered turret power, velocity damping, hysteresis, braking and disable checks passed");
     }
 }

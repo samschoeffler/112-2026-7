@@ -41,6 +41,8 @@ public class Red2Tip extends OpMode {
     private static final double TARGET_X = 58.0;
     private static final double TARGET_Y = 56.7;
     private static final int VISION_PIPELINE = 4;
+    // Includes flywheel readiness, transfer ramp and recovery between detected contacts.
+    private static final long SHOOTING_WINDOW_MS = 3000;
     private final TurretVisionAssist visionAssist = new TurretVisionAssist();
     private final TuningTurretControl aimMotor = new TuningTurretControl();
     private Follower follower;
@@ -88,12 +90,12 @@ public class Red2Tip extends OpMode {
                 Commands.waitMs(750),
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
-                Commands.waitMs(2000),
+                Commands.waitMs(SHOOTING_WINDOW_MS),
                 //autoCommand.intakeTogg,
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Tip.shootCloseToCorner()),
                 autoCommand.shooterTogg,
-                autoCommand.waitForFeedMs(50),
+                Commands.waitMs(SHOOTING_WINDOW_MS),
                 autoCommand.shooterTogg,
                 Commands.waitMs(500),
                 parallel(
@@ -107,7 +109,7 @@ public class Red2Tip extends OpMode {
                         )
                 ),
                 autoCommand.shooterTogg,
-                Commands.waitMs(2500),
+                Commands.waitMs(SHOOTING_WINDOW_MS),
                 autoCommand.shooterTogg,
                 autoCommand.toggleAuto,
                 follow(follower, AutoPaths.Tip.farShootToFlowerWait()),
@@ -117,7 +119,9 @@ public class Red2Tip extends OpMode {
                         follower, AutoPaths.Tip.park()
                                 //.with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
-                autoCommand.shooterTogg
+                autoCommand.shooterTogg,
+                Commands.waitMs(SHOOTING_WINDOW_MS),
+                autoCommand.stopShooter
         );
     }
 
@@ -127,6 +131,7 @@ public class Red2Tip extends OpMode {
         follower = Constants.create(hardwareMap);
         follower.update();
         autoCommand = new AutoCommands(hardwareMap);
+        autoCommand.enablePacedShooting();
         bulk = new BulkReads(hardwareMap);   // MANUAL bulk caching; cleared every loop
         turret = new Turret(hardwareMap);
         turretMotor = hardwareMap.get(DcMotorEx.class, "TurretRot");

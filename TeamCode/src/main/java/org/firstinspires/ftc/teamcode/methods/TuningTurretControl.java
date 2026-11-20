@@ -9,12 +9,40 @@ public final class TuningTurretControl {
     public static final double MIN_MOVING_POWER = 0.22;
     public static final double KP = 0.020; // power per degree
     public static final double KD = 0.0015; // power per encoder degree/second
+    private final double minMovingPower;
+    private final double stopErrorDeg;
+    private final double restartErrorDeg;
+    private final double brakeSeconds;
     private double velocityDamping = KD;
     private boolean moving;
     private int direction;
     private double brakeUntil = Double.NEGATIVE_INFINITY;
     private double previousTime = Double.NaN;
     public String status = "DISABLED";
+
+    public TuningTurretControl() {
+        this(MIN_MOVING_POWER, STOP_ERROR_DEG, RESTART_ERROR_DEG);
+    }
+
+    /** Per-OpMode settings; default autonomous and tuning behavior is preserved. */
+    public TuningTurretControl(double minMovingPower, double stopErrorDeg, double restartErrorDeg) {
+        this(minMovingPower, stopErrorDeg, restartErrorDeg, BRAKE_SECONDS);
+    }
+
+    public TuningTurretControl(double minMovingPower, double stopErrorDeg, double restartErrorDeg,
+                              double brakeSeconds) {
+        if (!Double.isFinite(minMovingPower) || minMovingPower < 0
+                || minMovingPower > CoordinateTurretControl.MAX_POWER
+                || !Double.isFinite(stopErrorDeg) || stopErrorDeg < 0
+                || !Double.isFinite(restartErrorDeg) || restartErrorDeg < stopErrorDeg
+                || !Double.isFinite(brakeSeconds) || brakeSeconds < 0) {
+            throw new IllegalArgumentException("Invalid turret power or error thresholds");
+        }
+        this.minMovingPower = minMovingPower;
+        this.stopErrorDeg = stopErrorDeg;
+        this.restartErrorDeg = restartErrorDeg;
+        this.brakeSeconds = brakeSeconds;
+    }
 
     /** Per-instance adjustment; other controllers and the shared default are unaffected. */
     public boolean setVelocityDamping(double gain) {
@@ -39,16 +67,16 @@ public final class TuningTurretControl {
         if (now<brakeUntil) { status="BRAKING"; return 0; }
         double magnitude=Math.abs(errorDeg);
         int requestedDirection=errorDeg>0 ? 1 : -1;
-        if (moving && (magnitude<=STOP_ERROR_DEG || requestedDirection!=direction)) {
-            moving=false; direction=0; brakeUntil=now+BRAKE_SECONDS;
+        if (moving && (magnitude<=stopErrorDeg || requestedDirection!=direction)) {
+            moving=false; direction=0; brakeUntil=now+brakeSeconds;
             status="BRAKING"; return 0;
         }
-        if (!moving && magnitude<=RESTART_ERROR_DEG) { status="SETTLED"; return 0; }
-        double power=MIN_MOVING_POWER+KP*magnitude-velocityDamping*velocityDegSec*requestedDirection;
+        if (!moving && magnitude<=restartErrorDeg) { status="SETTLED"; return 0; }
+        double power=minMovingPower+KP*magnitude-velocityDamping*velocityDegSec*requestedDirection;
         // If damping calls for less than breakaway power, brake instead of forcing
         // the minimum power and driving through the target. Never reverse on damping alone.
-        if (power<MIN_MOVING_POWER) {
-            moving=false; direction=0; brakeUntil=now+BRAKE_SECONDS;
+        if (power<minMovingPower) {
+            moving=false; direction=0; brakeUntil=now+brakeSeconds;
             status="DAMPING / BRAKING"; return 0;
         }
         moving=true; direction=requestedDirection; status="TRACKING";

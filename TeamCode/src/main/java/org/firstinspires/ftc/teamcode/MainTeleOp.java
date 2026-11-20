@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.Follower;
@@ -31,6 +33,9 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 /** Discrete recorded RED_SCORING waypoints; no Limelight, geometric aiming or speed curve. */
 @TeleOp(name = "MainTeleOp")
 public class MainTeleOp extends OpMode {
+    private static final double GRAPH_PERIOD_SECONDS = 0.1;
+    private TelemetryManager panelsTelemetry;
+    private double nextGraphTime;
     private Follower follower;
     private Launcher launcher;
     private Transfer transfer;
@@ -41,7 +46,8 @@ public class MainTeleOp extends OpMode {
     private Servo led;
     private BulkReads bulk;
     private final WaypointShootingControl waypoint = new WaypointShootingControl();
-    private final TuningTurretControl turretControl = new TuningTurretControl();
+    // Validated stationary sweep turret-1795204240327; retain +/-1 degree correction.
+    private final TuningTurretControl turretControl = new TuningTurretControl(0.140, 1.0, 1.0, 0.150);
     private boolean referenceConfirmed, standaloneStart, lastInitA;
     private boolean lastSelect, lastRamp, lastHold, lastOptions;
     private boolean isRumbling;
@@ -50,6 +56,8 @@ public class MainTeleOp extends OpMode {
     private String actionStatus = "Select a waypoint with GP1 D-pad RIGHT";
 
     @Override public void init() {
+        panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
+        turretControl.setVelocityDamping(0.00075);
         follower = Constants.create(hardwareMap);
         BatteryVoltage battery = new BatteryVoltage(hardwareMap);
         launcher = new Launcher(hardwareMap, battery);
@@ -97,6 +105,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addLine("then tap GP1 A during INIT and leave the turret forward through START.");
         telemetry.addLine("GP1 D-pad RIGHT: nearest waypoint, drive + hold. Sticks or GP1 B: take over.");
         telemetry.addLine("GP2 hold LT: intake | hold RT: transfer | tap Y when READY: paced volley | BACK: stop all");
+        telemetry.addLine("Panels > Graph: Turret error (deg), tolerance +/-1, and Turret aim active");
         telemetry.update();
     }
 
@@ -114,6 +123,7 @@ public class MainTeleOp extends OpMode {
         lastOptions = gamepad1.options;
         volley.primeManualInputs(gamepad2.left_trigger > .1, gamepad2.right_trigger > .2);
         turretControl.reset();
+        nextGraphTime = 0;
     }
 
     @Override public void loop() {
@@ -159,9 +169,10 @@ public class MainTeleOp extends OpMode {
         ShootingWaypoints.Point point = waypoint.selected();
         // Fixed recorded relative angle only. No bearing calculation or robot-yaw compensation.
         double turretError = point == null ? Double.NaN : point.turretDeg - turretAngle;
-        double encoderPower = turretControl.calculate(now, turretError, turretSpeed,
-                waypoint.active() && referenceConfirmed && turretValid);
+        boolean turretAimActive = waypoint.active() && referenceConfirmed && turretValid;
+        double encoderPower = turretControl.calculate(now, turretError, turretSpeed, turretAimActive);
         turretMotor.setPower(CoordinateTurretControl.motorPower(turretAngle, encoderPower, -1));
+        sendPanelsData(now, point, turretAngle, turretError, turretSpeed, turretAimActive);
         if (ramp) intake.toggleRamp();
         if (hold) intake.holdBalls();
         boolean ready = waypoint.ready() && referenceConfirmed && turretValid;
@@ -175,6 +186,29 @@ public class MainTeleOp extends OpMode {
                 reverse, gamepad2.back, targetVelocity);
         updateIndicators(ready);
         showTelemetry(pose, point, turretAngle, turretError, ready, reverse);
+    }
+
+    /** Keep plotting live error to the last selected target even after driver takeover. */
+    private void sendPanelsData(double now, ShootingWaypoints.Point point, double turretAngle,
+                                double turretError, double turretSpeed, boolean aimActive) {
+        if (now < nextGraphTime) return;
+        nextGraphTime = now + GRAPH_PERIOD_SECONDS;
+        if (point != null) {
+            addPanelsFinite("Turret error (deg)", turretError);
+            addPanelsFinite("Turret target (deg)", point.turretDeg);
+        }
+        addPanelsFinite("Turret angle (deg)", turretAngle);
+        addPanelsFinite("Turret velocity (deg/s)", turretSpeed);
+        addPanelsFinite("Turret motor power", turretMotor.getPower());
+        panelsTelemetry.addData("Turret tolerance +1 (deg)", 1.0);
+        panelsTelemetry.addData("Turret tolerance -1 (deg)", -1.0);
+        panelsTelemetry.addData("Turret aim active", aimActive ? 1 : 0);
+        panelsTelemetry.addData("Turret target selected", point != null ? 1 : 0);
+        panelsTelemetry.update();
+    }
+
+    private void addPanelsFinite(String name, double value) {
+        if (Double.isFinite(value)) panelsTelemetry.addData(name, value);
     }
 
     private void beginWaypoint(Pose start, ShootingWaypoints.Point point) {
