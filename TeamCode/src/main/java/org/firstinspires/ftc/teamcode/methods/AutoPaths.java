@@ -233,6 +233,10 @@ public final class AutoPaths {
         public static final Pose farControl1 =
                 poseFactory.of(47, 44, 0);
 
+        public static final Pose DUMYCONT =
+                poseFactory.of(17, 23, 0);
+
+
         public static final Pose closeControl1 =
                 poseFactory.of(30, 20, 0);
 
@@ -260,6 +264,11 @@ public final class AutoPaths {
         public static Path startToCornerWait() {
             return Paths.curve(coolio, closeControl1, cornerWait)
                     .linear(coolio, cornerWait);
+        }
+
+        public static Path DUMMYPATH() {
+            return Paths.curve(coolio, DUMYCONT, GeneralPoints.parkUp)
+                    .linear(coolio, GeneralPoints.parkUp);
         }
 
         // old path21

@@ -5,6 +5,8 @@ import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
 
+import org.firstinspires.ftc.teamcode.pedro.Constants;
+
 /** Pedro commands for recorded endpoints. Never changes the localizer's reported pose. */
 public final class WaypointDrive {
     private WaypointDrive() { }
@@ -17,7 +19,7 @@ public final class WaypointDrive {
         Pose destination = destination(point);
         // A zero-length line cannot define a tangent; hold handles turn-only moves too.
         if (Math.hypot(point.x - start.x(), point.y - start.y()) < .05) follower.hold(destination);
-        else follower.follow(Paths.line(start, destination).linear(start, destination));
+        else follower.follow(Paths.line(start, destination).linear(start, destination).with(Constants.foresightConfig.maxPathSpeed.at(0.45)));
     }
 
     public static void maintain(Follower follower, ShootingWaypoints.Point point, boolean arrived) {
