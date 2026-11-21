@@ -54,16 +54,16 @@ public final class AutoPaths {
                 poseFactory.of(47, 117, 80);
 
         public static final Pose flowerFar =
-                poseFactory.of(47, 128.25, 90);
-
+                poseFactory.of(47, 127.5, 90);
+//feet <3
         public static final Pose jiggle =
-                poseFactory.of(47, 128.0, 90);
+                poseFactory.of(47, 127.25, 90);
 
         public static final Pose midBack =
                 poseFactory.of(47, 125, 90);
 
         public static final Pose parkFar =
-                poseFactory.of(12, 120, 90);
+                poseFactory.of(15, 116, 90);
     }
 
     // GENERAL PATHS (shared by more than one auto)
@@ -205,7 +205,7 @@ public final class AutoPaths {
         private Red2TipPoints() {}
         public static final ShootingWaypoints.Point close = ShootingWaypoints.ALL.get(0); // ID 1
         public static final ShootingWaypoints.Point corner = ShootingWaypoints.ALL.get(1); // ID 2
-        public static final ShootingWaypoints.Point far = ShootingWaypoints.ALL.get(9); // ID 10
+        public static final ShootingWaypoints.Point far = ShootingWaypoints.ALL.get(10); // ID 10
         public static final Pose startClose = recordedPose(close);
         public static final Pose aimAssist = recordedPose(corner);
         public static final Pose farShoot = recordedPose(far);
@@ -302,6 +302,14 @@ public final class AutoPaths {
                     GeneralPoints.flowerWaitFar
             ).linear(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar);
         }
+
+        public static Path farShootToParl() {
+            return Paths.line(
+                    Red2TipPoints.farShoot,
+                    GeneralPoints.parkFar
+            ).linear(Red2TipPoints.farShoot, GeneralPoints.parkFar);
+        }
+
 
         // back to the far shooting spot for the last volley
         public static Path shootThingy() {
