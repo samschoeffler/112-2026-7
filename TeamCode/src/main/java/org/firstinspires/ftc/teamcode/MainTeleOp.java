@@ -26,6 +26,7 @@ import org.firstinspires.ftc.teamcode.methods.ShootingCoordinator;
 import org.firstinspires.ftc.teamcode.methods.ShootingWaypoints;
 import org.firstinspires.ftc.teamcode.methods.Transfer;
 import org.firstinspires.ftc.teamcode.methods.TuningTurretControl;
+import org.firstinspires.ftc.teamcode.methods.TurretRezeroControl;
 import org.firstinspires.ftc.teamcode.methods.WaypointShootingControl;
 import org.firstinspires.ftc.teamcode.methods.WaypointDrive;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -45,6 +46,7 @@ public class MainTeleOp extends OpMode {
     private DcMotorEx turretMotor;
     private Servo led;
     private BulkReads bulk;
+    private final TurretRezeroControl turretRezero = new TurretRezeroControl();
     private final WaypointShootingControl waypoint = new WaypointShootingControl();
     // Validated stationary sweep turret-1795204240327; retain +/-1 degree correction.
     private final TuningTurretControl turretControl = new TuningTurretControl(0.140, 1.0, 1.0, 0.150);
@@ -105,6 +107,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addLine("then tap GP1 A during INIT and leave the turret forward through START.");
         telemetry.addLine("GP1 D-pad RIGHT: nearest waypoint, drive + hold. Sticks or GP1 B: take over.");
         telemetry.addLine("GP2 hold LT: intake | hold RT: transfer | tap Y when READY: paced volley | BACK: stop all");
+        telemetry.addLine("GP2 LEFT/RIGHT: jog turret; release, then A: forward zero. UP: ramp; X: hold balls.");
         telemetry.addLine("Panels > Graph: Turret error (deg), tolerance +/-1, and Turret aim active");
         telemetry.update();
     }
@@ -123,6 +126,7 @@ public class MainTeleOp extends OpMode {
         lastOptions = gamepad1.options;
         volley.primeManualInputs(gamepad1.left_trigger > .1, gamepad1.right_trigger > .2);
         turretControl.reset();
+        turretRezero.prime(gamepad2.a);
         nextGraphTime = 0;
     }
 
@@ -133,7 +137,26 @@ public class MainTeleOp extends OpMode {
         boolean volleyButton = gamepad2.y;
         boolean ramp = gamepad1.a && !lastRamp, hold = gamepad1.x && !lastHold;
         lastSelect = gamepad1.dpad_right;
-        lastRamp = gamepad1.a; lastHold = gamepad1.x;
+        lastRamp = gamepad1.a; lastHold = gamepad2.x;
+        int turretTicks = turretMotor.getCurrentPosition();
+        double turretSpeed = turretMotor.getVelocity() / CoordinateTurretControl.TICKS_PER_DEGREE;
+        boolean turretValid = Double.isFinite(turretSpeed)
+                && turretMotor.getMode() == DcMotor.RunMode.RUN_WITHOUT_ENCODER;
+        turretRezero.update(gamepad2.dpad_left, gamepad2.dpad_right, gamepad2.a, turretSpeed, turretValid);
+        boolean manualTurret = turretRezero.manualRequested();
+        if (manualTurret) {
+            if (waypoint.active()) releaseWaypoint("Manual turret alignment");
+            turretControl.reset();
+            volley.stop();
+            if (turretRezero.zeroAccepted()) {
+                zeroTicks = turretTicks;
+                OpModeStorage.turretForwardZeroTicks = zeroTicks;
+                OpModeStorage.turretForwardZeroConfirmed = true;
+                actionStatus = "Turret forward zero saved; select a waypoint to resume aiming";
+            } else if (turretRezero.zeroPressed()) {
+                actionStatus = "Zero ignored: release turret D-pad, wait for turret to stop, then tap A";
+            } else actionStatus = "Manual turret: align ROBOT-FORWARD, release D-pad, then tap GP2 A";
+        }
         boolean takeover = WaypointShootingControl.driverTakeover(gamepad1.left_stick_y,
                 gamepad1.left_stick_x, gamepad1.right_stick_x);
         boolean cancelNavigation = gamepad1.b || gamepad1.back;
@@ -144,7 +167,7 @@ public class MainTeleOp extends OpMode {
         if (!waypoint.active()) manualDrive();
         follower.update(); // Fresh Pinpoint-backed field pose before choosing a waypoint.
         Pose pose = follower.pose();
-        if (select && !takeover && !cancelNavigation) {
+        if (select && !takeover && !cancelNavigation && !manualTurret) {
             if (!referenceConfirmed) actionStatus = "NOT SELECTED: confirm RED field pose and turret forward zero during INIT";
             else if (waypoint.select(now, pose.x(), pose.y(), Math.toDegrees(pose.heading()))) {
                 volley.cancelFeed("Cancelled: new waypoint selected");
@@ -153,11 +176,8 @@ public class MainTeleOp extends OpMode {
             } else actionStatus = "NOT SELECTED: invalid Pinpoint pose";
         } else if (select && takeover) actionStatus = "Release drive sticks, then tap D-pad RIGHT again";
 
-        double turretAngle = (turretMotor.getCurrentPosition() - (double) zeroTicks)
+        double turretAngle = (turretTicks - (double) zeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
-        double turretSpeed = turretMotor.getVelocity() / CoordinateTurretControl.TICKS_PER_DEGREE;
-        boolean turretValid = Double.isFinite(turretSpeed)
-                && turretMotor.getMode() == DcMotor.RunMode.RUN_WITHOUT_ENCODER;
         boolean wasNavigating = waypoint.active();
         waypoint.update(now, pose.x(), pose.y(), Math.toDegrees(pose.heading()), turretAngle,
                 !follower.following());
@@ -168,13 +188,14 @@ public class MainTeleOp extends OpMode {
         ShootingWaypoints.Point point = waypoint.selected();
         // Fixed recorded relative angle only. No bearing calculation or robot-yaw compensation.
         double turretError = point == null ? Double.NaN : point.turretDeg - turretAngle;
-        boolean turretAimActive = waypoint.active() && referenceConfirmed && turretValid;
+        boolean turretAimActive = waypoint.active() && referenceConfirmed && turretValid && !manualTurret;
         double encoderPower = turretControl.calculate(now, turretError, turretSpeed, turretAimActive);
+        if (manualTurret) encoderPower = turretRezero.jogDirection() * TurretRezeroControl.JOG_POWER;
         turretMotor.setPower(CoordinateTurretControl.motorPower(turretAngle, encoderPower, -1));
         sendPanelsData(now, point, turretAngle, turretError, turretSpeed, turretAimActive);
         if (ramp) intake.toggleRamp();
         if (hold) intake.holdBalls();
-        boolean ready = waypoint.ready() && referenceConfirmed && turretValid;
+        boolean ready = waypoint.ready() && referenceConfirmed && turretValid && !manualTurret;
         if (volley.active() && !ready) volley.cancelFeed("Cancelled: waypoint control unavailable");
         boolean fireCommand = waypoint.volleyTap(volleyButton, volley.active(), ready);
         if (waypoint.volleyTapRejected()) actionStatus = "Y ignored: wait for waypoint READY, release Y and tap again";
@@ -269,7 +290,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addLine("RED SCORING only: twelve recorded solutions, no vision or coordinate aiming");
         telemetry.addLine("GP1 RIGHT: nearest waypoint + hold | sticks or B: manual | OPTIONS: driver reference");
         telemetry.addLine("GP2 hold LT: intake only | hold RT: transfer only | tap Y: paced volley / tap again: stop feed");
-        telemetry.addLine("GP2 BACK: cancel all | B/RB: reverse | A: ramp | X: hold balls");
+        telemetry.addLine("GP2 LEFT/RIGHT: jog turret | A: forward zero | UP: ramp | X: hold balls");
         telemetry.update();
     }
 

@@ -47,7 +47,10 @@ target-based heading correction no longer run in MainTeleOp. A drive stick over
 0.08 or G1 B cancels waypoint control and feeding. G2 Y tap when READY starts
 the automatic PACED-1440 volley; an early tap is ignored, never queued. G2 LT
 holds intake only, RT holds transfer only, BACK cancels all, B/RB reverses, and
-A/X retain ramp controls. Y no longer toggles the flywheel. Arrival
+D-pad UP/X control the ramp. D-pad LEFT/RIGHT jog the turret; release them,
+let it stop, then tap A to mark the physical robot-forward position as zero.
+Manual turret alignment cancels navigation and stops shooting. It preserves
+field pose and updates the software encoder-zero handoff. Y no longer toggles the flywheel. Arrival
 alone cannot fire. Autonomous feeding retains its existing continuous behavior.
 Ramp control is independent: waypoint selection and shooting do not change or
 require a ramp position. Automatic volley completion or its

@@ -50,6 +50,31 @@ public final class WaypointShootingRegression {
     }
 
     public static void main(String[] args) {
+        TurretRezeroControl zero = new TurretRezeroControl();
+        zero.prime(true);
+        zero.update(false, false, true, 0, true);
+        check(!zero.manualRequested() && !zero.zeroAccepted(), "A held through START cannot re-zero");
+        zero.update(true, false, false, 0, true);
+        check(zero.manualRequested() && zero.jogDirection() == 1, "Left manually aligns turret");
+        zero.update(false, true, false, 0, true);
+        check(zero.jogDirection() == -1, "Right manually aligns in opposite direction");
+        zero.update(true, true, true, 0, true);
+        check(zero.jogDirection() == 0 && !zero.zeroAccepted(), "Both directions stop; A cannot zero during jog");
+        zero.update(false, false, false, 0, true);
+        check(!zero.manualRequested() && zero.jogDirection() == 0, "Release stops jogging");
+        zero.update(false, false, true, 3, true);
+        check(!zero.zeroAccepted(), "Moving turret cannot establish zero");
+        zero.update(false, false, true, 0, true);
+        check(!zero.zeroAccepted(), "Held A never queues a later capture");
+        zero.update(false, false, false, 0, true);
+        zero.update(false, false, true, 0, true);
+        check(zero.zeroAccepted() && zero.manualRequested(), "Fresh A tap captures stopped forward reference");
+        zero.update(false, false, false, 0, true);
+        zero.update(false, false, true, 0, false);
+        check(!zero.zeroAccepted(), "Invalid motor mode cannot capture zero");
+        zero.update(true, false, false, Double.NaN, false);
+        check(zero.jogDirection() == 0, "Invalid motor feedback disables jog power");
+
         int[] speeds = {1407, 1467, 1444, 1441, 1475, 1610};
         double[] headings = {90.19369300896139, 87.13372727966066, 90.23693493659674,
                 91.43148038091861, 94.62961400693953, 98.5288802116406};

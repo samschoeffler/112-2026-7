@@ -75,7 +75,9 @@ only the driver's field-centric reference, not the field coordinate system.
 | GP2 Y tap | When READY, spin up and automatically launch PACED-1440; tap again during a volley to stop feeding |
 | GP2 BACK | Cancel waypoint movement/hold and stop flywheel, intake and transfer |
 | GP2 B / right bumper | Cancel volley and reverse all three shooting motors; release restores wheel state but never resumes volley |
-| GP2 A | Toggle ramp; ramp position does not block the Y volley |
+| GP2 D-pad LEFT / RIGHT | Manually jog turret left/right; cancels waypoint control and stops shooting |
+| GP2 A tap | Capture current turret position as robot-forward zero after releasing D-pad and stopping |
+| GP2 D-pad UP tap | Toggle ramp independently |
 | GP2 X | Hold-balls ramp state |
 
 Center sticks before tapping D-pad RIGHT. Stick takeover has priority over a
@@ -83,9 +85,21 @@ simultaneous selection. D-pad RIGHT and Y held through START require release
 and another press. A Y press before READY is consumed, **never queued**; release
 and tap again after READY. Arrival alone cannot launch a volley.
 
-Changing turret angle or flywheel speed with D-pad controls is not supported in
-MainTeleOp: the twelve recorded solutions are authoritative. Continue using
-`Shooting | Field Calibration` for manual adjustment and additional measurements.
+To repair the turret-forward reference during MainTeleOp, hold GP2 D-pad LEFT
+or RIGHT to physically align the turret with the robot's forward direction.
+Release the D-pad, let the turret stop, then tap GP2 A. Jogging or pressing A
+cancels waypoint control and stops the shooting mechanisms. The current encoder
+count becomes the software zero without resetting the encoder or field pose;
+the new zero is stored for handoff. A held through START does not capture zero.
+A pressed while jogging, moving at 2 degrees/s or more, or with invalid motor
+feedback/mode is ignored; release A and tap again after correcting it. Both
+D-pad directions together stop jog power. Jog power is 0.25 with the existing
+motor sign and software travel limits. Select a waypoint again to resume aiming.
+Re-zeroing does not establish a missing field-pose reference.
+
+The recorded solutions remain authoritative; jogging and re-zeroing do not edit
+the waypoint bank. Continue using `Shooting | Field Calibration` to collect new
+solutions or change calibration flywheel speed.
 
 ## Arrival and hold
 
@@ -128,7 +142,7 @@ drivetrain, turret and all shooting mechanisms.
 Run `python3 tests/waypoints/run.py`, `python3 tests/shooting_calibration/run.py`
 and `python3 tests/shooting/run.py`, then compile Android. Tests cover exact bank
 values, nearest selection, latched targets, Pedro completion without extra settle
-gates, held Y through arrival/START, independent manual triggers, takeover,
+gates, held Y through arrival/START, independent manual triggers, turret jog/zero button edges and validation, takeover,
 drift-tolerant volleys, timeout, recorded velocity,
 real Pedro path endpoints/heading, turn-only moves and persistent hold.
 
