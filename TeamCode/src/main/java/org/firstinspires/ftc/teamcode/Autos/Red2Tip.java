@@ -83,7 +83,6 @@ public class Red2Tip extends OpMode {
                 autoCommand.shooterTogg,
                 follow(follower, AutoPaths.Red2TipPaths.farShootToFlowerWait()),
                 autoCommand.flowerCollectFarShoot(follower),
-                autoCommand.rampTogg,
                 follow(
                         follower, AutoPaths.Red2TipPaths.shootThingy()
                 ),

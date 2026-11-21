@@ -42,7 +42,7 @@ public final class AutoPaths {
 
         // far (top) side
         public static final Pose startFar =
-                poseFactory.of(59, 135, 270);
+                poseFactory.of(61.43, 133.35, 270);
 
         public static final Pose shootFar =
                 poseFactory.of(57, 130, 270);
@@ -54,16 +54,16 @@ public final class AutoPaths {
                 poseFactory.of(47, 117, 80);
 
         public static final Pose flowerFar =
-                poseFactory.of(47, 128.5, 90);
+                poseFactory.of(47, 128.25, 90);
 
         public static final Pose jiggle =
-                poseFactory.of(47, 128.3, 90);
+                poseFactory.of(47, 128.0, 90);
 
         public static final Pose midBack =
                 poseFactory.of(47, 125, 90);
 
         public static final Pose parkFar =
-                poseFactory.of(12, 130, 90);
+                poseFactory.of(12, 120, 90);
     }
 
     // GENERAL PATHS (shared by more than one auto)

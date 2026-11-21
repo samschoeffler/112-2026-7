@@ -87,7 +87,7 @@ public class Red1TipFar extends OpMode {
                 autoCommand.toggleAuto,
                 follow(follower, AutoPaths.Opp.shootToFlowerWait()),
                 autoCommand.rampTogg,
-                autoCommand.flowerCollectFarShoot(follower),
+                autoCommand.flowerCollectFarShootFS(follower),
                 follow(
                         follower, AutoPaths.Opp.flowerWaitToCollect()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
