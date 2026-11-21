@@ -50,31 +50,15 @@ public final class WaypointShootingRegression {
     }
 
     public static void main(String[] args) {
-        TurretRezeroControl zero = new TurretRezeroControl();
-        zero.prime(true);
-        zero.update(false, false, true, 0, true);
-        check(!zero.manualRequested() && !zero.zeroAccepted(), "A held through START cannot re-zero");
-        zero.update(true, false, false, 0, true);
-        check(zero.manualRequested() && zero.jogDirection() == 1, "Left manually aligns turret");
-        zero.update(false, true, false, 0, true);
-        check(zero.jogDirection() == -1, "Right manually aligns in opposite direction");
-        zero.update(true, true, true, 0, true);
-        check(zero.jogDirection() == 0 && !zero.zeroAccepted(), "Both directions stop; A cannot zero during jog");
-        zero.update(false, false, false, 0, true);
-        check(!zero.manualRequested() && zero.jogDirection() == 0, "Release stops jogging");
-        zero.update(false, false, true, 3, true);
-        check(!zero.zeroAccepted(), "Moving turret cannot establish zero");
-        zero.update(false, false, true, 0, true);
-        check(!zero.zeroAccepted(), "Held A never queues a later capture");
-        zero.update(false, false, false, 0, true);
-        zero.update(false, false, true, 0, true);
-        check(zero.zeroAccepted() && zero.manualRequested(), "Fresh A tap captures stopped forward reference");
-        zero.update(false, false, false, 0, true);
-        zero.update(false, false, true, 0, false);
-        check(!zero.zeroAccepted(), "Invalid motor mode cannot capture zero");
-        zero.update(true, false, false, Double.NaN, false);
-        check(zero.jogDirection() == 0, "Invalid motor feedback disables jog power");
-
+        check(ManualTurretJog.requested(true, false) && ManualTurretJog.requested(false, true),
+                "Either D-pad direction requests manual takeover");
+        near(ManualTurretJog.encoderPower(true, false, true), .25);
+        near(ManualTurretJog.encoderPower(false, true, true), -.25);
+        check(ManualTurretJog.requested(true, true), "Both buttons still cancel automatic aiming");
+        near(ManualTurretJog.encoderPower(true, true, true), 0);
+        check(!ManualTurretJog.requested(false, false), "Release ends manual input");
+        near(ManualTurretJog.encoderPower(false, false, true), 0);
+        near(ManualTurretJog.encoderPower(true, false, false), 0);
         int[] speeds = {1407, 1467, 1444, 1441, 1475, 1610};
         double[] headings = {90.19369300896139, 87.13372727966066, 90.23693493659674,
                 91.43148038091861, 94.62961400693953, 98.5288802116406};
@@ -169,10 +153,28 @@ public final class WaypointShootingRegression {
         check(r.i.power > 0 && r.t.power > 0, "Ready flywheel feeds paced volley");
         r.tick(false, false, 1475);
         check(r.volley.active() && r.volley.wheelEnabled(), "Pose drift no longer interrupts an active volley");
-        r.waypoint.cancel("Driver takeover"); r.volley.cancelFeed("Driver takeover");
-        check(!r.volley.active() && r.volley.wheelEnabled(), "Driver takeover leaves wheel enabled"); r.feedStopped();
-        r.tick(true, false, 1475); check(!r.volley.active(), "Held Y cannot restart after takeover");
+        double wheelTarget = r.launcher.getTargetVelocity();
+        r.waypoint.cancel("Manual turret control"); r.volley.cancelFeed("Manual turret control");
+        for (int n = 0; n < 10; n++) {
+            r.volley.cancelFeed("Manual turret control");
+            r.volley.update(true, true, false, false, false, r.point.velocityTicksPerSecond);
+            check(!r.waypoint.active() && !r.volley.active() && r.volley.wheelEnabled(),
+                    "Turret takeover cancels navigation/volley while preserving the running wheel");
+            near(r.launcher.getTargetVelocity(), wheelTarget);
+            r.feedStopped();
+        }
+        r.volley.update(true, true, false, false, false, r.point.velocityTicksPerSecond);
+        r.feedStopped();
+        check(!r.volley.manualFeeding(), "Triggers held through turret jogging cannot restart feeding");
+        r.tick(true, false, 1475);
+        check(!r.volley.active() && !r.waypoint.active(), "Held Y never resumes cancelled waypoint or volley");
+        r.volley.update(false, false, false, false, false, r.point.velocityTicksPerSecond);
+        r.volley.update(true, true, false, false, false, r.point.velocityTicksPerSecond);
+        check(r.volley.manualFeeding(), "Release and re-press restores manual feed controls");
         r.volley.stop();
+        r.volley.cancelFeed("Manual turret control");
+        r.volley.update(false, false, false, false, false, r.point.velocityTicksPerSecond);
+        check(!r.volley.wheelEnabled() && r.f.power == 0, "Jogging never starts a previously stopped wheel");
         check(r.f.power == 0 && r.i.power == 0 && r.t.power == 0, "STOP disables all mechanisms");
         WaypointShootingControl heldAtStart = new WaypointShootingControl();
         heldAtStart.primeVolleyButton(true); heldAtStart.select(0, p.x, p.y, p.headingDeg);

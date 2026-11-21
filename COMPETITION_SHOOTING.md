@@ -40,17 +40,20 @@ remain independent and retain their places in the routine.
 
 ## Controls and autonomous integration
 
-MainTeleOp: G1 D-pad RIGHT selects the nearest recorded X/Y, drives there with
+MainTeleOp: G1 left bumper selects the nearest recorded X/Y, drives there with
 Pedro and holds the recorded heading. Turret angle and flywheel target use that
 entry exactly; Limelight, coordinate aiming, distance-speed calculation and manual
 target-based heading correction no longer run in MainTeleOp. A drive stick over
 0.08 or G1 B cancels waypoint control and feeding. G2 Y tap when READY starts
-the automatic PACED-1440 volley; an early tap is ignored, never queued. G2 LT
-holds intake only, RT holds transfer only, BACK cancels all, B/RB reverses, and
-D-pad UP/X control the ramp. D-pad LEFT/RIGHT jog the turret; release them,
-let it stop, then tap A to mark the physical robot-forward position as zero.
-Manual turret alignment cancels navigation and stops shooting. It preserves
-field pose and updates the software encoder-zero handoff. Y no longer toggles the flywheel. Arrival
+the automatic PACED-1440 volley; an early tap is ignored, never queued. G1 LT
+holds intake only, RT holds transfer only, BACK cancels all, and B/RB reverses.
+G1 A/X control the ramp; G2 UP/DOWN retain manual ramp trim. G1 D-pad LEFT/RIGHT
+jogs the turret, cancelling waypoint travel/hold and the active volley while
+preserving the flywheel's on/off state and selected speed. Held feed triggers
+cannot restart feeding until released and pressed again. Releasing the D-pad
+stops jog power; a fresh left-bumper selection is required for automatic aiming.
+The GP2 jog/re-zero controls are removed from active TeleOp; encoder zero and
+field pose remain unchanged by jogging. Y no longer toggles the flywheel. Arrival
 alone cannot fire. Autonomous feeding retains its existing continuous behavior.
 Ramp control is independent: waypoint selection and shooting do not change or
 require a ramp position. Automatic volley completion or its

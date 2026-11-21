@@ -26,7 +26,7 @@ import org.firstinspires.ftc.teamcode.methods.ShootingCoordinator;
 import org.firstinspires.ftc.teamcode.methods.ShootingWaypoints;
 import org.firstinspires.ftc.teamcode.methods.Transfer;
 import org.firstinspires.ftc.teamcode.methods.TuningTurretControl;
-import org.firstinspires.ftc.teamcode.methods.TurretRezeroControl;
+import org.firstinspires.ftc.teamcode.methods.ManualTurretJog;
 import org.firstinspires.ftc.teamcode.methods.WaypointShootingControl;
 import org.firstinspires.ftc.teamcode.methods.WaypointDrive;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -46,7 +46,6 @@ public class MainTeleOp extends OpMode {
     private DcMotorEx turretMotor;
     private Servo led;
     private BulkReads bulk;
-    private final TurretRezeroControl turretRezero = new TurretRezeroControl();
     private final WaypointShootingControl waypoint = new WaypointShootingControl();
     // Validated stationary sweep turret-1795204240327; retain +/-1 degree correction.
     private final TuningTurretControl turretControl = new TuningTurretControl(0.140, 1.0, 1.0, 0.150);
@@ -55,7 +54,7 @@ public class MainTeleOp extends OpMode {
     private boolean isRumbling;
     private int zeroTicks;
     private double driverOffsetRad = Math.PI;
-    private String actionStatus = "Select a waypoint with GP1 D-pad RIGHT";
+    private String actionStatus = "Select a waypoint with GP1 left bumper";
 
     @Override public void init() {
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
@@ -104,10 +103,10 @@ public class MainTeleOp extends OpMode {
                 : referenceConfirmed ? "RED Auto pose and forward-zero handoff"
                 : "NOT CONFIRMED: waypoint movement/shooting disabled");
         telemetry.addLine("Standalone test: physically place at (56,8,90deg), turret ROBOT-FORWARD;");
-        telemetry.addLine("then tap GP1 A during INIT and leave the turret forward through START.");
-        telemetry.addLine("GP1 D-pad RIGHT: nearest waypoint, drive + hold. Sticks or GP1 B: take over.");
-        telemetry.addLine("GP2 hold LT: intake | hold RT: transfer | tap Y when READY: paced volley | BACK: stop all");
-        telemetry.addLine("GP2 LEFT/RIGHT: jog turret; release, then A: forward zero. UP: ramp; X: hold balls.");
+        telemetry.addLine("then tap GP2 A during INIT and leave the turret forward through START.");
+        telemetry.addLine("GP1 left bumper: nearest waypoint, drive + hold. Sticks or GP1 B: take over.");
+        telemetry.addLine("GP1 LT: intake | RT: transfer | BACK: stop all | GP2 Y: paced volley");
+        telemetry.addLine("GP1 D-pad LEFT/RIGHT: manual turret; cancels waypoint/volley, keeps flywheel state.");
         telemetry.addLine("Panels > Graph: Turret error (deg), tolerance +/-1, and Turret aim active");
         telemetry.update();
     }
@@ -121,41 +120,32 @@ public class MainTeleOp extends OpMode {
         }
         follower.manual(0, 0, 0);
         follower.update();
-        lastSelect = gamepad1.dpad_right; waypoint.primeVolleyButton(gamepad2.y);
+        lastSelect = gamepad1.left_bumper; waypoint.primeVolleyButton(gamepad2.y);
         lastRamp = gamepad1.a; lastHold = gamepad1.x;
         lastOptions = gamepad1.options;
         volley.primeManualInputs(gamepad1.left_trigger > .1, gamepad1.right_trigger > .2);
         turretControl.reset();
-        turretRezero.prime(gamepad2.a);
         nextGraphTime = 0;
     }
 
     @Override public void loop() {
         bulk.clear();
         double now = System.nanoTime() / 1e9;
-        boolean select = gamepad1.dpad_right && !lastSelect;
+        boolean select = gamepad1.left_bumper && !lastSelect;
         boolean volleyButton = gamepad2.y;
         boolean ramp = gamepad1.a && !lastRamp, hold = gamepad1.x && !lastHold;
-        lastSelect = gamepad1.dpad_right;
-        lastRamp = gamepad1.a; lastHold = gamepad2.x;
+        lastSelect = gamepad1.left_bumper;
+        lastRamp = gamepad1.a; lastHold = gamepad1.x;
         int turretTicks = turretMotor.getCurrentPosition();
         double turretSpeed = turretMotor.getVelocity() / CoordinateTurretControl.TICKS_PER_DEGREE;
         boolean turretValid = Double.isFinite(turretSpeed)
                 && turretMotor.getMode() == DcMotor.RunMode.RUN_WITHOUT_ENCODER;
-        turretRezero.update(gamepad2.dpad_left, gamepad2.dpad_right, gamepad2.a, turretSpeed, turretValid);
-        boolean manualTurret = turretRezero.manualRequested();
+        boolean manualTurret = ManualTurretJog.requested(gamepad1.dpad_left, gamepad1.dpad_right);
         if (manualTurret) {
-            if (waypoint.active()) releaseWaypoint("Manual turret alignment");
+            if (waypoint.active()) releaseWaypoint("Manual turret control");
+            volley.cancelFeed("Manual turret control"); // Preserve wheel state; block held triggers.
             turretControl.reset();
-            volley.stop();
-            if (turretRezero.zeroAccepted()) {
-                zeroTicks = turretTicks;
-                OpModeStorage.turretForwardZeroTicks = zeroTicks;
-                OpModeStorage.turretForwardZeroConfirmed = true;
-                actionStatus = "Turret forward zero saved; select a waypoint to resume aiming";
-            } else if (turretRezero.zeroPressed()) {
-                actionStatus = "Zero ignored: release turret D-pad, wait for turret to stop, then tap A";
-            } else actionStatus = "Manual turret: align ROBOT-FORWARD, release D-pad, then tap GP2 A";
+            actionStatus = "Manual turret; release D-pad to stop, left bumper to resume waypoint aiming";
         }
         boolean takeover = WaypointShootingControl.driverTakeover(gamepad1.left_stick_y,
                 gamepad1.left_stick_x, gamepad1.right_stick_x);
@@ -174,7 +164,7 @@ public class MainTeleOp extends OpMode {
                 turretControl.reset();
                 beginWaypoint(pose, waypoint.selected());
             } else actionStatus = "NOT SELECTED: invalid Pinpoint pose";
-        } else if (select && takeover) actionStatus = "Release drive sticks, then tap D-pad RIGHT again";
+        } else if (select && takeover) actionStatus = "Release drive sticks, then tap the left bumper again";
 
         intake.rampFix(gamepad2.dpad_up, gamepad2.dpad_down);
 
@@ -192,7 +182,8 @@ public class MainTeleOp extends OpMode {
         double turretError = point == null ? Double.NaN : point.turretDeg - turretAngle;
         boolean turretAimActive = waypoint.active() && referenceConfirmed && turretValid && !manualTurret;
         double encoderPower = turretControl.calculate(now, turretError, turretSpeed, turretAimActive);
-        if (manualTurret) encoderPower = turretRezero.jogDirection() * TurretRezeroControl.JOG_POWER;
+        if (manualTurret) encoderPower = ManualTurretJog.encoderPower(
+                gamepad1.dpad_left, gamepad1.dpad_right, turretValid);
         turretMotor.setPower(CoordinateTurretControl.motorPower(turretAngle, encoderPower, -1));
         sendPanelsData(now, point, turretAngle, turretError, turretSpeed, turretAimActive);
         if (ramp) intake.toggleRamp();
@@ -205,7 +196,7 @@ public class MainTeleOp extends OpMode {
         launcher.SHOOTING_VELOCITY = targetVelocity;
         boolean reverse = gamepad1.b || gamepad1.right_bumper;
         volley.update(gamepad1.left_trigger > .1, gamepad1.right_trigger > .2, fireCommand,
-                reverse, gamepad1.back, targetVelocity);
+                reverse && !manualTurret, gamepad1.back, targetVelocity);
         updateIndicators(ready);
         showTelemetry(pose, point, turretAngle, turretError, ready, reverse);
     }
@@ -290,9 +281,9 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Last volley", volley.outcome());
         telemetry.addData("Ramp / reverse", "%s / %s", intake.getRampState(), reverse);
         telemetry.addLine("RED SCORING only: twelve recorded solutions, no vision or coordinate aiming");
-        telemetry.addLine("GP1 RIGHT: nearest waypoint + hold | sticks or B: manual | OPTIONS: driver reference");
-        telemetry.addLine("GP2 hold LT: intake only | hold RT: transfer only | tap Y: paced volley / tap again: stop feed");
-        telemetry.addLine("GP2 LEFT/RIGHT: jog turret | A: forward zero | UP: ramp | X: hold balls");
+        telemetry.addLine("GP1 LB: nearest waypoint + hold | D-pad LEFT/RIGHT: turret | sticks or B: manual");
+        telemetry.addLine("GP1 LT: intake | RT: transfer | BACK: stop all | B/RB: reverse | GP2 Y: volley");
+        telemetry.addLine("GP1 A: ramp | X: hold balls | GP2 UP/DOWN: ramp trim");
         telemetry.update();
     }
 

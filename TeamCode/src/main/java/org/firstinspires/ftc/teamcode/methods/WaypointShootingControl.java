@@ -11,7 +11,7 @@ public final class WaypointShootingControl {
     private double positionError = Double.NaN, headingError = Double.NaN, turretError = Double.NaN;
     private boolean ready;
     private boolean volleyButtonHeld, volleyTapRejected;
-    private String status = "Manual drive; tap GP1 D-pad RIGHT to choose a recorded waypoint";
+    private String status = "Manual drive; tap GP1 left bumper to choose a recorded waypoint";
 
     public boolean select(double now, double x, double y, double headingDeg) {
         if (!finite(now, x, y, headingDeg)) return false;

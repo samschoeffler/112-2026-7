@@ -63,7 +63,7 @@ public final class AutoPaths {
                 poseFactory.of(47, 125, 90);
 
         public static final Pose parkFar =
-                poseFactory.of(26, 130, 90);
+                poseFactory.of(12, 130, 90);
     }
 
     // GENERAL PATHS (shared by more than one auto)
@@ -247,7 +247,7 @@ public final class AutoPaths {
                 poseFactory.of(45, 113, 0);
 
         public static final Pose flowerFarControl =
-                poseFactory.of(100, 90, 0);
+                poseFactory.of(70, 100, 0);
 
         public static final Pose parkControl =
                 poseFactory.of(40, 115, 0);

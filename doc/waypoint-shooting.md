@@ -1,7 +1,7 @@
 # Recorded waypoint shooting in MainTeleOp
 
 MainTeleOp uses twelve approved RED_SCORING shooting solutions (tags 30-33). GP1
-D-pad RIGHT reads the current Pedro/Pinpoint pose, selects the nearest recorded
+left bumper reads the current Pedro/Pinpoint pose, selects the nearest recorded
 X/Y by Euclidean distance, and latches that exact entry. Pedro drives a direct
 line to its X/Y and recorded robot heading, then holds there. A new D-pad press
 selects again; passing another waypoint during travel does not switch solutions.
@@ -51,7 +51,7 @@ zero ticks from either test are not reused. No CSV file is needed on the robot a
 - After a RED autonomous run, retain the existing field pose and confirmed
   turret-forward encoder reference from `OpModeStorage`.
 - For a standalone test, physically place the robot at **(56, 8, 90 degrees)**
-  and point the turret robot-forward. Tap **GP1 A during INIT**, then keep that
+  and point the turret robot-forward. Tap **GP2 A during INIT**, then keep that
   physical setup through START. START captures the local turret zero without
   resetting the encoder. This explicitly establishes the known field reference.
 - With no confirmed RED reference, manual driving/intake/transfer still work, but
@@ -66,40 +66,42 @@ only the driver's field-centric reference, not the field coordinate system.
 
 | Control | Action |
 | --- | --- |
-| GP1 sticks | Original full-range Pedro field-centric driving; while navigating/holding, any drive axis over 0.08 cancels waypoint control immediately |
-| GP1 D-pad RIGHT tap | Select nearest recorded waypoint, drive to it, then hold |
-| GP1 B | Cancel waypoint movement/hold and feeding; return to manual drive |
+| GP1 sticks | Full-range Pedro field-centric driving; any drive axis over 0.08 cancels waypoint control immediately |
+| GP1 left bumper tap | Select nearest recorded waypoint, drive to it, then hold |
+| GP1 D-pad LEFT / RIGHT hold | Rotate turret manually; cancel waypoint travel/hold and feeding while retaining the flywheel's on/off state and selected target |
+| GP1 B | Cancel waypoint navigation and reverse shooting motors |
 | GP1 OPTIONS | Reset field-centric driver reference |
-| GP2 hold LT >0.1 | Intake only; release stops intake |
-| GP2 hold RT >0.2 | Transfer only at 1440 ticks/s; release stops transfer |
+| GP1 hold LT >0.1 | Intake only; release stops intake |
+| GP1 hold RT >0.2 | Transfer only at 1440 ticks/s; release stops transfer |
 | GP2 Y tap | When READY, spin up and automatically launch PACED-1440; tap again during a volley to stop feeding |
-| GP2 BACK | Cancel waypoint movement/hold and stop flywheel, intake and transfer |
-| GP2 B / right bumper | Cancel volley and reverse all three shooting motors; release restores wheel state but never resumes volley |
-| GP2 D-pad LEFT / RIGHT | Manually jog turret left/right; cancels waypoint control and stops shooting |
-| GP2 A tap | Capture current turret position as robot-forward zero after releasing D-pad and stopping |
-| GP2 D-pad UP tap | Toggle ramp independently |
-| GP2 X | Hold-balls ramp state |
+| GP1 BACK | Cancel waypoint movement/hold and stop flywheel, intake and transfer |
+| GP1 right bumper | Cancel volley and reverse shooting motors; release restores wheel state but never resumes volley |
+| GP1 A tap | Toggle ramp independently |
+| GP1 X tap | Hold-balls ramp state |
+| GP2 D-pad UP / DOWN | Existing manual ramp trim |
 
-Center sticks before tapping D-pad RIGHT. Stick takeover has priority over a
-simultaneous selection. D-pad RIGHT and Y held through START require release
-and another press. A Y press before READY is consumed, **never queued**; release
-and tap again after READY. Arrival alone cannot launch a volley.
+Center sticks before tapping the left bumper. Stick takeover and manual turret
+input have priority over simultaneous waypoint selection. Left bumper and Y
+held through START require release and another press. A Y press before READY
+is consumed, **never queued**; release and tap again after READY. Arrival alone
+cannot launch a volley.
 
-To repair the turret-forward reference during MainTeleOp, hold GP2 D-pad LEFT
-or RIGHT to physically align the turret with the robot's forward direction.
-Release the D-pad, let the turret stop, then tap GP2 A. Jogging or pressing A
-cancels waypoint control and stops the shooting mechanisms. The current encoder
-count becomes the software zero without resetting the encoder or field pose;
-the new zero is stored for handoff. A held through START does not capture zero.
-A pressed while jogging, moving at 2 degrees/s or more, or with invalid motor
-feedback/mode is ignored; release A and tap again after correcting it. Both
-D-pad directions together stop jog power. Jog power is 0.25 with the existing
-motor sign and software travel limits. Select a waypoint again to resume aiming.
-Re-zeroing does not establish a missing field-pose reference.
+Manual turret control works throughout active TeleOp without requiring a selected
+waypoint or confirmed field reference. It cancels navigation and the active
+volley, stops intake/transfer, and preserves whether the flywheel was enabled
+and its selected speed. It also suppresses shooter reverse while jogging;
+BACK and Driver Station STOP still stop the shooting motors. Triggers held
+through jogging must be released and pressed again to run feed motors.
+Both D-pad directions together cancel automatic control but command zero jog
+power. Releasing the D-pad stops jog power; automatic turret aiming stays off
+until a fresh left-bumper waypoint selection. Jog power is 0.25 with the existing
+motor sign, motor-validity guards and software travel limits.
 
-The recorded solutions remain authoritative; jogging and re-zeroing do not edit
-the waypoint bank. Continue using `Shooting | Field Calibration` to collect new
-solutions or change calibration flywheel speed.
+GP2 LEFT/RIGHT and A no longer jog or re-zero the turret during active TeleOp.
+Manual jogging changes neither encoder zero nor field pose, and does not edit
+the waypoint bank. The existing GP2 A standalone-reference action during INIT
+remains available; it is separate from active TeleOp manual turret control.
+Use `Shooting | Field Calibration` to collect new shooting solutions.
 
 ## Arrival and hold
 
@@ -126,8 +128,8 @@ bypass its readiness/recovery pauses.
 Moving a GP1 stick releases the path/hold in the same loop and stops active
 intake/transfer feeding, leaves the flywheel's prior on/off state, and stops turret
 correction. Releasing the sticks resumes ordinary Pedro drive-or-hold behavior
-at the new location; it does not return to the shooting waypoint. Another D-pad
-RIGHT tap is required to reselect. Manual triggers held through START, takeover,
+at the new location; it does not return to the shooting waypoint. Another left-bumper
+tap is required to reselect. Manual triggers held through START, takeover,
 cancellation or a volley must be released before they can run their motors again.
 
 Robot/turret drift during a volley does not cancel feeding. The chassis and
@@ -142,7 +144,7 @@ drivetrain, turret and all shooting mechanisms.
 Run `python3 tests/waypoints/run.py`, `python3 tests/shooting_calibration/run.py`
 and `python3 tests/shooting/run.py`, then compile Android. Tests cover exact bank
 values, nearest selection, latched targets, Pedro completion without extra settle
-gates, held Y through arrival/START, independent manual triggers, turret jog/zero button edges and validation, takeover,
+gates, held Y through arrival/START, independent manual triggers, manual turret direction/priority and flywheel-preserving feed cancellation, takeover,
 drift-tolerant volleys, timeout, recorded velocity,
 real Pedro path endpoints/heading, turn-only moves and persistent hold.
 
