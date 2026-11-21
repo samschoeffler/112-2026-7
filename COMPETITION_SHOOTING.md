@@ -43,13 +43,10 @@ remain independent and retain their places in the routine.
 MainTeleOp: G1 D-pad RIGHT selects the nearest recorded X/Y, drives there with
 Pedro and holds the recorded heading. Turret angle and flywheel target use that
 entry exactly; Limelight, coordinate aiming, distance-speed calculation and manual
-target-based heading correction no longer run in MainTeleOp. Once a waypoint is
-selected, sticks, G1 B and further D-pad RIGHT presses cannot cancel or replace
-it; travel and hold continue until Driver Station STOP or a navigation fault.
-There is no travel timeout. G2 Y tap when READY starts
+target-based heading correction no longer run in MainTeleOp. A drive stick over
+0.08 or G1 B cancels waypoint control and feeding. G2 Y tap when READY starts
 the automatic PACED-1440 volley; an early tap is ignored, never queued. G2 LT
-holds intake only, RT holds transfer only, BACK stops shooting while navigation
-continues, B/RB reverses, and
+holds intake only, RT holds transfer only, BACK cancels all, B/RB reverses, and
 A/X retain ramp controls. Y no longer toggles the flywheel. Arrival
 alone cannot fire. Autonomous feeding retains its existing continuous behavior.
 Ramp control is independent: waypoint selection and shooting do not change or
@@ -69,15 +66,12 @@ autonomous handoff coordinates are unchanged. Longer shooting windows retain
 their scheduled durations, which include any readiness/ramp delay.
 
 STOP stops all mechanisms and the drivetrain. Invalid waypoint pose measurements
-cancel navigation; valid travel has no timeout and transitions into hold when
-Pedro completes the path.
+cancel navigation; failed arrival times out after 12 seconds without firing.
 
 ## Robot verification before competition
 
 1. Build/install and test MainTeleOp's waypoint travel/hold without balls first.
-   Confirm sticks/GP1 B cannot release travel or hold, D-pad RIGHT cannot
-   retarget, BACK stops only shooting, and Driver Station STOP ends navigation.
-   Check early/held Y and independent RT/LT.
+   Confirm driver stick takeover, GP1 B, BACK, early/held Y, independent RT/LT and STOP.
 2. Check Red2Tip at all four shooting windows (IDs 1, 2, 10, 10), including
    physical heading alignment, fixed flywheel target during travel and STOP.
    Check the exact turret/heading/speed at all twelve RED waypoints, then four-ball

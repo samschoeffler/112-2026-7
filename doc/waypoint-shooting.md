@@ -3,10 +3,8 @@
 MainTeleOp uses twelve approved RED_SCORING shooting solutions (tags 30-33). GP1
 D-pad RIGHT reads the current Pedro/Pinpoint pose, selects the nearest recorded
 X/Y by Euclidean distance, and latches that exact entry. Pedro drives a direct
-line to its X/Y and recorded robot heading, then holds there until Driver Station
-STOP. Further D-pad presses and driver sticks do not replace or cancel the
-selected solution. Invalid pose/time or path-construction failures still stop
-navigation; there is no travel timeout.
+line to its X/Y and recorded robot heading, then holds there. A new D-pad press
+selects again; passing another waypoint during travel does not switch solutions.
 
 Turret angle and flywheel target come directly from the selected entry. There is
 no blending, nearest-neighbor speed averaging, target bearing calculation,
@@ -68,20 +66,20 @@ only the driver's field-centric reference, not the field coordinate system.
 
 | Control | Action |
 | --- | --- |
-| GP1 sticks | Full-range Pedro field-centric driving before waypoint selection; ignored during waypoint travel/hold |
-| GP1 D-pad RIGHT tap | Select nearest recorded waypoint once, drive to it, then hold; further taps are ignored while active |
-| GP1 B | No waypoint action |
+| GP1 sticks | Original full-range Pedro field-centric driving; while navigating/holding, any drive axis over 0.08 cancels waypoint control immediately |
+| GP1 D-pad RIGHT tap | Select nearest recorded waypoint, drive to it, then hold |
+| GP1 B | Cancel waypoint movement/hold and feeding; return to manual drive |
 | GP1 OPTIONS | Reset field-centric driver reference |
 | GP2 hold LT >0.1 | Intake only; release stops intake |
 | GP2 hold RT >0.2 | Transfer only at 1440 ticks/s; release stops transfer |
 | GP2 Y tap | When READY, spin up and automatically launch PACED-1440; tap again during a volley to stop feeding |
-| GP2 BACK | Stop flywheel, intake and transfer; waypoint travel/hold continues |
+| GP2 BACK | Cancel waypoint movement/hold and stop flywheel, intake and transfer |
 | GP2 B / right bumper | Cancel volley and reverse all three shooting motors; release restores wheel state but never resumes volley |
 | GP2 A | Toggle ramp; ramp position does not block the Y volley |
 | GP2 X | Hold-balls ramp state |
 
-Once selected, the waypoint stays locked through travel and hold until Driver
-Station STOP, except for navigation faults. D-pad RIGHT and Y held through START require release
+Center sticks before tapping D-pad RIGHT. Stick takeover has priority over a
+simultaneous selection. D-pad RIGHT and Y held through START require release
 and another press. A Y press before READY is consumed, **never queued**; release
 and tap again after READY. Arrival alone cannot launch a volley.
 
@@ -104,39 +102,39 @@ The volley controller still waits for flywheel speed, using the
 same P1440 readiness, ramp,
 dip detection, recovery and completion rules as Volley Consistency Test.
 Automatic completion and the six-second timeout turn the flywheel off, stopping
-all three shooting motors. A second Y tap cancels feeding while retaining the
-flywheel state; BACK stops all shooting mechanisms. Neither releases navigation. Y is no
+all three shooting motors. A second Y tap or driver takeover cancels feeding
+while retaining the flywheel state; BACK stops all shooting mechanisms. Y is no
 longer a flywheel toggle. Manual RT/LT
 never start or stop the flywheel. Both triggers together run both feed motors.
 The automatic volley owns both feed motors while active, so held triggers cannot
 bypass its readiness/recovery pauses.
 
-GP1 sticks and GP1 B do not release the selected path or hold. GP2 BACK,
-reverse, Y, and manual ramp controls affect their mechanisms independently and
-do not release navigation. Manual triggers held through START, a shooting
+Moving a GP1 stick releases the path/hold in the same loop and stops active
+intake/transfer feeding, leaves the flywheel's prior on/off state, and stops turret
+correction. Releasing the sticks resumes ordinary Pedro drive-or-hold behavior
+at the new location; it does not return to the shooting waypoint. Another D-pad
+RIGHT tap is required to reselect. Manual triggers held through START, takeover,
 cancellation or a volley must be released before they can run their motors again.
 
 Robot/turret drift during a volley does not cancel feeding. The chassis and
-turret continue correcting their selected hold. Invalid localization/reference
-still cancels feeding. Invalid pose/time and path-construction failures stop
-navigation and feeding. Travel has no timeout. Driver Station STOP ends the
-OpMode and stops the drivetrain, turret and all shooting mechanisms. Following
-STOP, a new OpMode run is needed for manual driving or another waypoint selection.
+turret continue correcting their selected hold. Driver takeover, operator cancel,
+invalid localization/reference still cancels
+feeding. A travel timeout
+of 12 seconds or invalid pose cancels navigation and feeding. STOP stops the
+drivetrain, turret and all shooting mechanisms.
 
 ## Verification and limits
 
 Run `python3 tests/waypoints/run.py`, `python3 tests/shooting_calibration/run.py`
 and `python3 tests/shooting/run.py`, then compile Android. Tests cover exact bank
 values, nearest selection, latched targets, Pedro completion without extra settle
-gates, held Y through arrival/START, independent manual triggers, locked
-selection during travel/hold, travel beyond 12 seconds, shooter-only BACK,
-drift-tolerant volleys, invalid pose/time faults, recorded velocity,
+gates, held Y through arrival/START, independent manual triggers, takeover,
+drift-tolerant volleys, timeout, recorded velocity,
 real Pedro path endpoints/heading, turn-only moves and persistent hold.
 
 For the first robot trial, use an empty shooter and a clear route. Establish
 the reference, select a nearby waypoint, verify motion/heading/turret direction,
-and verify sticks, GP1 B and further D-pad RIGHT presses leave travel/hold
-active. Confirm Driver Station STOP ends travel and hold. Verify an early/held
+and interrupt both travel and hold with each drive stick. Verify an early/held
 Y cannot fire. Verify RT alone runs only transfer and LT alone only intake.
 Then load four balls, confirm READY, and tap Y. Repeat at all
 twelve points before match use.

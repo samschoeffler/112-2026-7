@@ -103,8 +103,8 @@ public class MainTeleOp extends OpMode {
                 : "NOT CONFIRMED: waypoint movement/shooting disabled");
         telemetry.addLine("Standalone test: physically place at (56,8,90deg), turret ROBOT-FORWARD;");
         telemetry.addLine("then tap GP1 A during INIT and leave the turret forward through START.");
-        telemetry.addLine("GP1 D-pad RIGHT: lock nearest waypoint; drive + hold until Driver Station STOP.");
-        telemetry.addLine("GP2 hold LT: intake | hold RT: transfer | tap Y when READY: paced volley | BACK: stop shooter only");
+        telemetry.addLine("GP1 D-pad RIGHT: nearest waypoint, drive + hold. Sticks or GP1 B: take over.");
+        telemetry.addLine("GP2 hold LT: intake | hold RT: transfer | tap Y when READY: paced volley | BACK: stop all");
         telemetry.addLine("Panels > Graph: Turret error (deg), tolerance +/-1, and Turret aim active");
         telemetry.update();
     }
@@ -134,19 +134,24 @@ public class MainTeleOp extends OpMode {
         boolean ramp = gamepad2.a && !lastRamp, hold = gamepad2.x && !lastHold;
         lastSelect = gamepad1.dpad_right;
         lastRamp = gamepad2.a; lastHold = gamepad2.x;
+        boolean takeover = WaypointShootingControl.driverTakeover(gamepad1.left_stick_y,
+                gamepad1.left_stick_x, gamepad1.right_stick_x);
+        boolean cancelNavigation = gamepad1.b || gamepad2.back;
+        if (waypoint.active() && (takeover || cancelNavigation))
+            releaseWaypoint(takeover ? "Driver stick takeover" : "Cancelled by operator");
         if (gamepad1.options && !lastOptions) driverOffsetRad = follower.pose().heading();
         lastOptions = gamepad1.options;
         if (!waypoint.active()) manualDrive();
         follower.update(); // Fresh Pinpoint-backed field pose before choosing a waypoint.
         Pose pose = follower.pose();
-        if (select && !waypoint.active()) {
+        if (select && !takeover && !cancelNavigation) {
             if (!referenceConfirmed) actionStatus = "NOT SELECTED: confirm RED field pose and turret forward zero during INIT";
             else if (waypoint.select(now, pose.x(), pose.y(), Math.toDegrees(pose.heading()))) {
                 volley.cancelFeed("Cancelled: new waypoint selected");
                 turretControl.reset();
                 beginWaypoint(pose, waypoint.selected());
             } else actionStatus = "NOT SELECTED: invalid Pinpoint pose";
-        } else if (select) actionStatus = "Waypoint locked: Driver Station STOP ends navigation";
+        } else if (select && takeover) actionStatus = "Release drive sticks, then tap D-pad RIGHT again";
 
         double turretAngle = (turretMotor.getCurrentPosition() - (double) zeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
@@ -182,7 +187,7 @@ public class MainTeleOp extends OpMode {
         showTelemetry(pose, point, turretAngle, turretError, ready, reverse);
     }
 
-    /** Plot live error to the selected waypoint. */
+    /** Keep plotting live error to the last selected target even after driver takeover. */
     private void sendPanelsData(double now, ShootingWaypoints.Point point, double turretAngle,
                                 double turretError, double turretSpeed, boolean aimActive) {
         if (now < nextGraphTime) return;
@@ -262,9 +267,9 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Last volley", volley.outcome());
         telemetry.addData("Ramp / reverse", "%s / %s", intake.getRampState(), reverse);
         telemetry.addLine("RED SCORING only: twelve recorded solutions, no vision or coordinate aiming");
-        telemetry.addLine("GP1 RIGHT: lock nearest waypoint + hold | Driver Station STOP: end navigation");
+        telemetry.addLine("GP1 RIGHT: nearest waypoint + hold | sticks or B: manual | OPTIONS: driver reference");
         telemetry.addLine("GP2 hold LT: intake only | hold RT: transfer only | tap Y: paced volley / tap again: stop feed");
-        telemetry.addLine("GP2 BACK: stop shooter only | B/RB: reverse | A: ramp | X: hold balls");
+        telemetry.addLine("GP2 BACK: cancel all | B/RB: reverse | A: ramp | X: hold balls");
         telemetry.update();
     }
 
@@ -273,7 +278,6 @@ public class MainTeleOp extends OpMode {
     }
 
     @Override public void stop() {
-        waypoint.cancel("Driver Station STOP");
         if (volley != null) volley.stop();
         if (turretMotor != null) turretMotor.setPower(0);
         if (follower != null) {

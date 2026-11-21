@@ -55,7 +55,7 @@ public final class WaypointDriveRegression {
         check(f.holds == 1, "Hold controller is not reset each loop");
         WaypointDrive.release(f);
         check(f.manuals == 1 && !f.holding() && !f.following() && drive.stops == 1,
-                "Fault/STOP release cancels path/hold and stops drivetrain output immediately");
+                "Takeover cancels path/hold and stops stale drivetrain output immediately");
         WaypointDrive.begin(f, PoseFactory.degrees().of(point.x, point.y, 0), point);
         check(f.follows == 1 && f.holds == 2, "Same X/Y with different heading uses turn-only pose hold");
         near(Math.toDegrees(f.held.heading()), point.headingDeg);
@@ -75,9 +75,9 @@ public final class WaypointDriveRegression {
                 "Red2Tip shares the authoritative shooting solutions 1, 2 and 10");
         checkPose(AutoPaths.Red2TipPoints.startClose, ShootingWaypoints.ALL.get(0));
         checkPose(AutoPaths.Red2TipPaths.lilShoot().endPose(), ShootingWaypoints.ALL.get(1));
-        checkPose(AutoPaths.Red2TipPaths.cornerToFarShoot().endPose(), ShootingWaypoints.ALL.get(9));
+        checkPose(AutoPaths.Red2TipPaths.flowerWaitToFarShoot().endPose(), ShootingWaypoints.ALL.get(9));
         checkPose(AutoPaths.Red2TipPaths.park().endPose(), ShootingWaypoints.ALL.get(9));
-        Pose cornerEnd = AutoPaths.Red2TipPaths.shootCloseToCorner().endPose();
+        Pose cornerEnd = AutoPaths.Red2TipPaths.cornerWaitToCorner().endPose();
         near(cornerEnd.x(), AutoPaths.GeneralPoints.cornerCollect.x());
         near(cornerEnd.y(), AutoPaths.GeneralPoints.cornerCollect.y());
         near(Math.toDegrees(cornerEnd.heading()), 180);

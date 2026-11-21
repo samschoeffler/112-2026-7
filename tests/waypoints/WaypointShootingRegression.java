@@ -100,8 +100,6 @@ public final class WaypointShootingRegression {
         c.update(.1, other.x, other.y, other.headingDeg, other.turretDeg, false);
         check(c.selected() == p && c.state() == WaypointShootingControl.State.DRIVING,
                 "Crossing into another waypoint region must not switch the selection");
-        check(!c.select(.15, other.x, other.y, other.headingDeg), "Cannot replace a waypoint during travel");
-        check(c.selected() == p, "Travel keeps its original destination");
         c.update(.2, p.x + 3, p.y, p.headingDeg + 5, p.turretDeg + 15, true);
         check(c.ready() && c.state() == WaypointShootingControl.State.HOLDING,
                 "Pedro completion is immediately READY without position/heading/turret settle checks");
@@ -110,17 +108,15 @@ public final class WaypointShootingRegression {
         check(c.ready() && c.active(), "Post-arrival drift remains diagnostic and does not block shooting");
         c.update(.22, p.x, p.y, p.headingDeg, Double.NaN, true);
         check(c.ready(), "Turret telemetry does not impose another settle gate");
-        check(!c.select(.3, other.x, other.y, other.headingDeg), "Cannot replace a waypoint while holding");
-        c.update(120, p.x + 4, p.y, p.headingDeg, p.turretDeg, false);
-        check(c.ready() && c.selected() == p, "Hold persists without a timeout or retargeting");
-        c.cancel("Driver Station STOP");
-        check(!c.active() && !c.ready(), "Driver Station STOP ends waypoint control");
-        c.select(121, p.x, p.y, p.headingDeg);
-        c.update(241, p.x + 10, p.y, p.headingDeg, p.turretDeg, false);
-        check(c.active() && !c.ready(), "Travel continues beyond the former 12-second timeout");
-        c.update(242, p.x, p.y, p.headingDeg, p.turretDeg, true);
-        check(c.ready(), "Long travel still enters hold normally");
-        c.cancel("Test reset");
+        c.cancel("Driver takeover");
+        check(!c.active() && !c.ready() && c.selected() == p, "Takeover disables auto but preserves recorded speed");
+        check(!WaypointShootingControl.driverTakeover(.079, -.079, .079), "Stick noise stays inside deadband");
+        check(WaypointShootingControl.driverTakeover(.081, 0, 0)
+                && WaypointShootingControl.driverTakeover(0, -.081, 0)
+                && WaypointShootingControl.driverTakeover(0, 0, .081), "Either drive stick can release hold");
+        c.select(2, p.x, p.y, p.headingDeg);
+        c.update(14.001, p.x + 10, p.y, p.headingDeg, p.turretDeg, false);
+        check(!c.active() && !c.ready(), "Unreached waypoint times out without firing");
         c.select(20, p.x, p.y, p.headingDeg);
         c.update(20.1, Double.NaN, p.y, p.headingDeg, p.turretDeg, true);
         check(!c.active(), "Invalid Pinpoint pose cancels navigation");
@@ -148,13 +144,9 @@ public final class WaypointShootingRegression {
         check(r.i.power > 0 && r.t.power > 0, "Ready flywheel feeds paced volley");
         r.tick(false, false, 1475);
         check(r.volley.active() && r.volley.wheelEnabled(), "Pose drift no longer interrupts an active volley");
-        r.volley.update(false, false, false, false, true, r.point.velocityTicksPerSecond);
-        check(r.waypoint.active() && r.waypoint.ready(), "BACK stops shooting without releasing waypoint hold");
-        check(!r.volley.active() && !r.volley.wheelEnabled(), "BACK stops the shooter");
-        r.feedStopped();
-        r.waypoint.cancel("Driver Station STOP"); r.volley.stop();
-        check(!r.waypoint.active() && !r.volley.active(), "Driver Station STOP ends navigation and shooting"); r.feedStopped();
-        r.tick(true, false, 1475); check(!r.volley.active(), "Held Y cannot restart after STOP");
+        r.waypoint.cancel("Driver takeover"); r.volley.cancelFeed("Driver takeover");
+        check(!r.volley.active() && r.volley.wheelEnabled(), "Driver takeover leaves wheel enabled"); r.feedStopped();
+        r.tick(true, false, 1475); check(!r.volley.active(), "Held Y cannot restart after takeover");
         r.volley.stop();
         check(r.f.power == 0 && r.i.power == 0 && r.t.power == 0, "STOP disables all mechanisms");
         WaypointShootingControl heldAtStart = new WaypointShootingControl();
@@ -163,6 +155,6 @@ public final class WaypointShootingRegression {
         check(!heldAtStart.volleyTap(true, false, true), "Y held through START cannot launch");
         heldAtStart.volleyTap(false, false, true);
         check(!heldAtStart.volleyTap(true, false, false), "Invalid reference/motor state still blocks Y volley");
-        System.out.println("Twelve exact waypoints, Pedro completion without settle gates, drift-tolerant volley, locked travel/hold, shooter-only BACK and Y integration passed");
+        System.out.println("Twelve exact waypoints, Pedro completion without settle gates, drift-tolerant volley, takeover, timeout and Y integration passed");
     }
 }
