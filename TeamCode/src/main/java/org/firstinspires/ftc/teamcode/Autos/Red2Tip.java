@@ -30,7 +30,7 @@ import org.firstinspires.ftc.teamcode.pedro.Constants;
 public class Red2Tip extends OpMode {
 
     // Same recorded-point controller settings as MainTeleOp.
-    private static final long SHOOTING_WINDOW_MS = 3000;
+    private static final long SHOOTING_WINDOW_MS = 3300;
     private final TuningTurretControl aimMotor = new TuningTurretControl(0.140, 1.0, 1.0, 0.150);
     private ShootingWaypoints.Point shootingPoint = AutoPaths.Red2TipPoints.close;
     private Follower follower;
@@ -53,7 +53,8 @@ public class Red2Tip extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                //selectShootingPoint(AutoPaths.Red2TipPoints.close),
+                selectShootingPoint(AutoPaths.Red2TipPoints.close),
+                follow(follower, AutoPaths.Red2TipPaths.thingthing()),
                 autoCommand.fWheelTogg,
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
@@ -62,9 +63,6 @@ public class Red2Tip extends OpMode {
                 //selectShootingPoint(AutoPaths.Red2TipPoints.corner),
                 follow(follower, AutoPaths.Red2TipPaths.startToCornerWait()),
                 follow(follower, AutoPaths.Red2TipPaths.cornerWaitToCorner()),
-                autoCommand.shooterTogg,
-                Commands.waitMs(500),
-                autoCommand.shooterTogg,
                 //follow(follower, AutoPaths.Red2TipPaths.lilShoot()),
                 parallel(
                         sequential(
@@ -87,12 +85,13 @@ public class Red2Tip extends OpMode {
                 autoCommand.flowerCollectFarShoot(follower),
                 autoCommand.rampTogg,
                 follow(
-                        follower, AutoPaths.Red2TipPaths.park()
+                        follower, AutoPaths.Red2TipPaths.shootThingy()
                 ),
                 selectShootingPoint(AutoPaths.Red2TipPoints.far),
                 autoCommand.shooterTogg,
                 Commands.waitMs(SHOOTING_WINDOW_MS),
-                autoCommand.stopShooter
+                autoCommand.stopShooter,
+                follow(follower, AutoPaths.Red2TipPaths.park())
         );
     }
 

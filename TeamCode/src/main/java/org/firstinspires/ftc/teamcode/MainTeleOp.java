@@ -176,6 +176,8 @@ public class MainTeleOp extends OpMode {
             } else actionStatus = "NOT SELECTED: invalid Pinpoint pose";
         } else if (select && takeover) actionStatus = "Release drive sticks, then tap D-pad RIGHT again";
 
+        intake.rampFix(gamepad2.dpad_up, gamepad2.dpad_down);
+
         double turretAngle = (turretTicks - (double) zeroTicks)
                 / CoordinateTurretControl.TICKS_PER_DEGREE;
         boolean wasNavigating = waypoint.active();

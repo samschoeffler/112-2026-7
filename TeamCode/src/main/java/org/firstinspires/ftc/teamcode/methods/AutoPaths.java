@@ -51,7 +51,7 @@ public final class AutoPaths {
                 poseFactory.of(58.387975978100386, 128.35222355399546, 271.8550682226753);
 
         public static final Pose flowerWaitFar =
-                poseFactory.of(47, 120, 80);
+                poseFactory.of(47, 117, 80);
 
         public static final Pose flowerFar =
                 poseFactory.of(47, 128.5, 90);
@@ -153,7 +153,7 @@ public final class AutoPaths {
         public static final Pose farControl4 =
                 poseFactory.of(49, 112, 0);
 
-        public static final Pose park =
+        public static final Pose shootThingy =
                 poseFactory.of(58.387975978100386, 128.35222355399546, 271.8550682226753);
 
         public static final Pose parkControl =
@@ -191,12 +191,12 @@ public final class AutoPaths {
         }
 
         // far flower wait -> park (was path5, unchanged)
-        public static Path park() {
+        public static Path shootThingy() {
             return Paths.line(
                     GeneralPoints.flowerWaitFar,
                     //parkControl,
-                    park
-            ).linear(GeneralPoints.flowerWaitFar, park);
+                    shootThingy
+            ).linear(GeneralPoints.flowerWaitFar, shootThingy);
         }
     }
 
@@ -227,13 +227,14 @@ public final class AutoPaths {
         public static final Pose cornerWait =
                 poseFactory.of(30, 11, 180);
 
+        public static final Pose coolio = poseFactory.of(58.22274275652067, 11.869801198403668, 90.19369300896139);
+
         // old path3 controls (flower wait -> far shoot, up the left side of the hive)
         public static final Pose farControl1 =
                 poseFactory.of(47, 44, 0);
 
         public static final Pose closeControl1 =
                 poseFactory.of(30, 20, 0);
-
 
         public static final Pose farControl2 =
                 poseFactory.of(6, 107, 0);
@@ -245,18 +246,30 @@ public final class AutoPaths {
         public static final Pose flowerWaitControl =
                 poseFactory.of(45, 113, 0);
 
+        public static final Pose flowerFarControl =
+                poseFactory.of(100, 90, 0);
+
+        public static final Pose parkControl =
+                poseFactory.of(40, 115, 0);
+
+
+
         // ---------- PATHS ----------
 
         // old path2wall (now starts at the start pose, where the first volley is recorded)
         public static Path startToCornerWait() {
-            return Paths.curve(Red2TipPoints.startClose, closeControl1, cornerWait)
-                    .linear(Red2TipPoints.startClose, cornerWait);
+            return Paths.curve(coolio, closeControl1, cornerWait)
+                    .linear(coolio, cornerWait);
         }
 
         // old path21
         public static Path cornerWaitToCorner() {
             return Paths.line(cornerWait, GeneralPoints.cornerCollect)
                     .linear(cornerWait, GeneralPoints.cornerCollect);
+        }
+
+        public static Path thingthing() {
+            return Paths.line(GeneralPoints.startClose, coolio).linear(GeneralPoints.startClose, coolio);
         }
 
         // corner -> recorded corner shooting spot
@@ -284,18 +297,23 @@ public final class AutoPaths {
 
         // old path4, starting from the recorded far shooting spot
         public static Path farShootToFlowerWait() {
-            return Paths.curve(
+            return Paths.line(
                     Red2TipPoints.farShoot,
-                    flowerWaitControl,
                     GeneralPoints.flowerWaitFar
             ).linear(Red2TipPoints.farShoot, GeneralPoints.flowerWaitFar);
         }
 
         // back to the far shooting spot for the last volley
-        public static Path park() {
-            return Paths.line(GeneralPoints.flowerWaitFar, Red2TipPoints.farShoot)
+        public static Path shootThingy() {
+            return Paths.curve(GeneralPoints.flowerWaitFar, flowerFarControl, Red2TipPoints.farShoot)
                     .linear(GeneralPoints.flowerWaitFar, Red2TipPoints.farShoot);
         }
+
+        public static Path park() {
+            return Paths.curve(Red2TipPoints.farShoot, parkControl, GeneralPoints.parkFar)
+                    .linear(Red2TipPoints.farShoot, GeneralPoints.parkFar);
+        }
+
     }
 
     // CORNER (1Tip)

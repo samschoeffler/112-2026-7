@@ -11,10 +11,10 @@ public class Intake {
     public static double REFERENCE_VOLTAGE = 12.76;
 
     // Verify on the robot using Ramp Tuning, then copy the measured values here.
-    public static final double RAMP_DOWN = 0.1;
-    public static final double RAMP_UP = 0.62;
-    public static final double RAMP_HOLD = 0.15;
-    public static final double RAMP_DOWNER = 0.23;
+    public static double RAMP_DOWN = 0.1;
+    public static double RAMP_UP = 0.62;
+    public static double RAMP_HOLD = 0.15;
+    public static double RAMP_DOWNER = 0.23;
 
     public enum RampState { UP, DOWN, HOLD, DOWNER }
 
@@ -47,11 +47,30 @@ public class Intake {
         stop();
         // Intake and outtake are power commands; stop must not switch to velocity control.
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        setRampState(RampState.UP);
+        //setRampState(RampState.UP);
     }
 
     public void intake() {
         setPower(INTAKE_POWER);
+    }
+
+    public void sneakyEh() {
+        setRampState(RampState.UP);
+    }
+
+    public void rampFix(boolean up, boolean down)
+    {
+        if(up){
+            RAMP_DOWN += 0.003;
+            RAMP_UP += 0.003;
+            RAMP_HOLD += 0.003;
+            RAMP_DOWNER += 0.003;
+        } else if(down) {
+            RAMP_DOWN -= 0.003;
+            RAMP_UP -= 0.003;
+            RAMP_HOLD -= 0.003;
+            RAMP_DOWNER -= 0.003;
+        }
     }
 
     /** Sets a requested normalized power and applies battery compensation. */

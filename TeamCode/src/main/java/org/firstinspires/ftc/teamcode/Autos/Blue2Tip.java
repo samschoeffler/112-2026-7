@@ -107,7 +107,7 @@ public class Blue2Tip extends OpMode {
                 autoCommand.flowerCollectFarShoot(follower),
                 autoCommand.rampTogg,
                 follow(
-                        follower, AutoPaths.Tip.park()
+                        follower, AutoPaths.Tip.shootThingy()
                                 .with(Constants.foresightConfig.maxPathSpeed.at(0.4))
                 ),
                 //Commands.waitMs(2000),

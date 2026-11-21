@@ -31,6 +31,7 @@ public class AutoCommands {
         BatteryVoltage battery = new BatteryVoltage(hardwareMap);
         launcher = new Launcher(hardwareMap, battery);
         intake = new Intake(hardwareMap, battery);
+        intake.sneakyEh();
         transfer = new Transfer(hardwareMap, battery);
         shooting = new ShootingCoordinator(launcher, transfer, intake);
         turret = new Turret(hardwareMap);
@@ -89,13 +90,13 @@ public class AutoCommands {
                 intakeTogg,
                 follow(follower, AutoPaths.GeneralPaths.flowerFarTo()),
                 //shooterTogg,
-                Commands.waitMs(1000),
+                Commands.waitMs(750),
                 //shooterTogg,
                 flowerFarJiggle(follower),
                 Commands.waitMs(500),
                 flowerFaHalfJiggle(follower),
                 //shooterTogg,
-                Commands.waitMs(1000),
+                Commands.waitMs(100),
                 follow(follower, AutoPaths.GeneralPaths.flowerFarFro())
         );
     }
