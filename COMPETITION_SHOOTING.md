@@ -20,11 +20,11 @@ the red hive. See [recorded waypoint shooting](doc/waypoint-shooting.md) for the
 startup reference, controls and verification procedure.
 
 Red2Tip also reads its shooting solutions directly from `ShootingWaypoints`:
-opening shots use ID 1 (-1.7573 degrees, 1430 ticks/s), corner shots use ID 2
+opening shots use ID 1 (3.7657 degrees, 1407 ticks/s), corner shots use ID 2
 (-36.4017 degrees, 1467 ticks/s), and both far-side windows use ID 10
-(1.0042 degrees, 1423 ticks/s). `AutoPaths.Red2TipPoints` and `Red2TipPaths`
+(-0.5021 degrees, 1409 ticks/s), retuned from `forchatgpt.csv`. `AutoPaths.Red2TipPoints` and `Red2TipPaths`
 use their exact recorded X/Y and robot headings without changing shared paths.
-Place Red2Tip at waypoint 1's starting pose (approximately 56, 8, 90.3334 degrees)
+Place Red2Tip at waypoint 1's starting pose (approximately 58.2227, 11.8698, 90.1937 degrees)
 with the turret physically forward before INIT. It captures the forward encoder
 reference as before and retains the RED pose/reference handoff to MainTeleOp.
 

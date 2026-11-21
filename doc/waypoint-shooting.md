@@ -17,36 +17,34 @@ hold. The motor controller uses feedback to reach the recorded turret angle.
 
 ## Recorded data
 
-The bank is `methods/ShootingWaypoints.java`, copied at full CSV precision from
-**data entries 1-6 only** of
-`shooting-red-scoring-1795144118301-1410421162.csv` (IDs 1-6) and all six rows of
-`shooting-red-scoring-1795206115920-1898172247 (1).csv` (IDs 7-12).
-Both sets target the red hive from opposite sides. The second session claimed a
-start of (56, 8, 90 degrees), physically (85.5, 133.5, 270 degrees) in the
-existing field frame. Its points are converted once into that frame with
-`x = 141.5 - captured_x`, `y = 141.5 - captured_y`, and
-`heading = (turret_capture_heading_deg + 180) % 360`. Robot-relative turret
-angles and target flywheel speeds are unchanged. The original six points are unchanged.
+The bank is `methods/ShootingWaypoints.java`. IDs 2-6 retain data entries 2-6
+from `shooting-red-scoring-1795144118301-1410421162.csv`; ID 1 reflects the
+operator's subsequent update. IDs 7-12 are rows 1-6 of the retune `forchatgpt.csv`,
+copied at full CSV precision in row order. Both sets target the red hive from
+opposite sides. The retune is already in the shared field coordinate frame;
+X/Y, turret-capture robot heading, robot-relative turret angle and target speed
+are copied directly, with no reflection or 180-degree heading adjustment.
+It replaces the earlier transformed opposite-side calibration.
 The table below is rounded for display; compiled values are not rounded.
 
 | ID | X inches | Y inches | Robot heading degrees | Turret degrees | Flywheel ticks/s |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 55.9998 | 7.9997 | 90.3334 | -1.7573 | 1430 |
+| 1 | 58.2227 | 11.8698 | 90.1937 | 3.7657 | 1407 |
 | 2 | 11.3415 | 13.2517 | 87.1337 | -36.4017 | 1467 |
 | 3 | 35.5965 | 11.8572 | 90.2369 | -19.8326 | 1444 |
 | 4 | 82.7257 | 12.9418 | 91.4315 | 29.3724 | 1441 |
 | 5 | 106.7381 | 13.6177 | 94.6296 | 47.4477 | 1475 |
 | 6 | 130.4997 | 17.4643 | 98.5289 | 58.7448 | 1610 |
-| 7 | 128.9154 | 129.5602 | 271.6748 | -48.4519 | 1600 |
-| 8 | 103.9254 | 128.4256 | 271.2178 | -35.8996 | 1483 |
-| 9 | 79.8212 | 128.3580 | 275.3800 | -20.8368 | 1432 |
-| 10 | 58.3880 | 128.3522 | 271.8551 | 1.0042 | 1423 |
-| 11 | 32.8552 | 129.6455 | 273.1604 | 26.8619 | 1431 |
-| 12 | 10.5938 | 126.0541 | 272.6595 | 44.9372 | 1465 |
+| 7 | 124.1210 | 131.5170 | 270.7681 | -49.4561 | 1604 |
+| 8 | 100.6796 | 129.2263 | 271.2026 | -39.6653 | 1489 |
+| 9 | 77.5155 | 129.6856 | 271.8643 | -22.8452 | 1430 |
+| 10 | 52.7568 | 130.3960 | 272.5997 | -0.5021 | 1409 |
+| 11 | 27.5570 | 128.6508 | 269.8947 | 28.6192 | 1413 |
+| 12 | 5.3845 | 126.5672 | 275.4882 | 39.9163 | 1444 |
 
 X/Y are the A snapshots. Robot heading is **turret_capture_heading_deg**, taken
-with B, so it corresponds to the captured turret angle; IDs 7-12 apply the
-field-frame transform above. Ramp control is completely independent: selecting
+with B, so it corresponds to the captured turret angle. IDs 7-12 need no
+field-frame conversion. Ramp control is completely independent: selecting
 a waypoint or shooting does not change or require a ramp position. Raw turret
 zero ticks from either test are not reused. No CSV file is needed on the robot at runtime.
 

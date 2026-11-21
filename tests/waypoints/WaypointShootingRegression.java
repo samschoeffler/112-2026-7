@@ -50,12 +50,12 @@ public final class WaypointShootingRegression {
     }
 
     public static void main(String[] args) {
-        int[] speeds = {1430, 1467, 1444, 1441, 1475, 1610};
-        double[] headings = {90.33341135862317, 87.13372727966066, 90.23693493659674,
+        int[] speeds = {1407, 1467, 1444, 1441, 1475, 1610};
+        double[] headings = {90.19369300896139, 87.13372727966066, 90.23693493659674,
                 91.43148038091861, 94.62961400693953, 98.5288802116406};
-        double[] angles = {-1.7573221757322175, -36.40167364016737, -19.832635983263597,
+        double[] angles = {3.7656903765690375, -36.40167364016737, -19.832635983263597,
                 29.372384937238493, 47.44769874476987, 58.74476987447699};
-        check(ShootingWaypoints.ALL.size() == 12, "Original six plus six transformed red-hive entries");
+        check(ShootingWaypoints.ALL.size() == 12, "Six existing plus six retuned red-hive entries");
         for (int n = 0; n < 6; n++) {
             ShootingWaypoints.Point p = ShootingWaypoints.ALL.get(n);
             check(p.id == n + 1 && p.velocityTicksPerSecond == speeds[n], "Exact recorded id/velocity");
@@ -63,27 +63,27 @@ public final class WaypointShootingRegression {
             check(ShootingWaypoints.nearest(p.x, p.y) == p, "Each recorded coordinate selects itself");
             check(ShootingWaypoints.nearest(p.x, p.y + .1) == p, "Nearby selection uses exact recorded object");
         }
-        // Original CSV values independently verify the opposite-side field transform.
+        // forchatgpt.csv is already in the field frame; catch accidental double transforms.
         double[][] oppositeSide = {
-                {12.584614190529651, 11.939794585460753, 91.674833190857, -48.45188284518829, 1600},
-                {37.57459745632382, 13.074448953463337, 91.21778425235642, -35.89958158995816, 1483},
-                {61.67884646438238, 13.14201895646223, 95.38001957029215, -20.836820083682007, 1432},
-                {83.11202402189961, 13.147776446004553, 91.85506822267529, 1.00418410041841, 1423},
-                {108.64477923535925, 11.854542409341166, 93.16035152401058, 26.861924686192467, 1431},
-                {130.90623269869587, 15.44585220457062, 92.65945277103852, 44.93723849372385, 1465}
+                {124.12103607898622, 131.5169783464567, 270.76810690920314, -49.45606694560669, 1604},
+                {100.67961445004921, 129.22625684362697, 271.20261622344265, -39.66527196652719, 1489},
+                {77.51547505536418, 129.6856064683809, 271.86431128985515, -22.845188284518827, 1430},
+                {52.75679941252461, 130.3960172397884, 272.5997040974121, -0.502092050209205, 1409},
+                {27.557010200079972, 128.65080585629923, 269.89468963889857, 28.619246861924687, 1413},
+                {5.384535301388718, 126.56718096395177, 275.4882047577888, 39.9163179916318, 1444}
         };
         for (int n = 0; n < oppositeSide.length; n++) {
             ShootingWaypoints.Point added = ShootingWaypoints.ALL.get(n + 6);
             double[] raw = oppositeSide[n];
-            check(added.id == n + 7, "Append without renumbering existing waypoints");
-            near(added.x, 141.5 - raw[0]); near(added.y, 141.5 - raw[1]);
-            near(added.headingDeg, (raw[2] + 180) % 360);
+            check(added.id == n + 7, "Retune preserves IDs 7-12");
+            near(added.x, raw[0]); near(added.y, raw[1]);
+            near(added.headingDeg, raw[2]);
             near(added.turretDeg, raw[3]); near(added.velocityTicksPerSecond, raw[4]);
             check(ShootingWaypoints.nearest(added.x, added.y) == added,
-                    "Opposite-side coordinates select their own transformed solution");
+                    "Opposite-side coordinates select their own retuned solution");
             WaypointShootingControl opposite = new WaypointShootingControl();
             check(opposite.select(0, added.x, added.y, added.headingDeg), "Select opposite-side waypoint");
-            check(opposite.selected() == added, "Selection preserves transformed heading/turret/speed");
+            check(opposite.selected() == added, "Selection preserves retuned heading/turret/speed");
             at(opposite, .1, added);
             check(opposite.ready(), "Opposite-side point is READY at Pedro completion");
         }
