@@ -13,7 +13,7 @@ from ftc_test_runner import run_tests, java_tool, CACHE
 
 run_tests(('Launcher', 'Transfer', 'Intake', 'BatteryVoltage', 'FlywheelVelocityControl',
            'FlywheelIntegralControl', 'SynchronizedFeed', 'ShootingCoordinator', 'CalibrationVolleyControl',
-           'ShootingWaypoints', 'WaypointShootingControl', 'ManualTurretJog'),
+           'ShootingWaypoints', 'WaypointShootingControl', 'ManualTurretJog', 'WaypointTurretCorrections', 'CoordinateTurretControl'),
           Path(__file__).with_name('WaypointShootingRegression.java'), 'WaypointShootingRegression')
 
 pedro = next((CACHE / 'com.pedropathing/core/3.0.1').glob('*/*.jar'), None)

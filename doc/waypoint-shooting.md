@@ -6,7 +6,8 @@ X/Y by Euclidean distance, and latches that exact entry. Pedro drives a direct
 line to its X/Y and recorded robot heading, then holds there. A new D-pad press
 selects again; passing another waypoint during travel does not switch solutions.
 
-Turret angle and flywheel target come directly from the selected entry. There is
+Flywheel target comes directly from the selected entry. Turret angle uses that
+entry unless a per-waypoint correction has been learned in this TeleOp run. There is
 no blending, nearest-neighbor speed averaging, target bearing calculation,
 Limelight correction, robot-yaw compensation, blue mirroring or distance-speed
 formula in MainTeleOp. Pedro still computes normal drive feedback along the
@@ -92,14 +93,34 @@ volley, stops intake/transfer, and preserves whether the flywheel was enabled
 and its selected speed. It also suppresses shooter reverse while jogging;
 BACK and Driver Station STOP still stop the shooting motors. Triggers held
 through jogging must be released and pressed again to run feed motors.
+After the robot arrives (READY), D-pad adjustment learns an angle for that
+selected waypoint. The target is latched before manual control cancels navigation.
+Release the D-pad and let the turret settle: its measured robot-relative angle
+is saved after 150 ms continuously below 2 degrees/s. Telemetry reports pending,
+saved, and effective angles. While saving is pending, a left-bumper selection
+is ignored; wait for the saved message, then tap it again. Future selections of
+that waypoint in the same run use the learned angle, including after visiting
+other waypoints. Subsequent adjustments replace the angle rather than adding
+the same offset repeatedly. The correction changes no other waypoint, flywheel
+speed, field pose, or encoder zero. It is not written to disk and is cleared on
+Driver Station STOP and INIT; Red2Tip continues using the recorded bank.
+
+Learning requires arrival with a confirmed reference and valid turret data.
+Jogging during travel or free manual driving does not learn a correction.
+The robot must remain at the adjustment location: movement over 1 inch or
+2 degrees relative to the initial adjustment pose, driver stick takeover,
+B/BACK, invalid data, or a new waypoint selection abandons the edit context.
+Already saved corrections are retained until STOP. These checks affect learning
+only; they do not introduce new shooting or arrival settle gates.
+
 Both D-pad directions together cancel automatic control but command zero jog
-power. Releasing the D-pad stops jog power; automatic turret aiming stays off
+power and do not create a new learned correction. Releasing the D-pad stops jog power; automatic turret aiming stays off
 until a fresh left-bumper waypoint selection. Jog power is 0.25 with the existing
 motor sign, motor-validity guards and software travel limits.
 
 GP2 LEFT/RIGHT and A no longer jog or re-zero the turret during active TeleOp.
-Manual jogging changes neither encoder zero nor field pose, and does not edit
-the waypoint bank. The existing GP2 A standalone-reference action during INIT
+Manual jogging changes neither encoder zero nor field pose. Learned angles
+override the compiled bank only for the current TeleOp run. The existing GP2 A standalone-reference action during INIT
 remains available; it is separate from active TeleOp manual turret control.
 Use `Shooting | Field Calibration` to collect new shooting solutions.
 
@@ -144,7 +165,8 @@ drivetrain, turret and all shooting mechanisms.
 Run `python3 tests/waypoints/run.py`, `python3 tests/shooting_calibration/run.py`
 and `python3 tests/shooting/run.py`, then compile Android. Tests cover exact bank
 values, nearest selection, latched targets, Pedro completion without extra settle
-gates, held Y through arrival/START, independent manual triggers, manual turret direction/priority and flywheel-preserving feed cancellation, takeover,
+gates, held Y through arrival/START, independent manual triggers, manual turret direction/priority, per-waypoint learning and STOP reset,
+flywheel-preserving feed cancellation, takeover,
 drift-tolerant volleys, timeout, recorded velocity,
 real Pedro path endpoints/heading, turn-only moves and persistent hold.
 

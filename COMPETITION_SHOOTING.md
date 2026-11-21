@@ -42,7 +42,8 @@ remain independent and retain their places in the routine.
 
 MainTeleOp: G1 left bumper selects the nearest recorded X/Y, drives there with
 Pedro and holds the recorded heading. Turret angle and flywheel target use that
-entry exactly; Limelight, coordinate aiming, distance-speed calculation and manual
+entry exactly, with per-waypoint turret corrections for the current TeleOp run;
+Limelight, coordinate aiming, distance-speed calculation and manual
 target-based heading correction no longer run in MainTeleOp. A drive stick over
 0.08 or G1 B cancels waypoint control and feeding. G2 Y tap when READY starts
 the automatic PACED-1440 volley; an early tap is ignored, never queued. G1 LT
@@ -52,6 +53,14 @@ jogs the turret, cancelling waypoint travel/hold and the active volley while
 preserving the flywheel's on/off state and selected speed. Held feed triggers
 cannot restart feeding until released and pressed again. Releasing the D-pad
 stops jog power; a fresh left-bumper selection is required for automatic aiming.
+After arriving at a waypoint, D-pad adjustment saves its final measured turret
+angle after release and 150 ms below 2 degrees/s. A later selection of that
+waypoint uses the learned angle; other points and speeds remain unchanged.
+Corrections live only in this TeleOp instance and clear on Driver Station STOP.
+Free manual jogging or jogging during travel does not learn a correction.
+Movement over 1 inch/2 degrees, stick takeover, B/BACK, or invalid reference/data
+abandons an unfinished adjustment while retaining prior saved corrections.
+Red2Tip and the recorded waypoint bank remain unchanged.
 The GP2 jog/re-zero controls are removed from active TeleOp; encoder zero and
 field pose remain unchanged by jogging. Y no longer toggles the flywheel. Arrival
 alone cannot fire. Autonomous feeding retains its existing continuous behavior.

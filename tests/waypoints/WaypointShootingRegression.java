@@ -49,7 +49,80 @@ public final class WaypointShootingRegression {
         void feedStopped() { check(i.power == 0 && t.power == 0, "Intake and transfer must stop"); }
     }
 
+    private static void learnedCorrections() {
+        WaypointTurretCorrections corrections = new WaypointTurretCorrections();
+        ShootingWaypoints.Point a = ShootingWaypoints.ALL.get(0), b = ShootingWaypoints.ALL.get(9);
+        double original = a.turretDeg;
+        near(corrections.target(a), original);
+        // No arrived edit context: jogging must not change any waypoint.
+        check(!corrections.update(0, true, true, a.x, a.y, a.headingDeg,
+                original + 3, 0, true, false), "Free manual jogging is not calibration");
+        near(corrections.target(a), original);
+        WaypointShootingControl navigation = new WaypointShootingControl();
+        navigation.select(0, a.x, a.y, a.headingDeg);
+        at(navigation, .1, a);
+        check(navigation.ready(), "Learning starts from an arrived waypoint");
+        corrections.begin(navigation.selected(), a.x, a.y, a.headingDeg);
+        navigation.cancel("Manual turret control");
+        corrections.update(1, true, true, a.x, a.y, a.headingDeg, original + 2, 10, true, false);
+        check(corrections.pending(), "Jog creates pending correction even after navigation cancellation");
+        corrections.update(1.1, false, false, a.x, a.y, a.headingDeg, original + 2.5, 3, true, false);
+        near(corrections.target(a), original);
+        corrections.update(1.2, false, false, a.x, a.y, a.headingDeg, original + 3, 0, true, false);
+        check(!corrections.update(1.3, false, false, a.x, a.y, a.headingDeg,
+                original + 3, 0, true, false), "Wait for stopped turret before saving");
+        check(corrections.update(1.4, false, false, a.x, a.y, a.headingDeg,
+                original + 3, 0, true, false), "Save final stopped angle");
+        near(corrections.target(a), original + 3);
+        near(corrections.target(b), b.turretDeg);
+        near(a.turretDeg, original);
+        navigation.select(2, b.x, b.y, b.headingDeg);
+        navigation.select(3, a.x, a.y, a.headingDeg);
+        near(corrections.target(navigation.selected()), original + 3);
+        // Additional jog at the same point replaces the learned angle, never adds it twice.
+        corrections.update(2, true, true, a.x, a.y, a.headingDeg, original + 4, 0, true, false);
+        corrections.update(2.1, false, false, a.x, a.y, a.headingDeg, original + 4, 0, true, false);
+        check(corrections.update(2.3, false, false, a.x, a.y, a.headingDeg,
+                original + 4, 0, true, false), "Save repeated adjustment");
+        near(corrections.target(a), original + 4);
+        corrections.update(3, true, true, a.x, a.y, a.headingDeg, original + 5, 0, true, false);
+        corrections.update(3.1, false, false, a.x + 2, a.y, a.headingDeg, original + 5, 0, true, false);
+        check(!corrections.pending() && corrections.editing() == null, "Moving chassis abandons unfinished edit");
+        near(corrections.target(a), original + 4);
+        corrections.begin(b, b.x, b.y, b.headingDeg);
+        corrections.update(4, true, true, b.x, b.y, b.headingDeg, b.turretDeg + 8, 0, true, false);
+        corrections.update(4.1, false, false, b.x, b.y, b.headingDeg, b.turretDeg + 8, 0, true, true);
+        near(corrections.target(b), b.turretDeg);
+        check(corrections.editing() == null, "Driver cancellation abandons only the pending edit");
+        corrections.begin(b, b.x, b.y, b.headingDeg);
+        corrections.update(5, true, true, b.x, b.y, b.headingDeg, Double.NaN, 0, true, false);
+        check(corrections.editing() == null, "Invalid feedback cannot become a saved angle");
+        corrections.begin(b, b.x, b.y, b.headingDeg);
+        corrections.update(6, true, true, b.x, b.y, b.headingDeg, b.turretDeg + 2, 0, true, false);
+        corrections.update(6.1, false, false, b.x, b.y, b.headingDeg, b.turretDeg + 2, 0, true, false);
+        check(corrections.update(6.3, false, false, b.x, b.y, b.headingDeg,
+                b.turretDeg + 2, 0, true, false), "A second waypoint has its own correction");
+        near(corrections.target(a), original + 4);
+        near(corrections.target(b), b.turretDeg + 2);
+        corrections.update(7, true, true, b.x, b.y, b.headingDeg + 3, b.turretDeg + 8, 0, true, false);
+        check(corrections.editing() == null, "Heading change abandons learning without touching saved angles");
+        near(corrections.target(b), b.turretDeg + 2);
+        corrections.begin(a, a.x, a.y, a.headingDeg);
+        corrections.update(8, true, false, a.x, a.y, a.headingDeg, original + 9, 0, true, false);
+        corrections.update(8.3, false, false, a.x, a.y, a.headingDeg, original + 9, 0, true, false);
+        near(corrections.target(a), original + 4);
+        check(!corrections.pending(), "Opposing D-pad buttons alone do not overwrite a correction");
+        corrections.update(9, true, true, a.x, a.y, a.headingDeg, original + 5, 0, true, false);
+        corrections.clear();
+        near(corrections.target(a), original);
+        near(corrections.target(b), b.turretDeg);
+        check(!corrections.pending(), "STOP clears saved and unfinished corrections");
+        near(new WaypointTurretCorrections().target(a), original);
+        System.out.println("Per-waypoint learning, final-angle capture, isolation, cancellation and STOP reset passed");
+    }
+
     public static void main(String[] args) {
+        learnedCorrections();
         check(ManualTurretJog.requested(true, false) && ManualTurretJog.requested(false, true),
                 "Either D-pad direction requests manual takeover");
         near(ManualTurretJog.encoderPower(true, false, true), .25);

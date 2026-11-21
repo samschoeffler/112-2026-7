@@ -28,6 +28,7 @@ import org.firstinspires.ftc.teamcode.methods.Transfer;
 import org.firstinspires.ftc.teamcode.methods.TuningTurretControl;
 import org.firstinspires.ftc.teamcode.methods.ManualTurretJog;
 import org.firstinspires.ftc.teamcode.methods.WaypointShootingControl;
+import org.firstinspires.ftc.teamcode.methods.WaypointTurretCorrections;
 import org.firstinspires.ftc.teamcode.methods.WaypointDrive;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
@@ -46,6 +47,8 @@ public class MainTeleOp extends OpMode {
     private DcMotorEx turretMotor;
     private Servo led;
     private BulkReads bulk;
+    private final WaypointTurretCorrections turretCorrections = new WaypointTurretCorrections();
+    private boolean lastManualTurret;
     private final WaypointShootingControl waypoint = new WaypointShootingControl();
     // Validated stationary sweep turret-1795204240327; retain +/-1 degree correction.
     private final TuningTurretControl turretControl = new TuningTurretControl(0.140, 1.0, 1.0, 0.150);
@@ -57,6 +60,8 @@ public class MainTeleOp extends OpMode {
     private String actionStatus = "Select a waypoint with GP1 left bumper";
 
     @Override public void init() {
+        turretCorrections.clear();
+        lastManualTurret = false;
         panelsTelemetry = PanelsTelemetry.INSTANCE.getTelemetry();
         turretControl.setVelocityDamping(0.00075);
         follower = Constants.create(hardwareMap);
@@ -106,7 +111,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addLine("then tap GP2 A during INIT and leave the turret forward through START.");
         telemetry.addLine("GP1 left bumper: nearest waypoint, drive + hold. Sticks or GP1 B: take over.");
         telemetry.addLine("GP1 LT: intake | RT: transfer | BACK: stop all | GP2 Y: paced volley");
-        telemetry.addLine("GP1 D-pad LEFT/RIGHT: manual turret; cancels waypoint/volley, keeps flywheel state.");
+        telemetry.addLine("GP1 LEFT/RIGHT: adjust turret; after arrival, release to save for this TeleOp only.");
         telemetry.addLine("Panels > Graph: Turret error (deg), tolerance +/-1, and Turret aim active");
         telemetry.update();
     }
@@ -140,16 +145,24 @@ public class MainTeleOp extends OpMode {
         double turretSpeed = turretMotor.getVelocity() / CoordinateTurretControl.TICKS_PER_DEGREE;
         boolean turretValid = Double.isFinite(turretSpeed)
                 && turretMotor.getMode() == DcMotor.RunMode.RUN_WITHOUT_ENCODER;
+        boolean takeover = WaypointShootingControl.driverTakeover(gamepad1.left_stick_y,
+                gamepad1.left_stick_x, gamepad1.right_stick_x);
+        boolean cancelNavigation = gamepad1.b || gamepad1.back;
         boolean manualTurret = ManualTurretJog.requested(gamepad1.dpad_left, gamepad1.dpad_right);
+        if (manualTurret && !lastManualTurret && waypoint.ready() && referenceConfirmed
+                && turretValid && !takeover && !cancelNavigation) {
+            Pose anchor = follower.pose();
+            turretCorrections.begin(waypoint.selected(), anchor.x(), anchor.y(), Math.toDegrees(anchor.heading()));
+        }
+        lastManualTurret = manualTurret;
         if (manualTurret) {
             if (waypoint.active()) releaseWaypoint("Manual turret control");
             volley.cancelFeed("Manual turret control"); // Preserve wheel state; block held triggers.
             turretControl.reset();
-            actionStatus = "Manual turret; release D-pad to stop, left bumper to resume waypoint aiming";
+            actionStatus = turretCorrections.editing() != null
+                    ? "Adjusting waypoint " + turretCorrections.editing().id + "; release D-pad to save this run"
+                    : "Manual turret only: arrive at a waypoint before learning an adjustment";
         }
-        boolean takeover = WaypointShootingControl.driverTakeover(gamepad1.left_stick_y,
-                gamepad1.left_stick_x, gamepad1.right_stick_x);
-        boolean cancelNavigation = gamepad1.b || gamepad1.back;
         if (waypoint.active() && (takeover || cancelNavigation))
             releaseWaypoint(takeover ? "Driver stick takeover" : "Cancelled by operator");
         if (gamepad1.options && !lastOptions) driverOffsetRad = follower.pose().heading();
@@ -157,9 +170,22 @@ public class MainTeleOp extends OpMode {
         if (!waypoint.active()) manualDrive();
         follower.update(); // Fresh Pinpoint-backed field pose before choosing a waypoint.
         Pose pose = follower.pose();
-        if (select && !takeover && !cancelNavigation && !manualTurret) {
+        double turretAngle = (turretTicks - (double) zeroTicks)
+                / CoordinateTurretControl.TICKS_PER_DEGREE;
+        ShootingWaypoints.Point edit = turretCorrections.editing();
+        if (turretCorrections.update(now, manualTurret, gamepad1.dpad_left != gamepad1.dpad_right,
+                pose.x(), pose.y(), Math.toDegrees(pose.heading()), turretAngle, turretSpeed,
+                turretValid && referenceConfirmed, takeover || cancelNavigation)) {
+            actionStatus = "Saved turret angle for waypoint " + edit.id + " for this TeleOp only";
+        } else if (edit != null && turretCorrections.editing() == null) {
+            actionStatus = "Turret adjustment not saved: robot moved or reference/motor data became invalid";
+        }
+        if (select && turretCorrections.pending()) {
+            actionStatus = "Wait for turret adjustment to save, then tap left bumper again";
+        } else if (select && !takeover && !cancelNavigation && !manualTurret) {
             if (!referenceConfirmed) actionStatus = "NOT SELECTED: confirm RED field pose and turret forward zero during INIT";
             else if (waypoint.select(now, pose.x(), pose.y(), Math.toDegrees(pose.heading()))) {
+                turretCorrections.cancelEdit();
                 volley.cancelFeed("Cancelled: new waypoint selected");
                 turretControl.reset();
                 beginWaypoint(pose, waypoint.selected());
@@ -168,8 +194,6 @@ public class MainTeleOp extends OpMode {
 
         intake.rampFix(gamepad2.dpad_up, gamepad2.dpad_down);
 
-        double turretAngle = (turretTicks - (double) zeroTicks)
-                / CoordinateTurretControl.TICKS_PER_DEGREE;
         boolean wasNavigating = waypoint.active();
         waypoint.update(now, pose.x(), pose.y(), Math.toDegrees(pose.heading()), turretAngle,
                 !follower.following());
@@ -178,8 +202,8 @@ public class MainTeleOp extends OpMode {
                 waypoint.state() == WaypointShootingControl.State.HOLDING);
 
         ShootingWaypoints.Point point = waypoint.selected();
-        // Fixed recorded relative angle only. No bearing calculation or robot-yaw compensation.
-        double turretError = point == null ? Double.NaN : point.turretDeg - turretAngle;
+        // Per-run correction overrides only this point's robot-relative turret angle.
+        double turretError = point == null ? Double.NaN : turretCorrections.target(point) - turretAngle;
         boolean turretAimActive = waypoint.active() && referenceConfirmed && turretValid && !manualTurret;
         double encoderPower = turretControl.calculate(now, turretError, turretSpeed, turretAimActive);
         if (manualTurret) encoderPower = ManualTurretJog.encoderPower(
@@ -208,7 +232,7 @@ public class MainTeleOp extends OpMode {
         nextGraphTime = now + GRAPH_PERIOD_SECONDS;
         if (point != null) {
             addPanelsFinite("Turret error (deg)", turretError);
-            addPanelsFinite("Turret target (deg)", point.turretDeg);
+            addPanelsFinite("Turret target (deg)", turretCorrections.target(point));
         }
         addPanelsFinite("Turret angle (deg)", turretAngle);
         addPanelsFinite("Turret velocity (deg/s)", turretSpeed);
@@ -271,9 +295,11 @@ public class MainTeleOp extends OpMode {
         if (point != null) {
             telemetry.addData("Recorded X / Y / heading", "%.3f / %.3f / %.3f", point.x, point.y, point.headingDeg);
             telemetry.addData("Position / heading error", "%.3f in / %.3f deg", waypoint.positionError(), waypoint.headingError());
-            telemetry.addData("Recorded turret / live / error", "%.3f / %.3f / %.3f deg", point.turretDeg, turretAngle, turretError);
+            telemetry.addData("Effective turret / live / error", "%.3f / %.3f / %.3f deg", turretCorrections.target(point), turretAngle, turretError);
+            telemetry.addData("Turret correction this run", "%.3f deg", turretCorrections.target(point) - point.turretDeg);
             telemetry.addData("Recorded flywheel target", point.velocityTicksPerSecond);
         }
+        telemetry.addData("Turret correction pending", turretCorrections.pending());
         telemetry.addData("Turret controller / zero", "%s / %d", turretControl.status, zeroTicks);
         telemetry.addData("READY for Y volley", ready);
         telemetry.addData("Flywheel enabled / measured", "%s / %.1f ticks/s", volley.wheelEnabled(), launcher.getMeasuredVelocity());
@@ -292,6 +318,7 @@ public class MainTeleOp extends OpMode {
     }
 
     @Override public void stop() {
+        turretCorrections.clear();
         if (volley != null) volley.stop();
         if (turretMotor != null) turretMotor.setPower(0);
         if (follower != null) {
