@@ -231,6 +231,10 @@ public final class AutoPaths {
         public static final Pose farControl1 =
                 poseFactory.of(47, 44, 0);
 
+        public static final Pose closeControl1 =
+                poseFactory.of(30, 20, 0);
+
+
         public static final Pose farControl2 =
                 poseFactory.of(6, 107, 0);
 
@@ -245,7 +249,7 @@ public final class AutoPaths {
 
         // old path2wall (now starts at the start pose, where the first volley is recorded)
         public static Path startToCornerWait() {
-            return Paths.line(Red2TipPoints.startClose, cornerWait)
+            return Paths.curve(Red2TipPoints.startClose, closeControl1, cornerWait)
                     .linear(Red2TipPoints.startClose, cornerWait);
         }
 
@@ -263,8 +267,8 @@ public final class AutoPaths {
 
         // old path22 (now starts at the corner shooting spot)
         public static Path aimAssistToCornerWait() {
-            return Paths.line(Red2TipPoints.aimAssist, cornerWait)
-                    .linear(Red2TipPoints.aimAssist, cornerWait);
+            return Paths.line(GeneralPoints.cornerCollect, cornerWait)
+                    .linear(GeneralPoints.cornerCollect, cornerWait);
         }
 
         // old path3, ending on the recorded far shooting spot

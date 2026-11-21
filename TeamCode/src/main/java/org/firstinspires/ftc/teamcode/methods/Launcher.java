@@ -12,7 +12,7 @@ public class Launcher {
     // Gains validated in the 12-ball PI recovery test.
     public static double KS = 0.605774, KV = 0.00533013;
     public static double KP = 0.032, KI = 0.060;
-    public double SHOOTING_VELOCITY = 1480;
+    public static double SHOOTING_VELOCITY = 1480;
 
     /**
      * I am Maskin

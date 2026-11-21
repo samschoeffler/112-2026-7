@@ -79,7 +79,7 @@ public class MainTeleOp extends OpMode {
         zeroTicks = OpModeStorage.turretForwardZeroTicks;
         follower.setPose(validPose ? handoff : new Pose(0, 0, 0));
         follower.manual(0, 0, 0);
-        lastInitA = gamepad1.a;
+        lastInitA = gamepad2.a;
         telemetry.setMsTransmissionInterval(100);
         showInit();
     }
@@ -87,11 +87,11 @@ public class MainTeleOp extends OpMode {
     @Override public void init_loop() {
         bulk.clear();
         // Explicit standalone reference only, while physically at the calibration start pose.
-        if (gamepad1.a && !lastInitA) {
+        if (gamepad2.a && !lastInitA) {
             standaloneStart = referenceConfirmed = true;
             follower.setPose(PoseFactory.degrees().of(56, 8, 90));
         }
-        lastInitA = gamepad1.a;
+        lastInitA = gamepad2.a;
         follower.update();
         showInit();
     }
@@ -119,9 +119,9 @@ public class MainTeleOp extends OpMode {
         follower.manual(0, 0, 0);
         follower.update();
         lastSelect = gamepad1.dpad_right; waypoint.primeVolleyButton(gamepad2.y);
-        lastRamp = gamepad2.a; lastHold = gamepad2.x;
+        lastRamp = gamepad1.a; lastHold = gamepad1.x;
         lastOptions = gamepad1.options;
-        volley.primeManualInputs(gamepad2.left_trigger > .1, gamepad2.right_trigger > .2);
+        volley.primeManualInputs(gamepad1.left_trigger > .1, gamepad1.right_trigger > .2);
         turretControl.reset();
         nextGraphTime = 0;
     }
@@ -131,12 +131,12 @@ public class MainTeleOp extends OpMode {
         double now = System.nanoTime() / 1e9;
         boolean select = gamepad1.dpad_right && !lastSelect;
         boolean volleyButton = gamepad2.y;
-        boolean ramp = gamepad2.a && !lastRamp, hold = gamepad2.x && !lastHold;
+        boolean ramp = gamepad1.a && !lastRamp, hold = gamepad1.x && !lastHold;
         lastSelect = gamepad1.dpad_right;
-        lastRamp = gamepad2.a; lastHold = gamepad2.x;
+        lastRamp = gamepad1.a; lastHold = gamepad1.x;
         boolean takeover = WaypointShootingControl.driverTakeover(gamepad1.left_stick_y,
                 gamepad1.left_stick_x, gamepad1.right_stick_x);
-        boolean cancelNavigation = gamepad1.b || gamepad2.back;
+        boolean cancelNavigation = gamepad1.b || gamepad1.back;
         if (waypoint.active() && (takeover || cancelNavigation))
             releaseWaypoint(takeover ? "Driver stick takeover" : "Cancelled by operator");
         if (gamepad1.options && !lastOptions) driverOffsetRad = follower.pose().heading();
@@ -180,9 +180,9 @@ public class MainTeleOp extends OpMode {
         if (waypoint.volleyTapRejected()) actionStatus = "Y ignored: wait for waypoint READY, release Y and tap again";
         double targetVelocity = point == null ? 0 : point.velocityTicksPerSecond;
         launcher.SHOOTING_VELOCITY = targetVelocity;
-        boolean reverse = gamepad2.b || gamepad2.right_bumper;
-        volley.update(gamepad2.left_trigger > .1, gamepad2.right_trigger > .2, fireCommand,
-                reverse, gamepad2.back, targetVelocity);
+        boolean reverse = gamepad1.b || gamepad1.right_bumper;
+        volley.update(gamepad1.left_trigger > .1, gamepad1.right_trigger > .2, fireCommand,
+                reverse, gamepad1.back, targetVelocity);
         updateIndicators(ready);
         showTelemetry(pose, point, turretAngle, turretError, ready, reverse);
     }

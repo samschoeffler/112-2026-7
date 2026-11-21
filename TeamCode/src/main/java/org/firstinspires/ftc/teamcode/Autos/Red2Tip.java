@@ -53,20 +53,19 @@ public class Red2Tip extends OpMode {
 
     private Command autoRoutine() {
         return sequential(
-                selectShootingPoint(AutoPaths.Red2TipPoints.close),
+                //selectShootingPoint(AutoPaths.Red2TipPoints.close),
                 autoCommand.fWheelTogg,
                 autoCommand.shooterTogg,
                 autoCommand.intakeTogg,
                 Commands.waitMs(SHOOTING_WINDOW_MS),
                 autoCommand.shooterTogg,
-                selectShootingPoint(AutoPaths.Red2TipPoints.corner),
+                //selectShootingPoint(AutoPaths.Red2TipPoints.corner),
                 follow(follower, AutoPaths.Red2TipPaths.startToCornerWait()),
                 follow(follower, AutoPaths.Red2TipPaths.cornerWaitToCorner()),
-                follow(follower, AutoPaths.Red2TipPaths.lilShoot()),
                 autoCommand.shooterTogg,
                 Commands.waitMs(500),
                 autoCommand.shooterTogg,
-                selectShootingPoint(AutoPaths.Red2TipPoints.far),
+                //follow(follower, AutoPaths.Red2TipPaths.lilShoot()),
                 parallel(
                         sequential(
                                 follow(follower, AutoPaths.Red2TipPaths.aimAssistToCornerWait()),
@@ -77,11 +76,10 @@ public class Red2Tip extends OpMode {
                         ),
                         sequential(
                                 Commands.waitMs(500),
-                                autoCommand.rampTogg,
-                                Commands.waitMs(2000),
                                 autoCommand.rampTogg
                         )
                 ),
+                selectShootingPoint(AutoPaths.Red2TipPoints.far),
                 autoCommand.shooterTogg,
                 Commands.waitMs(SHOOTING_WINDOW_MS),
                 autoCommand.shooterTogg,
@@ -91,6 +89,7 @@ public class Red2Tip extends OpMode {
                 follow(
                         follower, AutoPaths.Red2TipPaths.park()
                 ),
+                selectShootingPoint(AutoPaths.Red2TipPoints.far),
                 autoCommand.shooterTogg,
                 Commands.waitMs(SHOOTING_WINDOW_MS),
                 autoCommand.stopShooter
@@ -122,7 +121,7 @@ public class Red2Tip extends OpMode {
         OpModeStorage.turretForwardZeroTicks = turretZeroTicks;
         OpModeStorage.turretForwardZeroConfirmed = true;
 
-        follower.setPose(AutoPaths.Red2TipPoints.startClose);
+        follower.setPose(AutoPaths.GeneralPoints.startClose);
 
     }
 
